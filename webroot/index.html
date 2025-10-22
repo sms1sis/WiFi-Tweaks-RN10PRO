@@ -1,106 +1,119 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Wi‑Fi INI Changes</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: linear-gradient(to right, #1e3c72, #2a5298);
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    .container {
-      max-width: 800px;
-      width: 90%;
-      margin-top: 60px;
-      background: rgba(255, 255, 255, 0.08);
-      padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 12px;
-      font-size: 24px;
-    }
-
-    p {
-      text-align: center;
-      margin-bottom: 24px;
-      font-size: 16px;
-    }
-
-    button {
-      background: #ff9800;
-      color: #000;
-      border: none;
-      padding: 10px 18px;
-      font-size: 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.3s ease;
-      display: block;
-      margin: 0 auto 20px auto;
-    }
-
-    button:hover {
-      background: #ffc107;
-    }
-
-    pre {
-      background: #111;
-      color: #eee;
-      padding: 16px;
-      border-radius: 8px;
-      overflow-x: auto;
-      white-space: pre-wrap;
-      font-size: 14px;
-    }
-
-    .diff-added { color: #a6e22e; }   /* green */
-    .diff-removed { color: #f92672; } /* red */
-    .diff-header { color: #66d9ef; }  /* cyan */
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wi-Fi Tweaks for RN10 Pro</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        h1 {
+            text-align: center;
+            color: #bb86fc;
+        }
+        .tweak {
+            background-color: #2c2c2c;
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #bb86fc;
+        }
+        h2 {
+            color: #03dac6;
+            border-bottom: 2px solid #03dac6;
+            padding-bottom: 5px;
+        }
+        p {
+            margin-bottom: 10px;
+        }
+        code {
+            font-family: "Fira Code", "Courier New", monospace;
+            background-color: #1e1e1e;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .diff {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .diff-before, .diff-after {
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .diff-before {
+            background-color: #4d2d2d;
+        }
+        .diff-after {
+            background-color: #2d4d2d;
+        }
+        .diff-before pre, .diff-after pre {
+            margin: 0;
+            white-space: pre-wrap;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Wi‑Fi INI Changes</h2>
-    <p>Click below to view the diff between the default and modified configuration, with explanations.</p>
-    <button onclick="showDiff()">Show diff</button>
-    <pre id="diffOutput">Click the button to load diff.txt…</pre>
-  </div>
+    <div class="container">
+        <h1>Wi-Fi Tweaks for RN10 Pro</h1>
 
-  <script>
-    function highlightDiff(text) {
-      return text.split("\n").map(line => {
-        if (line.startsWith("+") && !line.startsWith("+++"))
-          return `<span class="diff-added">${line}</span>`;
-        if (line.startsWith("-") && !line.startsWith("---"))
-          return `<span class="diff-removed">${line}</span>`;
-        if (line.startsWith("@@") || line.startsWith("diff") || line.startsWith("---") || line.startsWith("+++"))
-          return `<span class="diff-header">${line}</span>`;
-        return line;
-      }).join("\n");
-    }
+        <div class="tweak">
+            <h2>Antenna Configuration (2x2 MIMO)</h2>
+            <p>This change allows the device's firmware to automatically select the best antenna configuration, enabling 2x2 MIMO for potentially double the throughput.</p>
+            <div class="diff">
+                <div class="diff-before">
+                    <pre><code>- gSetTxChainmask1x1=1
+- gSetRxChainmask1x1=1</code></pre>
+                </div>
+                <div class="diff-after">
+                    <pre><code>+ gSetTxChainmask1x1=0
++ gSetRxChainmask1x1=0</code></pre>
+                </div>
+            </div>
+        </div>
 
-    async function showDiff() {
-      try {
-        const r = await fetch('diff.txt');
-        const t = await r.text();
-        document.getElementById('diffOutput').innerHTML = highlightDiff(t);
-      } catch (e) {
-        document.getElementById('diffOutput').textContent = 'Failed to load diff: ' + e;
-      }
-    }
-  </script>
+        <div class="tweak">
+            <h2>Transmit Power</h2>
+            <p>Increases the transmit power of the Wi-Fi radio for a stronger signal and better range. This may increase battery consumption and heat.</p>
+            <div class="diff">
+                <div class="diff-before">
+                    <pre><code>- TxPower2g=10
+- TxPower5g=10</code></pre>
+                </div>
+                <div class="diff-after">
+                    <pre><code>+ TxPower2g=15
++ TxPower5g=15</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="tweak">
+            <h2>2.4GHz Channel Bonding</h2>
+            <p>Enables 40MHz channel bonding on the 2.4GHz band, which can significantly increase Wi-Fi speed.</p>
+            <div class="diff">
+                <div class="diff-before">
+                    <pre><code>- gChannelBondingMode24GHz=0</code></pre>
+                </div>
+                <div class="diff-after">
+                    <pre><code>+ gChannelBondingMode24GHz=1</code></pre>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </body>
 </html>
