@@ -10,7 +10,7 @@ It boosts signal strength, enables wider channel bonding, and unlocks antenna di
 
 ## 🔧 What It Does
 
-- **Overlays** `/vendor/etc/wifi/WCNSS_qcom_cfg.ini` with a custom `mine.ini`
+- **Overlays** `/vendor/etc/wifi/WCNSS_qcom_cfg.ini` with a custom config
 - **Boosts transmit power** for stronger signal at long range
 - **Enables 40 MHz bonding** on 2.4 GHz for higher throughput
 - **Lets firmware auto-select antenna chains** for better diversity (2x2 MIMO)
@@ -37,7 +37,7 @@ wifi-ini-highperf/
 ├─ post-fs-data.sh
 ├─ service.sh
 ├─ overlay/
-│  └─ vendor/etc/wifi/WCNSS_qcom_cfg.ini  # Your modified config
+│  └─ vendor/etc/wifi/WCNSS_qcom_cfg.ini  # Modified config
 ├─ webroot/
 │  ├─ index.html                          # WebUI page
 │  └─ diff.txt                            # Static diff + explanations
