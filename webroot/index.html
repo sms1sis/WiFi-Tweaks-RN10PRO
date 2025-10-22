@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Wi‑Fi INI Changes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #1e3c72, #2a5298);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 90%;
+      margin-top: 60px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 12px;
+      font-size: 24px;
+    }
+
+    p {
+      text-align: center;
+      margin-bottom: 24px;
+      font-size: 16px;
+    }
+
+    button {
+      background: #ff9800;
+      color: #000;
+      border: none;
+      padding: 10px 18px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      display: block;
+      margin: 0 auto 20px auto;
+    }
+
+    button:hover {
+      background: #ffc107;
+    }
+
+    pre {
+      background: #111;
+      color: #eee;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      font-size: 14px;
+    }
+
+    .diff-added { color: #a6e22e; }   /* green */
+    .diff-removed { color: #f92672; } /* red */
+    .diff-header { color: #66d9ef; }  /* cyan */
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Wi‑Fi INI Changes</h2>
+    <p>Click below to view the diff between the default and modified configuration, with explanations.</p>
+    <button onclick="showDiff()">Show diff</button>
+    <pre id="diffOutput">Click the button to load diff.txt…</pre>
+  </div>
+
+  <script>
+    function highlightDiff(text) {
+      return text.split("\n").map(line => {
+        if (line.startsWith("+") && !line.startsWith("+++"))
+          return `<span class="diff-added">${line}</span>`;
+        if (line.startsWith("-") && !line.startsWith("---"))
+          return `<span class="diff-removed">${line}</span>`;
+        if (line.startsWith("@@") || line.startsWith("diff") || line.startsWith("---") || line.startsWith("+++"))
+          return `<span class="diff-header">${line}</span>`;
+        return line;
+      }).join("\n");
+    }
+
+    async function showDiff() {
+      try {
+        const r = await fetch('diff.txt');
+        const t = await r.text();
+        document.getElementById('diffOutput').innerHTML = highlightDiff(t);
+      } catch (e) {
+        document.getElementById('diffOutput').textContent = 'Failed to load diff: ' + e;
+      }
+    }
+  </script>
+</body>
+</html>
