@@ -1,43 +1,42 @@
-# 📶 Wi-Fi INI High-Performance Overlay (Redmi Note 10 Pro)
+# Wi-Fi Tweaks for Redmi Note 10 Pro
 
-This is a **KSU Next overlayfs module** that replaces the default `WCNSS_qcom_cfg.ini` with a **tuned configuration (`mine.ini`)** for maximum Wi-Fi performance on the **Redmi Note 10 Pro**.
+This Magisk module replaces the default `WCNSS_qcom_cfg.ini` with a tuned configuration for improved Wi-Fi performance on the Redmi Note 10 Pro.
 
-It boosts signal strength, enables wider channel bonding, and unlocks antenna diversity — all while exposing a clean WebUI that shows exactly what changed and why.
+It boosts signal strength, enables wider channel bonding, and unlocks antenna diversity for a faster and more reliable connection. The module also includes a web UI to explain the applied tweaks.
 
-> ⚠️ This module is designed specifically for the **Redmi Note 10 Pro** (Snapdragon 732G). It may work on other Snapdragon-powered devices with similar Wi-Fi chipsets, but compatibility is not guaranteed.
-
----
-
-## 🔧 What It Does
-
-- **Overlays** `/vendor/etc/wifi/WCNSS_qcom_cfg.ini` with a custom config
-- **Boosts transmit power** for stronger signal at long range
-- **Enables 40 MHz bonding** on 2.4 GHz for higher throughput
-- **Lets firmware auto-select antenna chains** for better diversity (2x2 MIMO)
-- **Activates beamforming and MU-MIMO** features
-- **Provides a WebUI** with a color-coded diff and explanations
+> ⚠️ This module is designed specifically for the **Redmi Note 10 Pro**. It may work on other devices with similar Qualcomm Wi-Fi chipsets, but compatibility is not guaranteed.
 
 ---
 
-## 🖥️ WebUI Preview
+## 🔧 The Tweaks
 
-The module includes a WebUI with:
+This module applies the following changes to your Wi-Fi configuration:
 
-- ✅ A **“Show diff”** button to view changes from the default config  
-- 🎨 A **color-coded diff viewer** (GitHub-style)  
-- 📘 Inline explanations for each tweak
+*   **2x2 MIMO Antenna Configuration:** Allows the firmware to use both antennas for sending and receiving data, potentially doubling your Wi-Fi speed.
+*   **Increased Transmit Power:** Boosts the Wi-Fi signal strength for better range and stability, at the cost of slightly higher battery consumption.
+*   **40MHz Channel Bonding (2.4GHz & 5GHz):** Enables the use of wider channels on both Wi-Fi bands for significantly higher throughput.
+*   **WPA3 Security:** Enables the latest Wi-Fi security protocol for a more secure connection.
+
+---
+
+## 🖥️ Web UI
+
+This module includes a web-based UI that clearly explains the changes it makes. You can access it by opening the `index.html` file located in the module's `webroot` directory.
+
+The Web UI provides a breakdown of each tweak, showing the "before" and "after" values from the configuration file.
 
 ---
 
 ## 📂 Module Structure
 
-```text
-wifi-ini-highperf/
-├─ module.prop
-├─ post-fs-data.sh
-├─ service.sh
-├─ overlay/
-│  └─ vendor/etc/wifi/WCNSS_qcom_cfg.ini  # Modified config
-├─ webroot/
-│  ├─ index.html                          # WebUI page
-│  └─ diff.txt                            # Static diff + explanations
+```
+WiFi-Tweaks-RN10PRO/
+├── module.prop
+├── system/
+│   └── vendor/
+│       └── etc/
+│           └── wifi/
+│               └── WCNSS_qcom_cfg.ini  # The modified config file
+└── webroot/
+    └── index.html                  # The Web UI file
+```
