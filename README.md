@@ -39,3 +39,11 @@ WiFi-Tweaks-RN10PRO/
 └── webroot/
     └── index.html                  # The Web UI file
 ```
+
+---
+
+## 📝 Note for KSU/KSU Next Users
+
+For maximum assurance and stability on KSU (KernelSU) or KSU Next, it is highly recommended to use `overlay_fs` instead of `magisk mount`.
+
+**⚠️ Important Warning:** If you switch from `magisk mount` to `overlay_fs`, all currently installed modules will be removed. You will need to reinstall them after making the switch.
