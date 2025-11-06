@@ -14,8 +14,7 @@ This module applies the following changes to your Wi-Fi configuration:
 
 *   **2x2 MIMO Antenna Configuration:** Allows the firmware to use both antennas for sending and receiving data, potentially doubling your Wi-Fi speed.
 *   **Increased Transmit Power:** Boosts the Wi-Fi signal strength for better range and stability, at the cost of slightly higher battery consumption.
-*   **40MHz Channel Bonding (2.4GHz & 5GHz):** Enables the use of wider channels on both Wi-Fi bands for significantly higher throughput.
-*   **WPA3 Security:** Enables the latest Wi-Fi security protocol for a more secure connection.
+*   **2.4GHz Channel Bonding:** Enables 40MHz channel bonding on the 2.4GHz band, which can significantly increase Wi-Fi speed.
 
 ---
 
