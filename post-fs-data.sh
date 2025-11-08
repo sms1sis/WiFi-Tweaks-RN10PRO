@@ -5,18 +5,10 @@
 # Module directory
 MODDIR=${0%/*}
 
-# Log file for post-fs-data.sh
-LOG_FILE="${MODDIR}/post-fs-data.log"
-echo "--- $(date) - post-fs-data.sh started ---" > "${LOG_FILE}"
-
-
-
 # Permissions are set during module packaging for post-fs-data.sh itself.
 # However, other scripts might lose executable permissions during flashing.
 # Re-ensure switch_mode.sh is executable.
-echo "Re-ensuring switch_mode.sh is executable..." >> "${LOG_FILE}"
-chmod +x "${MODDIR}/common/switch_mode.sh" >> "${LOG_FILE}" 2>&1
-echo "chmod +x for switch_mode.sh exit code: $?" >> "${LOG_FILE}"
+chmod +x "${MODDIR}/common/switch_mode.sh"
 
 # Configuration files
 WIFI_CONFIG_DIR="/vendor/etc/wifi"

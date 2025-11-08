@@ -9,16 +9,18 @@ set -e
 # Dynamically set the module directory based on the execution path
 if echo "$0" | grep -q "/data/adb/modules/"; then
     # Running as a KernelSU module
-    MODULE_WIFI_DIR="/data/adb/modules/wifi_tweaks/system/vendor/etc/wifi"
+    MODULE_DIR="/data/adb/modules/wifi_tweaks"
 else
     # Running in a local/dev environment
-    MODULE_WIFI_DIR="$(dirname "$0")/../system/vendor/etc/wifi"
+    MODULE_DIR="$(dirname "$0")/.."
 fi
 
+MODULE_WIFI_DIR="${MODULE_DIR}/system/vendor/etc/wifi"
 ACTIVE_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
 PERF_CONFIG_FILE="${MODULE_WIFI_DIR}/perf.ini"
 BATTERY_CONFIG_FILE="${MODULE_WIFI_DIR}/battery.ini"
 DEFAULT_CONFIG_FILE="${MODULE_WIFI_DIR}/default.ini"
+MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 
 # --- Helper Functions ---
 get_status() {
@@ -61,6 +63,9 @@ case "$MODE" in
 
         # Perform the switch by copying the file content
         cp -f "${TARGET_INI_FILE}" "${ACTIVE_CONFIG_FILE}"
+
+        # Save the selected mode to the mode config file for persistence
+        echo "${MODE}" > "${MODE_CONFIG_FILE}"
 
         # Restart Wi-Fi to apply the new config
         svc wifi disable
