@@ -66,13 +66,14 @@
         .button-group {
             margin-top: 1.5rem;
             display: flex;
-            gap: 1.5rem;
+            gap: 0.8rem; /* Reduced gap */
             justify-content: center;
+            flex-wrap: wrap; /* Allow buttons to wrap */
         }
 
         button {
-            padding: 1rem 2rem;
-            font-size: 1rem;
+            padding: 0.8rem 1.2rem; /* Reduced padding */
+            font-size: 0.9rem; /* Slightly smaller font */
             font-weight: 700;
             cursor: pointer;
             border: none;
@@ -160,11 +161,11 @@
                 Performance
             </button>
             <button id="battery-button">
-                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm-1-8h2v6h-2zm0-4h2v2h-2z"/></svg>
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
                 Battery
             </button>
             <button id="default-button">
-                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
                 Default
             </button>
         </div>
@@ -231,17 +232,22 @@
         // ksu.exec is a SYNCHRONOUS global function
         const result = ksu.exec(command);
 
+        // Check if the result is a string (indicating direct stdout on success)
+        if (typeof result === 'string') {
+            return result; // Assume success, return stdout directly
+        }
+
         if (result && typeof result.errno === 'number') {
             if (result.errno === 0) {
                 // Return script's stdout on success
                 return result.stdout;
             } else {
                 // Throw an error if the script exited non-zero
-                throw new Error(`Command failed with errno ${result.errno}: ${result.stdout || 'No output'}`);
+                throw new Error(`Command failed with errno ${result.errno}: ${result.stdout || result.stderr || 'No output'}`);
             }
         } else {
-            // Throw a low-level bridge error
-            throw new Error('Invalid or unexpected response from ksu.exec.');
+            // Fallback for unexpected result format
+            throw new Error(`Unexpected response from ksu.exec. Raw result: ${JSON.stringify(result)}`);
         }
     }
 

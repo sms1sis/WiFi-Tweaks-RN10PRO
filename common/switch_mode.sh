@@ -62,11 +62,11 @@ case "$MODE" in
         # Perform the switch by copying the file content
         cp -f "${TARGET_INI_FILE}" "${ACTIVE_CONFIG_FILE}"
 
-        # Restart Wi-Fi services to apply the new config via overlay
-        svc wifi disable >/dev/null 2>&1
-        sleep 1
-        svc wifi enable >/dev/null 2>&1
+        # Restart Wi-Fi to apply the new config
+        svc wifi disable
         sleep 2
+        svc wifi enable
+        sleep 3
 
         # Output the new status to confirm
         get_status
