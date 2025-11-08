@@ -202,10 +202,10 @@
             batteryButton.style.cursor = locked ? 'wait' : 'pointer';
         }
 
-        // Generic function to run a shell command
-        function runCommand(command) {
-            // ksu.exec is synchronous and returns an object { errno, stdout }
-            const result = ksu.exec(command);
+        // Generic async function to run a shell command
+        async function runCommand(command) {
+            // ksu.exec is asynchronous and returns a Promise
+            const result = await ksu.exec(command);
 
             if (result && typeof result.errno === 'number') {
                 if (result.errno === 0) {
@@ -220,13 +220,13 @@
             }
         }
 
-        // Function to get the current status on page load
-        function getInitialStatus() {
+        // Async function to get the current status on page load
+        async function getInitialStatus() {
             outputDiv.textContent = 'Checking current Wi-Fi mode...';
             setUILocked(true);
             try {
                 const command = `${scriptPath} status`;
-                const result = runCommand(command);
+                const result = await runCommand(command);
                 setUIMode(result.trim());
                 outputDiv.textContent = `Current mode is ${currentModeSpan.textContent}. Ready.`;
             } catch (error) {
@@ -237,32 +237,30 @@
             }
         }
 
-        // Function to handle the switch process
-        function runSwitch(mode) {
+        // Async function to handle the switch process
+        async function runSwitch(mode) {
             const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
             outputDiv.textContent = `Switching to ${modeName} mode...`;
             setUILocked(true);
 
-            // Use a short timeout to allow the UI to update before blocking with ksu.exec
-            setTimeout(() => {
-                try {
-                    // First, run the switch command
-                    runCommand(`${scriptPath} ${mode}`);
-                    
-                    // After switching, re-verify the status directly to confirm
-                    const statusResult = runCommand(`${scriptPath} status`);
-                    const newMode = statusResult.trim();
-                    
-                    setUIMode(newMode);
-                    outputDiv.textContent = `Successfully switched to ${newMode.charAt(0).toUpperCase() + newMode.slice(1)} mode.`;
+            try {
+                // First, run the switch command
+                await runCommand(`${scriptPath} ${mode}`);
+                
+                // After switching, re-verify the status directly to confirm
+                const statusResult = await runCommand(`${scriptPath} status`);
+                const newMode = statusResult.trim();
+                
+                setUIMode(newMode);
+                outputDiv.textContent = `Successfully switched to ${newMode.charAt(0).toUpperCase() + newMode.slice(1)} mode.`;
 
-                } catch (error) {
-                    outputDiv.textContent = `Error switching mode: ${error.message}`;
-                    setUIMode('unknown');
-                } finally {
-                    setUILocked(false);
-                }
-            }, 50); // 50ms delay
+            } catch (error) {
+                outputDiv.textContent = `Error switching mode: ${error.message}`;
+                // Re-check status to show the real current state after a failed switch
+                await getInitialStatus();
+            } finally {
+                setUILocked(false);
+            }
         }
 
         // Event Listeners
