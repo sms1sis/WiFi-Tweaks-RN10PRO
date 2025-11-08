@@ -95,8 +95,8 @@
 - TxPower5g=10</code></pre>
                 </div>
                 <div class="diff-after">
-                    <pre><code>+ TxPower2g=15
-+ TxPower5g=15</code></pre>
+                    <pre><code>+ TxPower2g=12
++ TxPower5g=12</code></pre>
                 </div>
             </div>
         </div>
@@ -115,40 +115,40 @@
         </div>
 
         <div class="tweak">
-            <h2>Disable Power Saving (BMPS)</h2>
-            <p>Disables Beacon Mode Power Save (BMPS) to keep the Wi-Fi radio more active and reduce latency. This prioritizes performance over battery saving.</p>
+            <h2>Enable Power Saving (BMPS)</h2>
+            <p>Enables Beacon Mode Power Save (BMPS) to conserve battery life and improve standby time.</p>
             <div class="diff">
                 <div class="diff-before">
                     <pre><code>- gEnableBmps=1</code></pre>
                 </div>
                 <div class="diff-after">
-                    <pre><code>+ gEnableBmps=0</code></pre>
+                    <pre><code>+ gEnableBmps=1</code></pre>
                 </div>
             </div>
         </div>
 
         <div class="tweak">
-            <h2>Disable GreenAP</h2>
-            <p>Disables the GreenAP feature, which normally saves power when traffic is low. This ensures the connection remains in a high-performance state.</p>
+            <h2>Enable GreenAP</h2>
+            <p>Enables the GreenAP feature to save power, reduce heat, and improve device efficiency.</p>
             <div class="diff">
                 <div class="diff-before">
                     <pre><code>- gEnableGreenAp=1</code></pre>
                 </div>
                 <div class="diff-after">
-                    <pre><code>+ gEnableGreenAp=0</code></pre>
+                    <pre><code>+ gEnableGreenAp=1</code></pre>
                 </div>
             </div>
         </div>
 
         <div class="tweak">
-            <h2>Disable Enhanced GreenAP</h2>
-            <p>Disables Enhanced GreenAP (EGAP) to prevent the Wi-Fi chipset from throttling performance to save power. This helps maintain low latency for real-time applications.</p>
+            <h2>Enable Enhanced GreenAP</h2>
+            <p>Enables Enhanced GreenAP (EGAP) to further optimize power saving, reduce heat, and improve device efficiency.</p>
             <div class="diff">
                 <div class="diff-before">
                     <pre><code>- gEnableEGAP=1</code></pre>
                 </div>
                 <div class="diff-after">
-                    <pre><code>+ gEnableEGAP=0</code></pre>
+                    <pre><code>+ gEnableEGAP=1</code></pre>
                 </div>
             </div>
         </div>
