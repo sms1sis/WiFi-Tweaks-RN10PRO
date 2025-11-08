@@ -114,6 +114,58 @@
             </div>
         </div>
 
+        <div class="tweak">
+            <h2>Disable Power Saving (BMPS)</h2>
+            <p>Disables Beacon Mode Power Save (BMPS) to keep the Wi-Fi radio more active and reduce latency. This prioritizes performance over battery saving.</p>
+            <div class="diff">
+                <div class="diff-before">
+                    <pre><code>- gEnableBmps=1</code></pre>
+                </div>
+                <div class="diff-after">
+                    <pre><code>+ gEnableBmps=0</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="tweak">
+            <h2>Disable GreenAP</h2>
+            <p>Disables the GreenAP feature, which normally saves power when traffic is low. This ensures the connection remains in a high-performance state.</p>
+            <div class="diff">
+                <div class="diff-before">
+                    <pre><code>- gEnableGreenAp=1</code></pre>
+                </div>
+                <div class="diff-after">
+                    <pre><code>+ gEnableGreenAp=0</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="tweak">
+            <h2>Disable Enhanced GreenAP</h2>
+            <p>Disables Enhanced GreenAP (EGAP) to prevent the Wi-Fi chipset from throttling performance to save power. This helps maintain low latency for real-time applications.</p>
+            <div class="diff">
+                <div class="diff-before">
+                    <pre><code>- gEnableEGAP=1</code></pre>
+                </div>
+                <div class="diff-after">
+                    <pre><code>+ gEnableEGAP=0</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="tweak">
+            <h2>Prioritize ARP Packets</h2>
+            <p>Reduces potential latency spikes by prioritizing Address Resolution Protocol (ARP) packets into the 'Voice' access category, ensuring they are handled quickly.</p>
+            <div class="diff">
+                <div class="diff-before">
+                    <pre><code>- arp_ac_category=0</code></pre>
+                </div>
+                <div class="diff-after">
+                    <pre><code>+ arp_ac_category=3</code></pre>
+                </div>
+            </div>
+        </div>
+
     </div>
 </body>
 </html>

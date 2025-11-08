@@ -15,6 +15,8 @@ This module applies the following changes to your Wi-Fi configuration:
 *   **2x2 MIMO Antenna Configuration:** Allows the firmware to use both antennas for sending and receiving data, potentially doubling your Wi-Fi speed.
 *   **Increased Transmit Power:** Boosts the Wi-Fi signal strength for better range and stability, at the cost of slightly higher battery consumption.
 *   **2.4GHz Channel Bonding:** Enables 40MHz channel bonding on the 2.4GHz band, which can significantly increase Wi-Fi speed.
+*   **Reduced Power Saving (Low Latency)**: Disables multiple power-saving features (`BMPS`, `GreenAP`) to keep the Wi-Fi radio in a more active state, reducing latency for gaming and streaming.
+*   **ARP Packet Prioritization**: Moves ARP packets to the "Voice" access category to ensure address resolution is handled with high priority, preventing potential latency spikes.
 
 ---
 

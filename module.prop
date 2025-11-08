@@ -1,6 +1,6 @@
 id=wifi_tweaks
 name=Wi-Fi Tweaks for RN10 Pro
-version=2.2
+version=3.0
 versionCode=1
 author=sms1sis
 description=Applies recommended Wi-Fi tweaks (2x2 MIMO, channel bonding, etc.) systemlessly without touching the original file.
