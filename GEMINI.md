@@ -49,8 +49,8 @@ Once the module is installed and the device is rebooted, you can switch modes us
 ## Key Files
 
 *   `module.prop`: Defines the metadata for the KernelSU module (ID: `wifi_tweaks`, author: `sms1sis`, name, version, etc.).
-*   `common/switch_mode.sh`: The core shell script that handles the logic of switching the symlink and restarting Wi-Fi services. It now includes a `status` command and uses `svc wifi disable/enable` for a more robust Wi-Fi restart.
-*   `webroot/index.html`: A modern, single-page web interface that provides buttons to execute the `switch_mode.sh` script via `ksu.exec`. It actively displays the current mode on load and provides robust visual feedback and error handling during operations, correctly handling the synchronous return of `ksu.exec` (which provides `errno` and `stdout`).
+*   `common/switch_mode.sh`: The core shell script that handles the logic of switching the symlink and restarting Wi-Fi services. It has been optimized to reduce unnecessary output, returning only a final confirmation or error.
+*   `webroot/index.html`: A modern, single-page web interface that provides buttons to execute the `switch_mode.sh` script. The UI logic has been significantly improved to correctly handle the synchronous nature of `ksu.exec`, provide better real-time feedback during operations, and prevent UI freezes.
 *   `system/vendor/etc/wifi/perf.ini`: The Wi-Fi configuration file optimized for performance.
 *   `system/vendor/etc/wifi/battery.ini`: The Wi-Fi configuration file optimized for battery saving.
 *   `system/vendor/etc/wifi/WCNSS_qcom_cfg.ini`: A symbolic link that points to either `perf.ini` or `battery.ini`. This is the file the Android system reads.

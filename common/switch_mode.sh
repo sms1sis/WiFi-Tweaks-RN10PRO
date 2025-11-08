@@ -37,28 +37,17 @@ case "$MODE" in
             exit 1
         fi
 
-        echo "Switching to ${MODE} mode..."
-
-        # Remove the existing symlink
-        echo "Removing old configuration..."
+        # Perform the switch
         rm -f "${SYMLINK_PATH}"
-
-        # Create the new symlink
-        echo "Applying new configuration..."
         ln -s "${TARGET_INI}" "${SYMLINK_PATH}"
 
-        echo "Symlink created: ${SYMLINK_PATH} -> ${TARGET_INI}"
-
-        # Restart Wi-Fi services using Android's service manager
-        echo "Restarting Wi-Fi services..."
+        # Restart Wi-Fi services. These delays are important.
         svc wifi disable
         sleep 1
         svc wifi enable
+        sleep 2 # Allow time for the service to stabilize
 
-        # A short delay to allow services to restart
-        sleep 2
-
-        echo "Wi-Fi configuration switched to ${MODE} mode."
+        echo "Successfully switched to ${MODE} mode."
         ;;
     "status")
         if [ -L "${SYMLINK_PATH}" ]; then

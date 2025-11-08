@@ -239,24 +239,30 @@
 
         // Function to handle the switch process
         function runSwitch(mode) {
-            outputDiv.textContent = `Switching to ${mode} mode...`;
+            const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
+            outputDiv.textContent = `Switching to ${modeName} mode...`;
             setUILocked(true);
-            try {
-                const command = `${scriptPath} ${mode}`;
-                const result = runCommand(command);
-                outputDiv.textContent = result;
-                
-                // After switching, re-verify the status directly
-                const statusResult = runCommand(`${scriptPath} status`);
-                setUIMode(statusResult.trim());
-                outputDiv.textContent = `Successfully switched to ${currentModeSpan.textContent} mode.`;
 
-            } catch (error) {
-                outputDiv.textContent = `Error switching mode: ${error.message}`;
-                setUIMode('unknown');
-            } finally {
-                setUILocked(false);
-            }
+            // Use a short timeout to allow the UI to update before blocking with ksu.exec
+            setTimeout(() => {
+                try {
+                    // First, run the switch command
+                    runCommand(`${scriptPath} ${mode}`);
+                    
+                    // After switching, re-verify the status directly to confirm
+                    const statusResult = runCommand(`${scriptPath} status`);
+                    const newMode = statusResult.trim();
+                    
+                    setUIMode(newMode);
+                    outputDiv.textContent = `Successfully switched to ${newMode.charAt(0).toUpperCase() + newMode.slice(1)} mode.`;
+
+                } catch (error) {
+                    outputDiv.textContent = `Error switching mode: ${error.message}`;
+                    setUIMode('unknown');
+                } finally {
+                    setUILocked(false);
+                }
+            }, 50); // 50ms delay
         }
 
         // Event Listeners
