@@ -1,132 +1,268 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <title>Wi-Fi Config Switcher</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wi-Fi Tweaks for RN10 Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --background-start: #1a1a2e;
+            --background-end: #16213e;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --accent-perf: #03dac6;
+            --accent-perf-dark: #018786;
+            --accent-battery: #ff5252;
+            --accent-battery-dark: #c51162;
+            --shadow: rgba(0, 0, 0, 0.5);
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            background-color: #121212;
-            color: #e0e0e0;
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(45deg, var(--background-start), var(--background-end));
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
             margin: 0;
-            padding: 20px;
+            overflow: hidden;
         }
+
         .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #1e1e1e;
-            padding: 20px;
-            border-radius: 8px;
-        }
-        h1 {
             text-align: center;
-            color: #bb86fc;
+            background: var(--card-bg);
+            padding: 2.5rem 3rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        .tweak {
-            background-color: #2c2c2c;
-            margin-bottom: 20px;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #bb86fc;
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px var(--shadow);
         }
-        h2 {
-            color: #03dac6;
-            border-bottom: 2px solid #03dac6;
-            padding-bottom: 5px;
+
+        h1 {
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: -webkit-linear-gradient(45deg, var(--accent-perf), var(--accent-battery));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
+
         p {
-            margin-bottom: 10px;
+            color: var(--text-secondary);
+            font-weight: 300;
+            margin-bottom: 2rem;
         }
-        code {
-            font-family: "Fira Code", "Courier New", monospace;
-            background-color: #1e1e1e;
-            padding: 2px 5px;
-            border-radius: 4px;
-            font-size: 0.9em;
+
+        .button-group {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
         }
-        .diff {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 10px;
+
+        button {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #121212;
         }
-        .diff-before, .diff-after {
-            padding: 10px;
-            border-radius: 4px;
+
+        #perf-button {
+            background-color: var(--accent-perf);
         }
-        .diff-before {
-            background-color: #4d2d2d;
+
+        #perf-button:hover {
+            background-color: var(--accent-perf-dark);
+            box-shadow: 0 0 20px var(--accent-perf);
+            transform: translateY(-3px);
         }
-        .diff-after {
-            background-color: #2d4d2d;
+
+        #battery-button {
+            background-color: var(--accent-battery);
         }
-        .diff-before pre, .diff-after pre {
-            margin: 0;
+
+        #battery-button:hover {
+            background-color: var(--accent-battery-dark);
+            box-shadow: 0 0 20px var(--accent-battery);
+            transform: translateY(-3px);
+        }
+        
+        .icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        #output {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            text-align: left;
             white-space: pre-wrap;
+            font-family: monospace;
+            min-height: 60px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        #status {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Wi-Fi Tweaks for RN10 Pro</h1>
-
-        <div class="tweak">
-            <h2>Antenna Configuration (2x2 MIMO)</h2>
-            <p>This change allows the device's firmware to automatically select the best antenna configuration, enabling 2x2 MIMO for potentially double the throughput.</p>
-            <div class="diff">
-                <div class="diff-before">
-                    <pre><code>- gSetTxChainmask1x1=1
-- gSetRxChainmask1x1=1</code></pre>
-                </div>
-                <div class="diff-after">
-                    <pre><code>+ gSetTxChainmask1x1=0
-+ gSetRxChainmask1x1=0</code></pre>
-                </div>
-            </div>
+        <h1>Wi-Fi Tuner</h1>
+        <p>Instantly switch your Wi-Fi configuration.</p>
+        <div id="status">
+            Current Mode: <span id="current-mode">Unknown</span>
         </div>
-
-        <div class="tweak">
-            <h2>Balanced Transmit Power</h2>
-            <p>Sets a balanced transmit power for the Wi-Fi radio, offering a good compromise between signal strength and battery consumption.</p>
-            <div class="diff">
-                <div class="diff-before">
-                    <pre><code>- TxPower2g=10
-- TxPower5g=10</code></pre>
-                </div>
-                <div class="diff-after">
-                    <pre><code>+ TxPower2g=12
-+ TxPower5g=12</code></pre>
-                </div>
-            </div>
+        <div class="button-group">
+            <button id="perf-button">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10.12h-6.78l2.74-6.04-1.92-.88-3.43 7.54h-3.12L11.94 2 10 2.88 5.64 12H2v2h4.36l-4.22 9.28 1.92.88L7.5 16.62h3.12l-3.43 7.54 1.92.88L12.53 14h6.78l-2.74 6.04 1.92.88 3.43-7.54h3.12L18.06 22l1.92-.88L24.36 12H22v-2h-1v.01zM12.5 12H7.8l3.44-7.54L12.5 12z"/></svg>
+                Performance
+            </button>
+            <button id="battery-button">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm-1-8h2v6h-2zm0-4h2v2h-2z"/></svg>
+                Battery
+            </button>
         </div>
-
-        <div class="tweak">
-            <h2>2.4GHz Channel Bonding</h2>
-            <p>Enables 40MHz channel bonding on the 2.4GHz band, which can significantly increase Wi-Fi speed.</p>
-            <div class="diff">
-                <div class="diff-before">
-                    <pre><code>- gChannelBondingMode24GHz=0</code></pre>
-                </div>
-                <div class="diff-after">
-                    <pre><code>+ gChannelBondingMode24GHz=1</code></pre>
-                </div>
-            </div>
+        <div id="output">
+            <p>Status will be shown here...</p>
         </div>
-
-        <div class="tweak">
-            <h2>Prioritize ARP Packets</h2>
-            <p>Reduces potential latency spikes by prioritizing Address Resolution Protocol (ARP) packets into the 'Voice' access category, ensuring they are handled quickly.</p>
-            <div class="diff">
-                <div class="diff-before">
-                    <pre><code>- arp_ac_category=0</code></pre>
-                </div>
-                <div class="diff-after">
-                    <pre><code>+ arp_ac_category=3</code></pre>
-                </div>
-            </div>
-        </div>
-
     </div>
+
+    <script>
+        const perfButton = document.getElementById('perf-button');
+        const batteryButton = document.getElementById('battery-button');
+        const outputDiv = document.getElementById('output');
+        const currentModeSpan = document.getElementById('current-mode');
+        const statusDiv = document.getElementById('status');
+
+        const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh';
+
+        // Function to set the UI state (text and color)
+        function setUIMode(mode) {
+            // Clear any existing dot
+            const existingDot = statusDiv.querySelector('.status-dot');
+            if (existingDot) {
+                existingDot.remove();
+            }
+
+            const dot = document.createElement('span');
+            dot.className = 'status-dot';
+
+            let modeText = 'Unknown';
+            let dotColor = 'var(--text-secondary)';
+
+            if (mode.includes('perf')) {
+                modeText = 'Performance';
+                dotColor = 'var(--accent-perf)';
+            } else if (mode.includes('battery')) {
+                modeText = 'Battery';
+                dotColor = 'var(--accent-battery)';
+            }
+
+            currentModeSpan.textContent = modeText;
+            dot.style.backgroundColor = dotColor;
+            statusDiv.prepend(dot);
+        }
+
+        // Function to lock/unlock the UI during operations
+        function setUILocked(locked) {
+            perfButton.disabled = locked;
+            batteryButton.disabled = locked;
+            outputDiv.style.opacity = locked ? 0.6 : 1;
+            perfButton.style.cursor = locked ? 'wait' : 'pointer';
+            batteryButton.style.cursor = locked ? 'wait' : 'pointer';
+        }
+
+        // Generic function to run a shell command
+        function runCommand(command) {
+            // ksu.exec is synchronous and returns an object { errno, stdout }
+            const result = ksu.exec(command);
+
+            if (result && typeof result.errno === 'number') {
+                if (result.errno === 0) {
+                    return result.stdout;
+                } else {
+                    // Command executed but returned an error
+                    throw new Error(`Command failed with errno ${result.errno}: ${result.stdout || 'No output'}`);
+                }
+            } else {
+                // ksu.exec returned an unexpected value
+                throw new Error('Invalid or unexpected response from ksu.exec.');
+            }
+        }
+
+        // Function to get the current status on page load
+        function getInitialStatus() {
+            outputDiv.textContent = 'Checking current Wi-Fi mode...';
+            setUILocked(true);
+            try {
+                const command = `${scriptPath} status`;
+                const result = runCommand(command);
+                setUIMode(result.trim());
+                outputDiv.textContent = `Current mode is ${currentModeSpan.textContent}. Ready.`;
+            } catch (error) {
+                outputDiv.textContent = `Error checking status: ${error.message}`;
+                setUIMode('unknown');
+            } finally {
+                setUILocked(false);
+            }
+        }
+
+        // Function to handle the switch process
+        function runSwitch(mode) {
+            outputDiv.textContent = `Switching to ${mode} mode...`;
+            setUILocked(true);
+            try {
+                const command = `${scriptPath} ${mode}`;
+                const result = runCommand(command);
+                outputDiv.textContent = result;
+                
+                // After switching, re-verify the status directly
+                const statusResult = runCommand(`${scriptPath} status`);
+                setUIMode(statusResult.trim());
+                outputDiv.textContent = `Successfully switched to ${currentModeSpan.textContent} mode.`;
+
+            } catch (error) {
+                outputDiv.textContent = `Error switching mode: ${error.message}`;
+                setUIMode('unknown');
+            } finally {
+                setUILocked(false);
+            }
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', getInitialStatus);
+        perfButton.addEventListener('click', () => runSwitch('perf'));
+        batteryButton.addEventListener('click', () => runSwitch('battery'));
+    </script>
 </body>
 </html>

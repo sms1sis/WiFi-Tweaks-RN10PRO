@@ -1,50 +1,69 @@
-# Wi-Fi Tweaks for Redmi Note 10 Pro
+# WiFi Config Switcher (KernelSU Module)
 
-This Magisk module replaces the default `WCNSS_qcom_cfg.ini` with a tuned configuration for a balanced Wi-Fi experience on the Redmi Note 10 Pro.
+A KernelSU module to dynamically switch your device's Wi-Fi driver configuration between a high-performance mode and a battery-saving mode without requiring a reboot.
 
-It enables performance features like wider channel bonding and antenna diversity while maintaining reasonable power consumption for daily use. The module also includes a web UI to explain the applied tweaks.
+This module is ideal for users who want to maximize their Wi-Fi speed for gaming or large downloads and then switch back to a more power-efficient mode for daily use.
 
-> ⚠️ This module is designed specifically for the **Redmi Note 10 Pro**. It may work on other devices with similar Qualcomm Wi-Fi chipsets, but compatibility is not guaranteed.
+## ✨ Features
 
----
-
-## 🔧 The Tweaks
-
-This module applies the following changes to your Wi-Fi configuration:
-
-*   **2x2 MIMO Antenna Configuration:** Allows the firmware to use both antennas for sending and receiving data, potentially doubling your Wi-Fi speed.
-*   **Balanced Transmit Power:** Sets a moderate Wi-Fi signal strength, offering a good compromise between range and battery life.
-*   **2.4GHz Channel Bonding:** Enables 40MHz channel bonding on the 2.4GHz band, which can significantly increase Wi-Fi speed.
-*   **ARP Packet Prioritization**: Moves ARP packets to the "Voice" access category to ensure address resolution is handled with high priority, preventing potential latency spikes.
+*   **Instant Switching:** Change Wi-Fi modes on the fly without rebooting.
+*   **Two Modes:**
+    *   **Performance (`perf.ini`):** Optimized for maximum throughput and low latency.
+    *   **Battery (`battery.ini`):** Tuned for reduced power consumption.
+*   **User-Friendly WebUI:** A modern, responsive web interface within the KernelSU app to switch modes with a single tap.
+*   **Command-Line Interface:** Advanced users can switch modes via a shell script.
 
 ---
 
-## 🖥️ Web UI
+## 🚀 Usage
 
-This module includes a web-based UI that clearly explains the changes it makes. You can access it by opening the `index.html` file located in the module's `webroot` directory.
+Once the module is installed and the device is rebooted, you can switch modes using one of two methods:
 
-The Web UI provides a breakdown of each tweak, showing the "before" and "after" values from the configuration file.
+### 1. WebUI (Recommended)
 
----
+1.  Open the **KernelSU** app.
+2.  Navigate to the **Modules** tab.
+3.  Select **WiFi Config Switcher**.
+4.  Open the **WebUI** and use the "Performance" or "Battery" buttons. The interface will show the script's output and the current active mode.
 
-## 📂 Module Structure
+### 2. Command Line (Advanced)
 
-```
-WiFi-Tweaks-RN10PRO/
-├── module.prop
-├── system/
-│   └── vendor/
-│       └── etc/
-│           └── wifi/
-│               └── WCNSS_qcom_cfg.ini  # The modified config file
-└── webroot/
-    └── index.html                  # The Web UI file
+Open a root shell (`su`) and execute the script directly:
+
+```bash
+# For Performance Mode
+/data/adb/modules/wifi_tweaks/common/switch_mode.sh perf
+
+# For Battery Mode
+/data/adb/modules/wifi_tweaks/common/switch_mode.sh battery
 ```
 
 ---
 
-## 📝 Note for KSU/KSU Next Users
+## 📦 Building (Packaging) the Module
 
-For maximum assurance and stability on KSU (KernelSU) or KSU Next, it is highly recommended to use `OverlayFS` instead of `magisk mount`.
+This is a "build-less" project. To package the module for installation, you need to create a zip archive of the project's contents.
 
-**⚠️ Important Warning:** If you switch from `magisk mount` to `OverlayFS`, all currently installed modules will be removed. You will need to reinstall them after making the switch.
+From the root of the project directory, run the following command:
+
+```bash
+zip -r wifi_tweaks.zip . -x ".git/*" "GEMINI.md"
+```
+
+This will create `wifi_tweaks.zip`, which can be flashed in the KernelSU app.
+
+---
+
+## 📂 Key Files
+
+*   `module.prop`: Defines the metadata for the KernelSU module (ID, name, version, etc.).
+*   `common/switch_mode.sh`: The core shell script that handles the logic of switching the symlink and restarting Wi-Fi services.
+*   `webroot/index.html`: The modern, single-page web interface for the module.
+*   `system/vendor/etc/wifi/perf.ini`: The Wi-Fi configuration file optimized for performance.
+*   `system/vendor/etc/wifi/battery.ini`: The Wi-Fi configuration file optimized for battery saving.
+
+---
+
+## Safety Note
+
+The script uses `svc wifi disable` and `svc wifi enable` to restart the Wi-Fi service, which is the standard and safe Android method for this operation. The script also verifies that it is running with root privileges before making any changes.
