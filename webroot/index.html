@@ -158,115 +158,123 @@
     </div>
 
     <script>
-        const perfButton = document.getElementById('perf-button');
-        const batteryButton = document.getElementById('battery-button');
-        const outputDiv = document.getElementById('output');
-        const currentModeSpan = document.getElementById('current-mode');
-        const statusDiv = document.getElementById('status');
+    // NOTE: This code uses the SYNCHRONOUS ksu.exec provided by the KernelSU WebUI bridge.
 
-        const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh';
+    const perfButton = document.getElementById('perf-button');
+    const batteryButton = document.getElementById('battery-button');
+    const outputDiv = document.getElementById('output');
+    const currentModeSpan = document.getElementById('current-mode');
+    const statusDiv = document.getElementById('status');
 
-        // Function to set the UI state (text and color)
-        function setUIMode(mode) {
-            // Clear any existing dot
-            const existingDot = statusDiv.querySelector('.status-dot');
-            if (existingDot) {
-                existingDot.remove();
-            }
+    // MODULE ID check: Based on module.prop, the ID is 'wifi_tweaks'.
+    const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh'; 
 
-            const dot = document.createElement('span');
-            dot.className = 'status-dot';
-
-            let modeText = 'Unknown';
-            let dotColor = 'var(--text-secondary)';
-
-            if (mode.includes('perf')) {
-                modeText = 'Performance';
-                dotColor = 'var(--accent-perf)';
-            } else if (mode.includes('battery')) {
-                modeText = 'Battery';
-                dotColor = 'var(--accent-battery)';
-            }
-
-            currentModeSpan.textContent = modeText;
-            dot.style.backgroundColor = dotColor;
-            statusDiv.prepend(dot);
+    // Function to set the UI state (text and color)
+    function setUIMode(mode) {
+        const existingDot = statusDiv.querySelector('.status-dot');
+        if (existingDot) {
+            existingDot.remove();
         }
 
-        // Function to lock/unlock the UI during operations
-        function setUILocked(locked) {
-            perfButton.disabled = locked;
-            batteryButton.disabled = locked;
-            outputDiv.style.opacity = locked ? 0.6 : 1;
-            perfButton.style.cursor = locked ? 'wait' : 'pointer';
-            batteryButton.style.cursor = locked ? 'wait' : 'pointer';
+        const dot = document.createElement('span');
+        dot.className = 'status-dot';
+
+        let modeText = 'Unknown';
+        let dotColor = 'var(--text-secondary)';
+
+        if (mode.includes('perf')) {
+            modeText = 'Performance';
+            dotColor = 'var(--accent-perf)';
+        } else if (mode.includes('battery')) {
+            modeText = 'Battery';
+            dotColor = 'var(--accent-battery)';
         }
 
-        // Generic async function to run a shell command
-        async function runCommand(command) {
-            // ksu.exec is asynchronous and returns a Promise
-            const result = await ksu.exec(command);
+        currentModeSpan.textContent = modeText;
+        dot.style.backgroundColor = dotColor;
+        statusDiv.prepend(dot);
+    }
 
-            if (result && typeof result.errno === 'number') {
-                if (result.errno === 0) {
-                    return result.stdout;
-                } else {
-                    // Command executed but returned an error
-                    throw new Error(`Command failed with errno ${result.errno}: ${result.stdout || 'No output'}`);
-                }
+    // Function to lock/unlock the UI during operations
+    function setUILocked(locked) {
+        perfButton.disabled = locked;
+        batteryButton.disabled = locked;
+        outputDiv.style.opacity = locked ? 0.6 : 1;
+        perfButton.style.cursor = locked ? 'wait' : 'pointer';
+        batteryButton.style.cursor = locked ? 'wait' : 'pointer';
+    }
+
+    // Generic function to run a shell command (Synchronous call)
+    function runCommand(command) {
+        // ksu.exec is a SYNCHRONOUS global function
+        const result = ksu.exec(command);
+
+        if (result && typeof result.errno === 'number') {
+            if (result.errno === 0) {
+                // Return script's stdout on success
+                return result.stdout;
             } else {
-                // ksu.exec returned an unexpected value
-                throw new Error('Invalid or unexpected response from ksu.exec.');
+                // Throw an error if the script exited non-zero
+                throw new Error(`Command failed with errno ${result.errno}: ${result.stdout || 'No output'}`);
             }
+        } else {
+            // Throw a low-level bridge error
+            throw new Error('Invalid or unexpected response from ksu.exec.');
         }
+    }
 
-        // Async function to get the current status on page load
-        async function getInitialStatus() {
-            outputDiv.textContent = 'Checking current Wi-Fi mode...';
-            setUILocked(true);
-            try {
-                const command = `${scriptPath} status`;
-                const result = await runCommand(command);
-                setUIMode(result.trim());
-                outputDiv.textContent = `Current mode is ${currentModeSpan.textContent}. Ready.`;
-            } catch (error) {
-                outputDiv.textContent = `Error checking status: ${error.message}`;
-                setUIMode('unknown');
-            } finally {
-                setUILocked(false);
-            }
+    // Function to get the current status on page load (Synchronous)
+    function getInitialStatus() {
+        outputDiv.textContent = 'Checking current Wi-Fi mode...';
+        setUILocked(true);
+        try {
+            // No 'await' needed here
+            const command = `${scriptPath} status`; 
+            const result = runCommand(command);
+            const initialMode = result.trim();
+            
+            setUIMode(initialMode);
+            outputDiv.textContent = `Current mode is ${currentModeSpan.textContent}. Ready.`;
+        } catch (error) {
+            outputDiv.textContent = `Error checking status: ${error.message}`;
+            setUIMode('unknown');
+        } finally {
+            setUILocked(false);
         }
+    }
 
-        // Async function to handle the switch process
-        async function runSwitch(mode) {
-            const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
-            outputDiv.textContent = `Switching to ${modeName} mode...`;
-            setUILocked(true);
+    // Function to handle the switch process (Synchronous)
+    function runSwitch(mode) {
+        const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
+        outputDiv.textContent = `Switching to ${modeName} mode...`;
+        setUILocked(true);
+        
+        try {
+            // First, run the switch command. No 'await'.
+            const switchOutput = runCommand(`${scriptPath} ${mode}`);
+            outputDiv.textContent = switchOutput; // Display the success message from the script
+            
+            // After switching, re-verify the status directly to confirm. No 'await'.
+            const statusResult = runCommand(`${scriptPath} status`);
+            const newMode = statusResult.trim();
+            
+            setUIMode(newMode);
+            outputDiv.textContent = `Successfully switched to ${newMode.charAt(0).toUpperCase() + newMode.slice(1)} mode.`;
 
-            try {
-                // First, run the switch command
-                await runCommand(`${scriptPath} ${mode}`);
-                
-                // After switching, re-verify the status directly to confirm
-                const statusResult = await runCommand(`${scriptPath} status`);
-                const newMode = statusResult.trim();
-                
-                setUIMode(newMode);
-                outputDiv.textContent = `Successfully switched to ${newMode.charAt(0).toUpperCase() + newMode.slice(1)} mode.`;
-
-            } catch (error) {
-                outputDiv.textContent = `Error switching mode: ${error.message}`;
-                // Re-check status to show the real current state after a failed switch
-                await getInitialStatus();
-            } finally {
-                setUILocked(false);
-            }
+        } catch (error) {
+            outputDiv.textContent = `Error switching mode: ${error.message}`;
+            // If the switch failed, check the status immediately. No 'await'.
+            getInitialStatus();
+        } finally {
+            setUILocked(false);
         }
+    }
 
-        // Event Listeners
-        document.addEventListener('DOMContentLoaded', getInitialStatus);
-        perfButton.addEventListener('click', () => runSwitch('perf'));
-        batteryButton.addEventListener('click', () => runSwitch('battery'));
-    </script>
+    // Event Listeners: Call the synchronous functions directly
+    document.addEventListener('DOMContentLoaded', getInitialStatus);
+    perfButton.addEventListener('click', () => runSwitch('perf'));
+    batteryButton.addEventListener('click', () => runSwitch('battery');
+   </script>
+
 </body>
 </html>
