@@ -15,6 +15,8 @@
             --accent-perf-dark: #018786;
             --accent-battery: #ff5252;
             --accent-battery-dark: #c51162;
+            --accent-default: #42a5f5; /* A shade of blue for default */
+            --accent-default-dark: #1976d2;
             --shadow: rgba(0, 0, 0, 0.5);
         }
 
@@ -102,6 +104,16 @@
             transform: translateY(-3px);
         }
         
+        #default-button {
+            background-color: var(--accent-default);
+        }
+
+        #default-button:hover {
+            background-color: var(--accent-default-dark);
+            box-shadow: 0 0 20px var(--accent-default);
+            transform: translateY(-3px);
+        }
+        
         .icon {
             width: 24px;
             height: 24px;
@@ -151,6 +163,10 @@
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm-1-8h2v6h-2zm0-4h2v2h-2z"/></svg>
                 Battery
             </button>
+            <button id="default-button">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                Default
+            </button>
         </div>
         <div id="output">
             <p>Status will be shown here...</p>
@@ -162,6 +178,7 @@
 
     const perfButton = document.getElementById('perf-button');
     const batteryButton = document.getElementById('battery-button');
+    const defaultButton = document.getElementById('default-button');
     const outputDiv = document.getElementById('output');
     const currentModeSpan = document.getElementById('current-mode');
     const statusDiv = document.getElementById('status');
@@ -188,6 +205,9 @@
         } else if (mode.includes('battery')) {
             modeText = 'Battery';
             dotColor = 'var(--accent-battery)';
+        } else if (mode.includes('default')) {
+            modeText = 'Default';
+            dotColor = 'var(--accent-default)';
         }
 
         currentModeSpan.textContent = modeText;
@@ -199,9 +219,11 @@
     function setUILocked(locked) {
         perfButton.disabled = locked;
         batteryButton.disabled = locked;
+        defaultButton.disabled = locked;
         outputDiv.style.opacity = locked ? 0.6 : 1;
         perfButton.style.cursor = locked ? 'wait' : 'pointer';
         batteryButton.style.cursor = locked ? 'wait' : 'pointer';
+        defaultButton.style.cursor = locked ? 'wait' : 'pointer';
     }
 
     // Generic function to run a shell command (Synchronous call)
@@ -273,7 +295,8 @@
     // Event Listeners: Call the synchronous functions directly
     document.addEventListener('DOMContentLoaded', getInitialStatus);
     perfButton.addEventListener('click', () => runSwitch('perf'));
-    batteryButton.addEventListener('click', () => runSwitch('battery');
+    batteryButton.addEventListener('click', () => runSwitch('battery'));
+    defaultButton.addEventListener('click', () => runSwitch('default'));
    </script>
 
 </body>

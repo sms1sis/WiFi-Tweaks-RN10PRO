@@ -18,6 +18,7 @@ fi
 ACTIVE_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
 PERF_CONFIG_FILE="${MODULE_WIFI_DIR}/perf.ini"
 BATTERY_CONFIG_FILE="${MODULE_WIFI_DIR}/battery.ini"
+DEFAULT_CONFIG_FILE="${MODULE_WIFI_DIR}/default.ini"
 
 # --- Helper Functions ---
 get_status() {
@@ -26,6 +27,8 @@ get_status() {
         echo "perf"
     elif cmp -s "${ACTIVE_CONFIG_FILE}" "${BATTERY_CONFIG_FILE}"; then
         echo "battery"
+    elif cmp -s "${ACTIVE_CONFIG_FILE}" "${DEFAULT_CONFIG_FILE}"; then
+        echo "default"
     else
         echo "unknown"
     fi
@@ -40,14 +43,14 @@ fi
 
 # Check if an argument is provided
 if [ -z "$1" ]; then
-    echo "Usage: $0 [perf|battery|status]" >&2
+    echo "Usage: $0 [perf|battery|default|status]" >&2
     exit 1
 fi
 
 MODE="$1"
 
 case "$MODE" in
-    "perf"|"battery")
+    "perf"|"battery"|"default")
         TARGET_INI_FILE="${MODULE_WIFI_DIR}/${MODE}.ini"
         
         # Check if the target .ini file exists
@@ -72,7 +75,7 @@ case "$MODE" in
         get_status
         ;;
     *)
-        echo "Usage: $0 [perf|battery|status]" >&2
+        echo "Usage: $0 [perf|battery|default|status]" >&2
         exit 1
         ;;
 esac
