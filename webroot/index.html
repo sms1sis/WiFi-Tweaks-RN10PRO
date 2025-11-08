@@ -87,16 +87,16 @@
         </div>
 
         <div class="tweak">
-            <h2>Transmit Power</h2>
-            <p>Increases the transmit power of the Wi-Fi radio for a stronger signal and better range. This may increase battery consumption and heat.</p>
+            <h2>Balanced Transmit Power</h2>
+            <p>Sets a balanced transmit power for the Wi-Fi radio, offering a good compromise between signal strength and battery consumption.</p>
             <div class="diff">
                 <div class="diff-before">
                     <pre><code>- TxPower2g=10
 - TxPower5g=10</code></pre>
                 </div>
                 <div class="diff-after">
-                    <pre><code>+ TxPower2g=15
-+ TxPower5g=15</code></pre>
+                    <pre><code>+ TxPower2g=12
++ TxPower5g=12</code></pre>
                 </div>
             </div>
         </div>
@@ -110,45 +110,6 @@
                 </div>
                 <div class="diff-after">
                     <pre><code>+ gChannelBondingMode24GHz=1</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="tweak">
-            <h2>Disable Power Saving (BMPS)</h2>
-            <p>Disables Beacon Mode Power Save (BMPS) to keep the Wi-Fi radio more active and reduce latency. This prioritizes performance over battery saving.</p>
-            <div class="diff">
-                <div class="diff-before">
-                    <pre><code>- gEnableBmps=1</code></pre>
-                </div>
-                <div class="diff-after">
-                    <pre><code>+ gEnableBmps=0</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="tweak">
-            <h2>Disable GreenAP</h2>
-            <p>Disables the GreenAP feature, which normally saves power when traffic is low. This ensures the connection remains in a high-performance state.</p>
-            <div class="diff">
-                <div class="diff-before">
-                    <pre><code>- gEnableGreenAp=1</code></pre>
-                </div>
-                <div class="diff-after">
-                    <pre><code>+ gEnableGreenAp=0</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="tweak">
-            <h2>Disable Enhanced GreenAP</h2>
-            <p>Disables Enhanced GreenAP (EGAP) to prevent the Wi-Fi chipset from throttling performance to save power. This helps maintain low latency for real-time applications.</p>
-            <div class="diff">
-                <div class="diff-before">
-                    <pre><code>- gEnableEGAP=1</code></pre>
-                </div>
-                <div class="diff-after">
-                    <pre><code>+ gEnableEGAP=0</code></pre>
                 </div>
             </div>
         </div>
