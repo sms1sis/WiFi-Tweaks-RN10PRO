@@ -4,7 +4,7 @@
 
 This project is a KernelSU module named "WiFi Config Switcher" (`wifi_tweaks`). Its primary purpose is to allow a user to dynamically switch the device's Wi-Fi driver configuration between a high-performance mode and a battery-saving mode without requiring a reboot.
 
-The module achieves this by using a shell script to manipulate a symbolic link (`WCNSS_qcom_cfg.ini`) in the `/vendor/etc/wifi/` directory, pointing it to either a `perf.ini` or a `battery.ini` file.
+The module works by leveraging KernelSU's overlay filesystem. It contains a `WCNSS_qcom_cfg.ini` file that is presented to the system. A shell script, `switch_mode.sh`, modifies this file by copying the contents of either `perf.ini` or `battery.ini` to it, and then restarts the Wi-Fi services to apply the changes. This allows for a rebootless switch of the Wi-Fi configuration.
 
 A user-friendly web interface (WebUI), accessible through the KernelSU app, provides buttons to trigger the switch. The module also includes the necessary configuration files and scripts to function as a standalone KernelSU module.
 
@@ -49,11 +49,12 @@ Once the module is installed and the device is rebooted, you can switch modes us
 ## Key Files
 
 *   `module.prop`: Defines the metadata for the KernelSU module (ID: `wifi_tweaks`, author: `sms1sis`, name, version, etc.).
-*   `common/switch_mode.sh`: The core shell script that handles the logic of switching the symlink and restarting Wi-Fi services. It has been optimized to reduce unnecessary output, returning only a final confirmation or error.
-*   `webroot/index.html`: A modern, single-page web interface that provides buttons to execute the `switch_mode.sh` script. The UI logic has been significantly improved to correctly handle the synchronous nature of `ksu.exec`, provide better real-time feedback during operations, and prevent UI freezes.
+*   `common/switch_mode.sh`: The core shell script that handles the logic of switching the Wi-Fi configuration by copying the appropriate `.ini` file and restarting Wi-Fi services.
+*   `common/post-fs-data.sh`: A boot script that ensures the initial Wi-Fi configuration is applied correctly when the device starts.
+*   `webroot/index.html`: A modern, single-page web interface that provides buttons to execute the `switch_mode.sh` script.
 *   `system/vendor/etc/wifi/perf.ini`: The Wi-Fi configuration file optimized for performance.
 *   `system/vendor/etc/wifi/battery.ini`: The Wi-Fi configuration file optimized for battery saving.
-*   `system/vendor/etc/wifi/WCNSS_qcom_cfg.ini`: A symbolic link that points to either `perf.ini` or `battery.ini`. This is the file the Android system reads.
+*   `system/vendor/etc/wifi/WCNSS_qcom_cfg.ini`: A regular file that is a copy of either `perf.ini` or `battery.ini`. This is the file the Android system reads via the KernelSU overlay.
 
 ## Development Conventions
 

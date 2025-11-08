@@ -1,29 +1,31 @@
 #!/system/bin/sh
 
-# Wi-Fi Config Switcher Script
-#
-# This script is designed to be robust and produce minimal, predictable output
-# for easier integration with the WebUI.
+# Wi-Fi Config Switcher Script (Overlay-friendly version)
 
 # Exit on any error
 set -e
 
 # --- Configuration ---
-WIFI_CONFIG_DIR="/vendor/etc/wifi"
-WIFI_CONFIG_SYMLINK="WCNSS_qcom_cfg.ini"
-SYMLINK_PATH="${WIFI_CONFIG_DIR}/${WIFI_CONFIG_SYMLINK}"
+# Dynamically set the module directory based on the execution path
+if echo "$0" | grep -q "/data/adb/modules/"; then
+    # Running as a KernelSU module
+    MODULE_WIFI_DIR="/data/adb/modules/wifi_tweaks/system/vendor/etc/wifi"
+else
+    # Running in a local/dev environment
+    MODULE_WIFI_DIR="$(dirname "$0")/../system/vendor/etc/wifi"
+fi
+
+ACTIVE_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
+PERF_CONFIG_FILE="${MODULE_WIFI_DIR}/perf.ini"
+BATTERY_CONFIG_FILE="${MODULE_WIFI_DIR}/battery.ini"
 
 # --- Helper Functions ---
 get_status() {
-    if [ -L "${SYMLINK_PATH}" ]; then
-        CURRENT_TARGET=$(readlink "${SYMLINK_PATH}")
-        if echo "${CURRENT_TARGET}" | grep -q "perf.ini"; then
-            echo "perf"
-        elif echo "${CURRENT_TARGET}" | grep -q "battery.ini"; then
-            echo "battery"
-        else
-            echo "unknown"
-        fi
+    # Compare the active config with the perf and battery configs
+    if cmp -s "${ACTIVE_CONFIG_FILE}" "${PERF_CONFIG_FILE}"; then
+        echo "perf"
+    elif cmp -s "${ACTIVE_CONFIG_FILE}" "${BATTERY_CONFIG_FILE}"; then
+        echo "battery"
     else
         echo "unknown"
     fi
@@ -46,26 +48,24 @@ MODE="$1"
 
 case "$MODE" in
     "perf"|"battery")
-        TARGET_INI="${MODE}.ini"
+        TARGET_INI_FILE="${MODULE_WIFI_DIR}/${MODE}.ini"
         
         # Check if the target .ini file exists
-        if [ ! -f "${WIFI_CONFIG_DIR}/${TARGET_INI}" ]; then
-            echo "Error: Config file ${TARGET_INI} not found." >&2
+        if [ ! -f "${TARGET_INI_FILE}" ]; then
+            echo "Error: Source config file ${TARGET_INI_FILE} not found." >&2
             exit 1
         fi
 
-        # Perform the switch
-        rm -f "${SYMLINK_PATH}"
-        ln -s "${TARGET_INI}" "${SYMLINK_PATH}"
+        # Perform the switch by copying the file content
+        cp -f "${TARGET_INI_FILE}" "${ACTIVE_CONFIG_FILE}"
 
-        # Restart Wi-Fi services, silencing output for a cleaner WebUI experience.
-        # The delays are important for service stability.
+        # Restart Wi-Fi services to apply the new config via overlay
         svc wifi disable >/dev/null 2>&1
         sleep 1
         svc wifi enable >/dev/null 2>&1
         sleep 2
 
-        # The final output is the new status, which confirms the operation succeeded.
+        # Output the new status to confirm
         get_status
         ;;
     "status")
