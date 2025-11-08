@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-This project is a KernelSU module named "WiFi Config Switcher" (`wifi_tweaks`). Its primary purpose is to allow a user to dynamically switch the device's Wi-Fi driver configuration between a high-performance mode and a battery-saving mode without requiring a reboot.
+This project is a KernelSU module named "WiFi Config Switcher" (`wifi_tweaks`). Its primary purpose is to allow a user to dynamically switch the device's Wi-Fi driver configuration between a high-performance mode, a battery-saving mode, and a default mode without requiring a reboot.
 
-The module works by leveraging KernelSU's overlay filesystem. It contains a `WCNSS_qcom_cfg.ini` file that is presented to the system. A shell script, `switch_mode.sh`, modifies this file by copying the contents of either `perf.ini` or `battery.ini` to it, and then restarts the Wi-Fi services to apply the changes. This allows for a rebootless switch of the Wi-Fi configuration.
+The module works by leveraging KernelSU's overlay filesystem. It contains a `WCNSS_qcom_cfg.ini` file that is presented to the system. A shell script, `switch_mode.sh`, modifies this file by copying the contents of either `perf.ini`, `battery.ini`, or `default.ini` to it, and then restarts the Wi-Fi services to apply the changes. This allows for a rebootless switch of the Wi-Fi configuration.
 
 A user-friendly web interface (WebUI), accessible through the KernelSU app, provides buttons to trigger the switch. The module also includes the necessary configuration files and scripts to function as a standalone KernelSU module.
 
@@ -42,6 +42,9 @@ Once the module is installed and the device is rebooted, you can switch modes us
     # For Battery Mode
     /data/adb/modules/wifi_tweaks/common/switch_mode.sh battery
 
+    # For Default Mode
+    /data/adb/modules/wifi_tweaks/common/switch_mode.sh default
+
     # To get the current status
     /data/adb/modules/wifi_tweaks/common/switch_mode.sh status
     ```
@@ -54,6 +57,7 @@ Once the module is installed and the device is rebooted, you can switch modes us
 *   `webroot/index.html`: A modern, single-page web interface that provides buttons to execute the `switch_mode.sh` script.
 *   `system/vendor/etc/wifi/perf.ini`: The Wi-Fi configuration file optimized for performance.
 *   `system/vendor/etc/wifi/battery.ini`: The Wi-Fi configuration file optimized for battery saving.
+*   `system/vendor/etc/wifi/default.ini`: The default Wi-Fi configuration file.
 *   `system/vendor/etc/wifi/WCNSS_qcom_cfg.ini`: A regular file that is a copy of either `perf.ini` or `battery.ini`. This is the file the Android system reads via the KernelSU overlay.
 
 ## Development Conventions
