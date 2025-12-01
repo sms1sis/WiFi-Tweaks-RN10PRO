@@ -74,4 +74,3 @@ This will create `wifi_tweaks.zip`, which can be flashed in the KernelSU app.
 The script uses `svc wifi disable` and `svc wifi enable` to restart the Wi-Fi service, which is the standard and safe Android method for this operation. The script also verifies that it is running with root privileges before making any changes.
 
 ---
-**Version:** 5.0.0
