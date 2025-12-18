@@ -1,6 +1,6 @@
 id=wifi_tweaks
 name=WiFi Config Switcher
-version=5.2.0
+version=5.2.1
 versionCode=5
 author=sms1sis
 description=Switch between performance ,battery and default Wi-Fi configs.

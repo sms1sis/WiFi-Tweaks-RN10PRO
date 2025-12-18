@@ -129,6 +129,8 @@
             white-space: pre-wrap;
             font-family: monospace;
             min-height: 60px;
+            max-height: 180px;
+            overflow-y: auto;
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
         }
@@ -286,6 +288,7 @@
                 
                 // Append the output so the user sees the logs
                 outputDiv.textContent += switchOutput + "\n"; 
+                outputDiv.scrollTop = outputDiv.scrollHeight;
                 
                 // After switching, re-verify the status directly to confirm.
                 const statusResult = runCommand(`${scriptPath} status`);
@@ -293,9 +296,11 @@
                 
                 setUIMode(newMode);
                 outputDiv.textContent += `\nFinal State: ${newMode.charAt(0).toUpperCase() + newMode.slice(1)} mode active.`;
+                outputDiv.scrollTop = outputDiv.scrollHeight;
 
             } catch (error) {
                 outputDiv.textContent += `\nError switching mode: ${error.message}`;
+                outputDiv.scrollTop = outputDiv.scrollHeight;
                 // If the switch failed, check the status immediately.
                  try {
                     const command = `${scriptPath} status`; 

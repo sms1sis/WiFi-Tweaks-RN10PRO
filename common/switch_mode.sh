@@ -2,9 +2,6 @@
 
 # Wi-Fi Config Switcher Script (Hot-Reload Version)
 
-# Exit on any error
-set -e
-
 # --- Configuration ---
 if echo "$0" | grep -q "/data/adb/modules/"; then
     MODULE_DIR="/data/adb/modules/wifi_tweaks"
@@ -38,122 +35,38 @@ get_status() {
     fi
 }
 
+# Function to attempt driver reload
 reload_driver() {
-    # List of common Qualcomm-related Wi-Fi module names
-    # Added specific qca_cld3 variants often found in newer devices
-    WLAN_MODULE_NAMES=("wlan" "qca_cld3_wlan" "qca_cld3_qca6390" "qca_cld3_qca6490" "wlan_mac" "qca_wlan" "wlan0")
+    # 1. Try unloading common modules
+    local modules="wlan qca_cld3_wlan qca_cld3"
+    local reloaded=false
 
-    FOUND_MODULE=""
-
-    # 1. Search for a loaded module
-    for MOD_NAME in "${WLAN_MODULE_NAMES[@]}"; do
-        # Use ^... to match start of line to avoid partial matches
-        if lsmod | grep -q "^${MOD_NAME} "; then
-            FOUND_MODULE="${MOD_NAME}"
-            break
+    for mod in $modules; do
+        if lsmod | grep -q "^$mod"; then
+            echo "[*] Unloading module $mod..."
+            rmmod "$mod" 2>/dev/null
+            sleep 1
+            echo "[*] Loading module $mod..."
+            # Attempt to find and reload the module
+            if [ -f "/vendor/lib/modules/$mod.ko" ]; then
+                insmod "/vendor/lib/modules/$mod.ko" 2>/dev/null
+            elif [ -f "/system/lib/modules/$mod.ko" ]; then
+                insmod "/system/lib/modules/$mod.ko" 2>/dev/null
+            else
+                modprobe "$mod" 2>/dev/null
+            fi
+            
+            if lsmod | grep -q "^$mod"; then
+                reloaded=true
+            fi
         fi
     done
 
-    if [ -n "${FOUND_MODULE}" ]; then
-        # --- MODULAR DRIVER RELOAD LOGIC (Hot-Reload) ---
-        
-        echo "Detected modular driver (${FOUND_MODULE})."
-        
-        echo "Stopping Wi-Fi service..."
-        svc wifi disable
-        sleep 1
-
-        echo "Unloading module (${FOUND_MODULE})..."
-        # rmmod attempts to remove the module. '2>/dev/null || true' suppresses errors if not found
-        rmmod "${FOUND_MODULE}" 2>/dev/null || true 
-        sleep 1
-
-        echo "Starting Wi-Fi service (will load new config)..."
-        svc wifi enable
-        sleep 3
-        
-        echo ""
-        echo "✅ Config applied successfully. No reboot required."
-
-    else
-        # --- MONOLITHIC / BUILT-IN DRIVER LOGIC ---
-        
-        echo "Driver not found in lsmod. Checking for built-in driver paths..."
-
-        # Potential sysfs paths for Qualcomm Wi-Fi drivers (CNSS/ICNSS/PCI)
-        # 'cnss' and 'icnss' are common platform drivers for Qualcomm connectivity
-        POSSIBLE_DRIVERS=("cnss_pci" "icnss" "cnss2" "qca6174" "qcacld")
-        
-        FOUND_DRIVER_PATH=""
-        REBIND_SUCCESS=0
-        
-        for DRIVER in "${POSSIBLE_DRIVERS[@]}"; do
-             # Check Platform bus
-             if [ -d "/sys/bus/platform/drivers/${DRIVER}" ]; then
-                 FOUND_DRIVER_PATH="/sys/bus/platform/drivers/${DRIVER}"
-             # Check PCI bus
-             elif [ -d "/sys/bus/pci/drivers/${DRIVER}" ]; then
-                 FOUND_DRIVER_PATH="/sys/bus/pci/drivers/${DRIVER}"
-             fi
-
-             if [ -n "${FOUND_DRIVER_PATH}" ]; then
-                 echo "Found potential built-in driver at ${FOUND_DRIVER_PATH}"
-                 
-                 # Iterate over devices bound to this driver (symlinks)
-                 for DEV in "${FOUND_DRIVER_PATH}"/*; do
-                     # Check if it's a symlink (device) and not a file like 'bind'/'unbind'
-                     if [ -L "${DEV}" ]; then
-                         DEV_NAME=$(basename "${DEV}")
-                         # Skip standard files just in case
-                         if [ "${DEV_NAME}" = "bind" ] || [ "${DEV_NAME}" = "unbind" ] || [ "${DEV_NAME}" = "module" ]; then
-                             continue
-                         fi
-                         
-                         echo "Attempting to rebind device: ${DEV_NAME}..."
-                         
-                         echo "Stopping Wi-Fi service..."
-                         svc wifi disable
-                         sleep 1
-                         
-                         echo "Unbinding ${DEV_NAME}..."
-                         echo "${DEV_NAME}" > "${FOUND_DRIVER_PATH}/unbind"
-                         sleep 1
-                         
-                         echo "Binding ${DEV_NAME}..."
-                         echo "${DEV_NAME}" > "${FOUND_DRIVER_PATH}/bind"
-                         sleep 1
-                         
-                         echo "Starting Wi-Fi service..."
-                         svc wifi enable
-                         sleep 3
-                         
-                         echo "✅ Driver rebind attempted via sysfs."
-                         REBIND_SUCCESS=1
-                         break # Assume only one wifi device per driver
-                     fi
-                 done
-                 
-                 if [ "${REBIND_SUCCESS}" -eq 1 ]; then
-                     break
-                 fi
-                 # If we found the driver path but no device, reset and try next driver name
-                 FOUND_DRIVER_PATH=""
-             fi
-        done
-
-        if [ "${REBIND_SUCCESS}" -eq 0 ]; then
-            # --- FALLBACK: SOFT RESET ONLY ---
-            echo "Could not identify sysfs path for rebind. Falling back to service toggle..."
-            svc wifi disable
-            sleep 2
-            svc wifi enable
-            sleep 3
-
-            echo ""
-            echo "⚠️ WARNING: Driver is built-in and rebind failed. A **FULL DEVICE REBOOT** is likely REQUIRED for changes to take effect."
-            echo ""
-        fi
+    if [ "$reloaded" = false ]; then
+        echo "[!] Monolithic driver detected or module reload failed."
+        return 1
     fi
+    return 0
 }
 
 
@@ -191,7 +104,18 @@ case "$MODE" in
         echo "${MODE}" > "${MODE_CONFIG_FILE}"
 
         # STEP 3: Reload Driver
-        reload_driver
+        echo "[*] Toggling WiFi..."
+        svc wifi disable
+        sleep 2
+
+        if reload_driver; then
+            echo "[+] Driver reloaded successfully."
+        else
+            echo "[!] Automatic reload failed (monolithic driver or busy)."
+            echo "[!] PLEASE REBOOT your device to apply changes."
+        fi
+
+        svc wifi enable
 
         # Output status
         get_status
