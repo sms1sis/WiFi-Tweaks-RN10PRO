@@ -40,13 +40,15 @@ get_status() {
 
 reload_driver() {
     # List of common Qualcomm-related Wi-Fi module names
-    WLAN_MODULE_NAMES=("wlan" "wlan_mac" "qca_wlan" "wlan0")
+    # Added specific qca_cld3 variants often found in newer devices
+    WLAN_MODULE_NAMES=("wlan" "qca_cld3_wlan" "qca_cld3_qca6390" "qca_cld3_qca6490" "wlan_mac" "qca_wlan" "wlan0")
 
     FOUND_MODULE=""
 
     # 1. Search for a loaded module
     for MOD_NAME in "${WLAN_MODULE_NAMES[@]}"; do
-        if lsmod | grep -q "${MOD_NAME}"; then
+        # Use ^... to match start of line to avoid partial matches
+        if lsmod | grep -q "^${MOD_NAME} "; then
             FOUND_MODULE="${MOD_NAME}"
             break
         fi
@@ -55,7 +57,7 @@ reload_driver() {
     if [ -n "${FOUND_MODULE}" ]; then
         # --- MODULAR DRIVER RELOAD LOGIC (Hot-Reload) ---
         
-        echo "Detected modular driver (${FOUND_MODULE}.ko)."
+        echo "Detected modular driver (${FOUND_MODULE})."
         
         echo "Stopping Wi-Fi service..."
         svc wifi disable
@@ -74,19 +76,83 @@ reload_driver() {
         echo "✅ Config applied successfully. No reboot required."
 
     else
-        # --- MONOLITHIC DRIVER RELOAD LOGIC (Soft-Reset + Reboot Warning) ---
+        # --- MONOLITHIC / BUILT-IN DRIVER LOGIC ---
         
-        echo "Driver not found in lsmod using common module names. Assuming monolithic or different name."
+        echo "Driver not found in lsmod. Checking for built-in driver paths..."
 
-        echo "Attempting soft restart of Wi-Fi service..."
-        svc wifi disable
-        sleep 2
-        svc wifi enable
-        sleep 3
+        # Potential sysfs paths for Qualcomm Wi-Fi drivers (CNSS/ICNSS/PCI)
+        # 'cnss' and 'icnss' are common platform drivers for Qualcomm connectivity
+        POSSIBLE_DRIVERS=("cnss_pci" "icnss" "cnss2" "qca6174" "qcacld")
+        
+        FOUND_DRIVER_PATH=""
+        REBIND_SUCCESS=0
+        
+        for DRIVER in "${POSSIBLE_DRIVERS[@]}"; do
+             # Check Platform bus
+             if [ -d "/sys/bus/platform/drivers/${DRIVER}" ]; then
+                 FOUND_DRIVER_PATH="/sys/bus/platform/drivers/${DRIVER}"
+             # Check PCI bus
+             elif [ -d "/sys/bus/pci/drivers/${DRIVER}" ]; then
+                 FOUND_DRIVER_PATH="/sys/bus/pci/drivers/${DRIVER}"
+             fi
 
-        echo ""
-        echo "⚠️ WARNING: Driver is built-in. The new configuration has been written and bind-mounted, but a **FULL DEVICE REBOOT** is REQUIRED for the kernel driver to read the new settings."
-        echo ""
+             if [ -n "${FOUND_DRIVER_PATH}" ]; then
+                 echo "Found potential built-in driver at ${FOUND_DRIVER_PATH}"
+                 
+                 # Iterate over devices bound to this driver (symlinks)
+                 for DEV in "${FOUND_DRIVER_PATH}"/*; do
+                     # Check if it's a symlink (device) and not a file like 'bind'/'unbind'
+                     if [ -L "${DEV}" ]; then
+                         DEV_NAME=$(basename "${DEV}")
+                         # Skip standard files just in case
+                         if [ "${DEV_NAME}" = "bind" ] || [ "${DEV_NAME}" = "unbind" ] || [ "${DEV_NAME}" = "module" ]; then
+                             continue
+                         fi
+                         
+                         echo "Attempting to rebind device: ${DEV_NAME}..."
+                         
+                         echo "Stopping Wi-Fi service..."
+                         svc wifi disable
+                         sleep 1
+                         
+                         echo "Unbinding ${DEV_NAME}..."
+                         echo "${DEV_NAME}" > "${FOUND_DRIVER_PATH}/unbind"
+                         sleep 1
+                         
+                         echo "Binding ${DEV_NAME}..."
+                         echo "${DEV_NAME}" > "${FOUND_DRIVER_PATH}/bind"
+                         sleep 1
+                         
+                         echo "Starting Wi-Fi service..."
+                         svc wifi enable
+                         sleep 3
+                         
+                         echo "✅ Driver rebind attempted via sysfs."
+                         REBIND_SUCCESS=1
+                         break # Assume only one wifi device per driver
+                     fi
+                 done
+                 
+                 if [ "${REBIND_SUCCESS}" -eq 1 ]; then
+                     break
+                 fi
+                 # If we found the driver path but no device, reset and try next driver name
+                 FOUND_DRIVER_PATH=""
+             fi
+        done
+
+        if [ "${REBIND_SUCCESS}" -eq 0 ]; then
+            # --- FALLBACK: SOFT RESET ONLY ---
+            echo "Could not identify sysfs path for rebind. Falling back to service toggle..."
+            svc wifi disable
+            sleep 2
+            svc wifi enable
+            sleep 3
+
+            echo ""
+            echo "⚠️ WARNING: Driver is built-in and rebind failed. A **FULL DEVICE REBOOT** is likely REQUIRED for changes to take effect."
+            echo ""
+        fi
     fi
 }
 

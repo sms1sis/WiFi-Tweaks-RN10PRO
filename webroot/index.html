@@ -274,28 +274,40 @@
     // Function to handle the switch process (Synchronous)
     function runSwitch(mode) {
         const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
-        outputDiv.textContent = `Switching to ${modeName} mode...`;
+        outputDiv.textContent = `Switching to ${modeName} mode...\n\n`;
         setUILocked(true);
         
-        try {
-            // First, run the switch command. No 'await'.
-            const switchOutput = runCommand(`${scriptPath} ${mode}`);
-            outputDiv.textContent = switchOutput; // Display the success message from the script
-            
-            // After switching, re-verify the status directly to confirm. No 'await'.
-            const statusResult = runCommand(`${scriptPath} status`);
-            const newMode = statusResult.trim();
-            
-            setUIMode(newMode);
-            outputDiv.textContent = `Successfully switched to ${newMode.charAt(0).toUpperCase() + newMode.slice(1)} mode.`;
+        // Use setTimeout to allow the UI to update with the initial message before the sync call blocks
+        setTimeout(() => {
+            try {
+                // First, run the switch command. No 'await'.
+                // We assume runCommand returns the stdout string.
+                const switchOutput = runCommand(`${scriptPath} ${mode}`);
+                
+                // Append the output so the user sees the logs
+                outputDiv.textContent += switchOutput + "\n"; 
+                
+                // After switching, re-verify the status directly to confirm.
+                const statusResult = runCommand(`${scriptPath} status`);
+                const newMode = statusResult.trim();
+                
+                setUIMode(newMode);
+                outputDiv.textContent += `\nFinal State: ${newMode.charAt(0).toUpperCase() + newMode.slice(1)} mode active.`;
 
-        } catch (error) {
-            outputDiv.textContent = `Error switching mode: ${error.message}`;
-            // If the switch failed, check the status immediately. No 'await'.
-            getInitialStatus();
-        } finally {
-            setUILocked(false);
-        }
+            } catch (error) {
+                outputDiv.textContent += `\nError switching mode: ${error.message}`;
+                // If the switch failed, check the status immediately.
+                 try {
+                    const command = `${scriptPath} status`; 
+                    const result = runCommand(command);
+                    setUIMode(result.trim());
+                } catch (e) {
+                    setUIMode('unknown');
+                }
+            } finally {
+                setUILocked(false);
+            }
+        }, 50); // Small delay to let the DOM render "Switching..."
     }
 
     // Event Listeners: Call the synchronous functions directly
