@@ -2,7 +2,7 @@
 
 A KernelSU module to easily switch your device's Wi-Fi driver configuration between a high-performance, battery-saving, or default mode.
 
-**Note:** A reboot is required for the selected mode to take effect.
+**Note:** A reboot is required for the selected mode to take effect if wifi driver is monolithic/built-in!
 
 ## ✨ Features
 
@@ -11,7 +11,7 @@ A KernelSU module to easily switch your device's Wi-Fi driver configuration betw
     *   **Performance (`perf.ini`):** Optimized for maximum throughput and low latency.
     *   **Battery (`battery.ini`):** Tuned for reduced power consumption.
     *   **Default (`default.ini`):** The stock configuration for your device.
-*   **User-Friendly WebUI:** A modern, responsive web interface within the KernelSU app to switch modes with a single tap. The UI now includes icons for each mode.
+*   **User-Friendly WebUI:** A modern, responsive web interface within the KernelSU app to switch modes with a single tap.
 *   **Command-Line Interface:** Advanced users can switch modes via a shell script.
 
 ---
@@ -71,6 +71,6 @@ This will create `wifi_tweaks.zip`, which can be flashed in the KernelSU app.
 
 ## Safety Note
 
-The script uses `svc wifi disable` and `svc wifi enable` to restart the Wi-Fi service, which is the standard and safe Android method for this operation. The script also verifies that it is running with root privileges before making any changes.
+The script uses `svc wifi disable` and `svc wifi enable` to restart the Wi-Fi service, which is the standard and safe Android method for this operation. 
 
 ---
