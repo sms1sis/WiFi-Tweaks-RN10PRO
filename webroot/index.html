@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wi-Fi Config Switcher</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --background-start: #1a1a2e;
+            --background-end: #16213e;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --accent-perf: #03dac6;
+            --accent-perf-dark: #018786;
+            --accent-battery: #ff5252;
+            --accent-battery-dark: #c51162;
+            --accent-default: #42a5f5; /* A shade of blue for default */
+            --accent-default-dark: #1976d2;
+            --shadow: rgba(0, 0, 0, 0.5);
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(45deg, var(--background-start), var(--background-end));
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-y: auto;
+            padding: 20px 0;
+        }
+
+        .container {
+            text-align: center;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            width: 90%;
+            max-width: 500px;
+            margin: auto;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px var(--shadow);
+        }
+
+        h1 {
+            font-weight: 700;
+            font-size: 2.2rem;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            background: -webkit-linear-gradient(45deg, var(--accent-perf), var(--accent-battery));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: var(--text-secondary);
+            font-weight: 300;
+            margin-bottom: 1.5rem;
+        }
+
+        .button-group {
+            margin-top: 1rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+        }
+
+        button {
+            padding: 0.7rem 0.2rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: #121212;
+            justify-content: center;
+            width: 100%;
+        }
+
+        #perf-button {
+            background-color: var(--accent-perf);
+        }
+
+        #perf-button:hover:not(:disabled) {
+            background-color: var(--accent-perf-dark);
+            box-shadow: 0 0 15px var(--accent-perf);
+            transform: translateY(-2px);
+        }
+
+        #battery-button {
+            background-color: var(--accent-battery);
+        }
+
+        #battery-button:hover:not(:disabled) {
+            background-color: var(--accent-battery-dark);
+            box-shadow: 0 0 15px var(--accent-battery);
+            transform: translateY(-2px);
+        }
+        
+        #default-button {
+            background-color: var(--accent-default);
+        }
+
+        #default-button:hover:not(:disabled) {
+            background-color: var(--accent-default-dark);
+            box-shadow: 0 0 15px var(--accent-default);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        #output {
+            margin-top: 1.5rem;
+            padding: 1.2rem;
+            background-color: rgba(0, 0, 0, 0.45);
+            border-radius: 12px;
+            text-align: center;
+            white-space: pre-wrap;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        #output.updating {
+            border-color: var(--accent-perf);
+            box-shadow: 0 0 15px rgba(3, 218, 198, 0.2);
+            animation: pulse-border 1.5s infinite;
+        }
+
+        @keyframes pulse-border {
+            0% { border-color: rgba(255, 255, 255, 0.15); }
+            50% { border-color: var(--accent-perf); }
+            100% { border-color: rgba(255, 255, 255, 0.15); }
+        }
+        
+        #status {
+            margin-top: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.2);
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-flex;
+            margin-bottom: 1rem;
+        }
+        
+        .status-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 12px;
+            box-shadow: 0 0 10px currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Wi-Fi Tuner</h1>
+        <p>Advanced Wi-Fi Configuration Manager</p>
+        <div id="status">
+            <span id="mode-container">Current Mode: <span id="current-mode">Detecting...</span></span>
+        </div>
+        <div class="button-group">
+            <button id="perf-button">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10.12h-6.78l2.74-6.04-1.92-.88-3.43 7.54h-3.12L11.94 2 10 2.88 5.64 12H2v2h4.36l-4.22 9.28 1.92.88L7.5 16.62h3.12l-3.43 7.54 1.92.88L12.53 14h6.78l-2.74 6.04 1.92.88 3.43-7.54h3.12L18.06 22l1.92-.88L24.36 12H22v-2h-1v.01zM12.5 12H7.8l3.44-7.54L12.5 12z"/></svg>
+                Performance
+            </button>
+            <button id="battery-button">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                Battery
+            </button>
+            <button id="default-button">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                Default
+            </button>
+        </div>
+        <div id="output">Initializing system hooks...</div>
+    </div>
+
+    <script>
+    // ASYNCHRONOUS KernelSU WebUI Bridge
+    const perfButton = document.getElementById('perf-button');
+    const batteryButton = document.getElementById('battery-button');
+    const defaultButton = document.getElementById('default-button');
+    const outputDiv = document.getElementById('output');
+    const currentModeSpan = document.getElementById('current-mode');
+    const statusDiv = document.getElementById('status');
+
+    const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh'; 
+    const logFile = "/data/local/tmp/wifi_tweaks.log";
+    let pollInterval = null;
+
+    function setUIMode(mode) {
+        const existingDot = statusDiv.querySelector('.status-dot');
+        if (existingDot) existingDot.remove();
+
+        const dot = document.createElement('span');
+        dot.className = 'status-dot';
+
+        let modeText = 'Unknown';
+        let dotColor = 'var(--text-secondary)';
+
+        if (mode.includes('perf')) {
+            modeText = 'Performance';
+            dotColor = 'var(--accent-perf)';
+        } else if (mode.includes('battery')) {
+            modeText = 'Battery';
+            dotColor = 'var(--accent-battery)';
+        } else if (mode.includes('default')) {
+            modeText = 'Default';
+            dotColor = 'var(--accent-default)';
+        }
+
+        currentModeSpan.textContent = modeText;
+        dot.style.backgroundColor = dotColor;
+        dot.style.color = dotColor;
+        statusDiv.prepend(dot);
+    }
+
+    function setUILocked(locked) {
+        [perfButton, batteryButton, defaultButton].forEach(btn => btn.disabled = locked);
+        if (locked) {
+            outputDiv.classList.add('updating');
+        } else {
+            outputDiv.classList.remove('updating');
+        }
+    }
+
+    function runCommand(command) {
+        try {
+            const result = ksu.exec(command);
+            if (typeof result === 'string') return result;
+            if (result && typeof result.errno === 'number') {
+                if (result.errno === 0) return result.stdout;
+                return `Error (Code ${result.errno}): ${result.stderr || 'Command failed'}`;
+            }
+            return String(result);
+        } catch (e) {
+            return `Execution Error: ${e.message}`;
+        }
+    }
+
+    function getInitialStatus() {
+        setUILocked(true);
+        setTimeout(() => {
+            const result = runCommand(`${scriptPath} status`);
+            setUIMode(result.trim());
+            outputDiv.textContent = `System Ready. Detected Mode: ${currentModeSpan.textContent}`;
+            setUILocked(false);
+        }, 300);
+    }
+
+    function readFileSafe(path) {
+        try {
+            const content = ksu.fs.readFile(path);
+            if (!content) return "";
+            if (typeof content !== 'string') {
+                return new TextDecoder('utf-8').decode(content);
+            }
+            return content;
+        } catch (e) {
+            return "";
+        }
+    }
+
+    function getVersion() {
+        try {
+            const propPath = scriptPath.replace('common/switch_mode.sh', 'module.prop');
+            let prop = readFileSafe(propPath);
+            if (!prop || prop.includes('Error')) {
+                prop = runCommand(`cat ${propPath}`);
+            }
+            
+            const match = prop.match(/^version=(.*)$/m);
+            if (match) {
+                const v = match[1].trim();
+                return v.startsWith('v') ? v : 'v' + v;
+            }
+        } catch (e) {
+            console.error("Version detection error:", e);
+        }
+        return "vUnknown";
+    }
+
+    function finalizeSwitch() {
+        // Verify Status
+        const newMode = runCommand(`${scriptPath} status`).trim();
+        setUIMode(newMode);
+        
+        outputDiv.textContent = `Operation complete. Current Mode: ${newMode.toUpperCase()}`;
+        setUILocked(false);
+    }
+
+    function runSwitch(mode) {
+        if (pollInterval) clearInterval(pollInterval);
+
+        const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
+        setUILocked(true);
+        outputDiv.textContent = `Switching to ${modeName} mode...\nPlease wait...`;
+        
+        // 1. Clean old log
+        runCommand(`rm "${logFile}"`);
+
+        // 2. Start script in background & get PID
+        const cmd = `nohup sh ${scriptPath} ${mode} > /dev/null 2>&1 & echo $!`;
+        const result = runCommand(cmd);
+        const pid = parseInt(result.trim());
+
+        if (isNaN(pid)) {
+             outputDiv.textContent = `\n[Error] Failed to start background process. Output: ${result}`;
+             setUILocked(false);
+             return;
+        }
+
+        // 3. Poll process status only (no log reading)
+        let attempts = 0;
+        
+        pollInterval = setInterval(() => {
+            attempts++;
+            
+            // kill -0 <pid> returns 0 if running, 1 if not found
+            const check = runCommand(`kill -0 ${pid} 2>/dev/null; echo $?`).trim();
+            
+            if (check !== '0') {
+                clearInterval(pollInterval);
+                pollInterval = null;
+                finalizeSwitch();
+            } else if (attempts > 100) { // 20 seconds timeout
+                clearInterval(pollInterval);
+                pollInterval = null;
+                outputDiv.textContent += `\n[Timeout] Script execution timed out.`;
+                finalizeSwitch();
+            }
+        }, 200); // Poll every 200ms
+    }
+
+    document.addEventListener('DOMContentLoaded', getInitialStatus);
+    perfButton.addEventListener('click', () => runSwitch('perf'));
+    batteryButton.addEventListener('click', () => runSwitch('battery'));
+    defaultButton.addEventListener('click', () => runSwitch('default'));
+    </script>
+
+</body>
+</html>
