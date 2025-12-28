@@ -1,37 +1,34 @@
 #!/system/bin/sh
-
 # This script runs at boot time to set the Wi-Fi configuration.
 
-# Module directory
+# --- Configuration ---
 MODDIR=${0%/*}
-
-# Permissions are set during module packaging for post-fs-data.sh itself.
-# However, other scripts might lose executable permissions during flashing.
-# Re-ensure switch_mode.sh is executable.
-chmod +x "${MODDIR}/common/switch_mode.sh"
-
-# Configuration files
 WIFI_CONFIG_DIR="/vendor/etc/wifi"
 WIFI_CONFIG_FILE="WCNSS_qcom_cfg.ini"
 CONFIG_FILE_PATH="${WIFI_CONFIG_DIR}/${WIFI_CONFIG_FILE}"
-
-# Mode configuration file
 MODE_CONFIG_FILE="${MODDIR}/common/mode.conf"
+INTERNAL_CONFIG_FILE="${MODDIR}/system/vendor/etc/wifi/${WIFI_CONFIG_FILE}"
 
-# Read the desired mode
+# --- Execution ---
+
+# 1. Ensure helper script is executable
+chmod +x "${MODDIR}/common/switch_mode.sh"
+
+# 2. Determine Mode
 if [ -f "${MODE_CONFIG_FILE}" ]; then
     MODE=$(cat "${MODE_CONFIG_FILE}")
 else
-    # Default to performance mode if the config file doesn't exist
-    MODE="perf"
+    # Default to battery mode if not set
+    MODE="battery"
+    echo "$MODE" > "${MODE_CONFIG_FILE}"
 fi
 
-# Target .ini file
+# 3. Prepare Module Config
 TARGET_INI_FILE="${MODDIR}/system/vendor/etc/wifi/${MODE}.ini"
 
-# Check if the target .ini file exists
 if [ -f "${TARGET_INI_FILE}" ]; then
-    # Copy the selected .ini file to the module's internal system mirror
-    # This prepares the file for Magic Mount overlay
-    cp -f "${TARGET_INI_FILE}" "${MODDIR}/system/vendor/etc/wifi/${WIFI_CONFIG_FILE}"
+    # Overwrite the internal config file with the selected mode
+    cp -f "${TARGET_INI_FILE}" "${INTERNAL_CONFIG_FILE}"
+    # Ensure correct permissions for the config file
+    chmod 644 "${INTERNAL_CONFIG_FILE}"
 fi

@@ -1,47 +1,49 @@
 #!/system/bin/sh
 
 # Wi-Fi Config Switcher Script (Hot-Reload Version)
-# Improved logging for debugging
+# Improved logging and error handling
 
-# --- Configuration ---
+# --- Constants & Paths ---
+readonly SCRIPT_NAME=$(basename "$0")
 if echo "$0" | grep -q "/data/adb/modules/"; then
-    MODULE_DIR="/data/adb/modules/wifi_tweaks"
+    readonly MODULE_DIR="/data/adb/modules/wifi_tweaks"
 else
-    # Fallback to current script location
-    SCRIPT_PATH=$(readlink -f "$0")
-    SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
-    MODULE_DIR=$(dirname "$SCRIPT_DIR")
+    # Fallback to current script location logic
+    readonly SCRIPT_PATH=$(readlink -f "$0")
+    readonly SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+    readonly MODULE_DIR=$(dirname "$SCRIPT_DIR")
 fi
 
-# Defined Paths
-MODULE_WIFI_DIR="${MODULE_DIR}/system/vendor/etc/wifi"
-INTERNAL_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
-SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
+readonly MODULE_WIFI_DIR="${MODULE_DIR}/system/vendor/etc/wifi"
+readonly INTERNAL_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
+readonly SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
 
-# Get version from module.prop
-VERSION=$(grep "^version=" "${MODULE_DIR}/module.prop" | cut -d= -f2)
-[ -z "$VERSION" ] && VERSION="Unknown"
+readonly PERF_CONFIG_FILE="${MODULE_WIFI_DIR}/perf.ini"
+readonly BATTERY_CONFIG_FILE="${MODULE_WIFI_DIR}/battery.ini"
+readonly DEFAULT_CONFIG_FILE="${MODULE_WIFI_DIR}/default.ini"
+readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 
-PERF_CONFIG_FILE="${MODULE_WIFI_DIR}/perf.ini"
-BATTERY_CONFIG_FILE="${MODULE_WIFI_DIR}/battery.ini"
-DEFAULT_CONFIG_FILE="${MODULE_WIFI_DIR}/default.ini"
-MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
+readonly LOG_FILE="/data/local/tmp/wifi_tweaks.log"
+readonly RESULT_FILE="/data/local/tmp/wifi_tweaks_result"
 
-LOG_FILE="/data/local/tmp/wifi_tweaks.log"
+# Get version
+readonly VERSION=$(grep "^version=" "${MODULE_DIR}/module.prop" | cut -d= -f2 || echo "Unknown")
 
-# Function to log (timestamps added, output redirected by main block)
+# --- Logging Helper ---
 log() {
     echo "[$(date +%T)] $1"
 }
 
-# --- Helper Functions ---
+# --- Core Functions ---
+
 get_status() {
-    # Check the ACTUAL system file to verify if the mount is active/visible
+    # Check if system file exists
     if [ ! -f "${SYSTEM_CONFIG_FILE}" ]; then
         echo "unknown"
         return
     fi
     
+    # Compare content to determine mode
     if cmp -s "${SYSTEM_CONFIG_FILE}" "${PERF_CONFIG_FILE}"; then
         echo "perf"
     elif cmp -s "${SYSTEM_CONFIG_FILE}" "${BATTERY_CONFIG_FILE}"; then
@@ -53,53 +55,56 @@ get_status() {
     fi
 }
 
-# Function to attempt driver reload
 reload_driver() {
     log "[*] Starting driver reload sequence..."
     local modules="wlan qca_cld3_wlan qca_cld3"
     local reloaded=false
     local found_any=false
 
-    # Check if lsmod can even run
+    # Pre-check for module support
     if [ ! -f /proc/modules ]; then
-        log "[!] /proc/modules not found. Driver hot-reload is likely impossible."
-        return 1
+        log "[!] /proc/modules missing. Assuming monolithic kernel."
+        return 2
     fi
 
     for mod in $modules; do
-        if lsmod 2>/dev/null | grep -q "^$mod"; then
+        # Check if module is loaded
+        if lsmod 2>/dev/null | grep -q "^$mod "; then
             found_any=true
-            log "[*] Found active module: $mod. Attempting unload..."
-            # Safety: Ensure interface is down
+            log "[*] Found active module: $mod. Attempting reload..."
+            
+            # 1. Unload
             ip link set wlan0 down 2>/dev/null
             sleep 0.5
-            
             rmmod "$mod"
             sleep 1
             
-            if lsmod 2>/dev/null | grep -q "^$mod"; then
-                log "[!] Failed to unload $mod (busy?)"
+            if lsmod 2>/dev/null | grep -q "^$mod "; then
+                log "[!] Failed to unload $mod (Resource busy?)"
                 continue
             fi
             
-            log "[*] Module $mod unloaded. Searching for source..."
+            # 2. Reload
+            # Search for the module file (.ko)
             local mod_path=""
-            if [ -f "/vendor/lib/modules/$mod.ko" ]; then
-                mod_path="/vendor/lib/modules/$mod.ko"
-            elif [ -f "/system/lib/modules/$mod.ko" ]; then
-                mod_path="/system/lib/modules/$mod.ko"
-            fi
+            for path in "/vendor/lib/modules/$mod.ko" "/system/lib/modules/$mod.ko"; do
+                if [ -f "$path" ]; then
+                    mod_path="$path"
+                    break
+                fi
+            done
 
             if [ -n "$mod_path" ]; then
-                log "[*] Found $mod.ko at $mod_path. Loading..."
+                log "[*] Loading from: $mod_path"
                 insmod "$mod_path"
             else
-                log "[*] Source .ko not found, attempting modprobe $mod..."
+                log "[*] Loading via modprobe..."
                 modprobe "$mod"
             fi
             
+            # 3. Verify
             sleep 1
-            if lsmod 2>/dev/null | grep -q "^$mod"; then
+            if lsmod 2>/dev/null | grep -q "^$mod "; then
                 log "[+] $mod reloaded successfully."
                 reloaded=true
             else
@@ -109,13 +114,13 @@ reload_driver() {
     done
 
     if [ "$found_any" = false ]; then
-        log "[!] No supported Wi-Fi modules found in lsmod."
+        log "[!] No supported Wi-Fi modules found active."
         log "[?] System likely uses a Monolithic/Built-in Wi-Fi driver."
-        return 1
+        return 2
     fi
 
     if [ "$reloaded" = false ]; then
-        log "[!] No modules were successfully hot-reloaded."
+        log "[!] Driver reload failed."
         return 1
     fi
     return 0
@@ -123,64 +128,73 @@ reload_driver() {
 
 perform_switch() {
     local MODE="$1"
-    log "[*] Initiating switch operation..."
-    log "[*] Script version: $VERSION"
-    log "[*] Target mode: $MODE"
+    local TARGET_INI_FILE="${MODULE_WIFI_DIR}/${MODE}.ini"
+
+    log "[*] Operation: Switch to $MODE"
+    log "[*] Version: $VERSION"
     
-    # Check for potential interference
+    # Interference check
     if grep -q "susfs" /proc/filesystems; then
-        log "[!] WARNING: SUSFS detected. This may hide mounts or prevent changes."
+        log "[!] WARNING: SUSFS detected."
     fi
     
-    TARGET_INI_FILE="${MODULE_WIFI_DIR}/${MODE}.ini"
-    
     if [ ! -f "${TARGET_INI_FILE}" ]; then
-        log "Error: Source config file ${TARGET_INI_FILE} not found."
+        log "[!] Error: Config file ${TARGET_INI_FILE} missing."
         exit 1
     fi
 
-    log "[*] Updating module config file..."
+    # 1. Update Internal State
+    log "[*] Updating internal config..."
     cat "${TARGET_INI_FILE}" > "${INTERNAL_CONFIG_FILE}"
+    chmod 644 "${INTERNAL_CONFIG_FILE}"
 
-    log "[*] Applying bind mount to $SYSTEM_CONFIG_FILE..."
-    # Unmount first if already mounted to avoid stacking
+    # 2. Bind Mount
+    log "[*] Remounting config..."
     nsenter -t 1 -m -- umount "${SYSTEM_CONFIG_FILE}" 2>/dev/null
     
-    # Use nsenter with -- separator to correctly pass -o bind to mount
     if nsenter -t 1 -m -- mount -o bind "${INTERNAL_CONFIG_FILE}" "${SYSTEM_CONFIG_FILE}"; then
-        log "[+] Bind mount command successful (Global Namespace)."
+        log "[+] Bind mount successful."
         # Verify visibility
-        if grep -q "${SYSTEM_CONFIG_FILE}" /proc/mounts; then
-            log "[+] Mount confirmed in /proc/mounts."
-        else
-            log "[!] WARNING: Mount not visible in /proc/mounts (SUSFS/Namespace issue?)"
+        if ! grep -q "${SYSTEM_CONFIG_FILE}" /proc/mounts; then
+            log "[!] WARNING: Mount not visible in /proc/mounts."
         fi
     else
-        log "[!] Bind mount failed!"
+        log "[!] Bind mount failed."
     fi
 
+    # 3. Persist Mode
     echo "${MODE}" > "${MODE_CONFIG_FILE}"
 
-    log "[*] Toggling WiFi service..."
+    # 4. Restart Driver/Service
+    log "[*] Restarting Wi-Fi service..."
     svc wifi disable
     sleep 2
 
-    if reload_driver; then
-        log "[+] Hot-reload complete."
+    reload_driver
+    local RET=$?
+    
+    if [ $RET -eq 0 ]; then
+        log "[+] Driver hot-reload successful."
+        echo "SUCCESS" > "$RESULT_FILE"
+    elif [ $RET -eq 2 ]; then
+        log "[!] Hot-reload skipped (Built-in driver)."
+        log "[!] *** REBOOT REQUIRED ***"
+        echo "BUILTIN" > "$RESULT_FILE"
     else
-        log "[!] Hot-reload failed/unsupported."
-        log "[!] *** REBOOT REQUIRED to apply changes ***"
+        log "[!] Hot-reload failed."
+        log "[!] *** REBOOT REQUIRED ***"
+        echo "FAILED" > "$RESULT_FILE"
     fi
 
     svc wifi enable
-    log "[*] WiFi service re-enabled."
-    log "[*] Mode switch to ${MODE} successful."
+    log "[*] Wi-Fi service enabled."
 }
 
-# --- Main Execution ---
+# --- Entry Point ---
 
+# Root check
 if [ "$(id -u)" -ne 0 ]; then
-    echo "Error: This script must be run as root."
+    echo "Error: Must run as root."
     exit 1
 fi
 
@@ -189,26 +203,22 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-MODE="$1"
+CMD="$1"
 
-if [ "$MODE" = "status" ]; then
+if [ "$CMD" = "status" ]; then
     get_status
 else
-    # Save original stdout(1) and stderr(2) to FD 3 and 4
-    exec 3>&1 4>&2
-
-    # Redirect stdout and stderr to log file
+    # Setup Logging
+    # Redirect stdout(1) and stderr(2) to log file, keeping original stdout on FD 3
+    exec 3>&1
     exec > "$LOG_FILE" 2>&1
     chmod 644 "$LOG_FILE"
 
     echo "--- WiFi Tweaks Log $(date) ---"
-    perform_switch "$MODE"
+    perform_switch "$CMD"
 
-    # Restore stdout and stderr
-    exec 1>&3 2>&4
-
-    # Close unused FDs
-    exec 3>&- 4>&-
+    # Restore stdout
+    exec 1>&3 3>&-
 fi
 
 exit 0

@@ -9,7 +9,7 @@ A KernelSU module to easily switch your device's Wi-Fi driver configuration betw
 *   **Easy Mode Selection:** Choose your preferred Wi-Fi mode (Performance, Battery, or Default) via a simple WebUI or command-line interface.
 *   **Three Modes:**
     *   **Performance (`perf.ini`):** Unleashes full power. Disables power saving for lowest latency, enables MIMO & 40MHz BW, and maximizes TX power.
-    *   **Battery (`battery.ini`):** A balanced sweet spot. Retains power saving for battery life but enables MIMO & 40MHz BW for better connectivity than stock.
+    *   **Battery (`battery.ini`):** A balanced sweet spot. Retains power saving for battery life but enables MIMO & 40MHz BW for better connectivity than stock. **(Default Mode)**
     *   **Default (`default.ini`):** The restrictive stock config (SISO, low power, max power saving).
 *   **User-Friendly WebUI:** A modern, responsive web interface within the KernelSU app to switch modes with a single tap.
 *   **Command-Line Interface:** Advanced users can switch modes via a shell script.
@@ -73,7 +73,7 @@ This is a "build-less" project. To package the module for installation, you need
 From the root of the project directory, run the following command:
 
 ```bash
-zip -r wifi_tweaks.zip . -x ".git/*" "GEMINI.md" ".gitignore" "README.md" "update.json" "changelog.md" "wifi_tweaks.zip"
+zip -r wifi_tweaks.zip . -x ".git*" "GEMINI.md" ".gitignore" "README.md" "update.json" "changelog.md" "wifi_tweaks.zip"
 ```
 
 This will create `wifi_tweaks.zip`, which can be flashed in the KernelSU app.

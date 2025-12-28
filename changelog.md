@@ -1,5 +1,11 @@
 # WiFi Config Switcher Changelog
 
+## v3.0.1
+- **Feature:** Changed default mode to 'Battery'.
+- **WebUI:** Reordered buttons to place 'Default' in the middle.
+- **WebUI:** Added detailed status message indicating if a reboot is required based on driver type (Built-in vs Modular).
+- **Script:** Improved driver reload detection logic.
+
 ## v3.0.0
 - **Version Reset:** Synchronized versioning scheme to v3.0.0 and versionCode 30 for both local and remote updates.
 - **Maintenance:** Retains all improvements from previous 5.x.x releases (minimal WebUI, optimized scripts).

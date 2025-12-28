@@ -15,7 +15,7 @@
             --accent-perf-dark: #018786;
             --accent-battery: #ff5252;
             --accent-battery-dark: #c51162;
-            --accent-default: #42a5f5; /* A shade of blue for default */
+            --accent-default: #42a5f5;
             --accent-default-dark: #1976d2;
             --shadow: rgba(0, 0, 0, 0.5);
         }
@@ -71,7 +71,7 @@
         .button-group {
             margin-top: 1rem;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 0.6rem;
         }
 
@@ -91,36 +91,27 @@
             width: 100%;
         }
 
-        #perf-button {
-            background-color: var(--accent-perf);
-        }
-
+        #perf-button { background-color: var(--accent-perf); }
         #perf-button:hover:not(:disabled) {
             background-color: var(--accent-perf-dark);
             box-shadow: 0 0 15px var(--accent-perf);
             transform: translateY(-2px);
         }
 
-        #battery-button {
-            background-color: var(--accent-battery);
-        }
-
+        #battery-button { background-color: var(--accent-battery); }
         #battery-button:hover:not(:disabled) {
             background-color: var(--accent-battery-dark);
             box-shadow: 0 0 15px var(--accent-battery);
             transform: translateY(-2px);
         }
-        
-        #default-button {
-            background-color: var(--accent-default);
-        }
 
+        #default-button { background-color: var(--accent-default); }
         #default-button:hover:not(:disabled) {
             background-color: var(--accent-default-dark);
             box-shadow: 0 0 15px var(--accent-default);
             transform: translateY(-2px);
         }
-        
+
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -158,7 +149,7 @@
             50% { border-color: var(--accent-perf); }
             100% { border-color: rgba(255, 255, 255, 0.15); }
         }
-        
+
         #status {
             margin-top: 0.5rem;
             font-size: 1rem;
@@ -173,7 +164,7 @@
             display: inline-flex;
             margin-bottom: 1rem;
         }
-        
+
         .status-dot {
             display: inline-block;
             width: 12px;
@@ -203,13 +194,13 @@
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10.12h-6.78l2.74-6.04-1.92-.88-3.43 7.54h-3.12L11.94 2 10 2.88 5.64 12H2v2h4.36l-4.22 9.28 1.92.88L7.5 16.62h3.12l-3.43 7.54 1.92.88L12.53 14h6.78l-2.74 6.04 1.92.88 3.43-7.54h3.12L18.06 22l1.92-.88L24.36 12H22v-2h-1v.01zM12.5 12H7.8l3.44-7.54L12.5 12z"/></svg>
                 Performance
             </button>
-            <button id="battery-button">
-                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
-                Battery
-            </button>
             <button id="default-button">
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
                 Default
+            </button>
+            <button id="battery-button">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+                Battery
             </button>
         </div>
         <div id="output">Initializing system hooks...</div>
@@ -226,6 +217,7 @@
 
     const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh'; 
     const logFile = "/data/local/tmp/wifi_tweaks.log";
+    const resultFile = "/data/local/tmp/wifi_tweaks_result";
     let pollInterval = null;
 
     function setUIMode(mode) {
@@ -301,31 +293,22 @@
         }
     }
 
-    function getVersion() {
-        try {
-            const propPath = scriptPath.replace('common/switch_mode.sh', 'module.prop');
-            let prop = readFileSafe(propPath);
-            if (!prop || prop.includes('Error')) {
-                prop = runCommand(`cat ${propPath}`);
-            }
-            
-            const match = prop.match(/^version=(.*)$/m);
-            if (match) {
-                const v = match[1].trim();
-                return v.startsWith('v') ? v : 'v' + v;
-            }
-        } catch (e) {
-            console.error("Version detection error:", e);
-        }
-        return "vUnknown";
-    }
-
     function finalizeSwitch() {
-        // Verify Status
         const newMode = runCommand(`${scriptPath} status`).trim();
         setUIMode(newMode);
         
-        outputDiv.textContent = `Operation complete. Current Mode: ${newMode.toUpperCase()}`;
+        const switchResult = readFileSafe(resultFile).trim();
+        let rebootMsg = "";
+        
+        if (switchResult === "SUCCESS") {
+            rebootMsg = "\n(No reboot required - Driver reloaded)";
+        } else if (switchResult === "BUILTIN") {
+            rebootMsg = "\n(Reboot Required - Built-in Driver)";
+        } else if (switchResult === "FAILED") {
+            rebootMsg = "\n(Reboot Required - Driver Reload Failed)";
+        }
+        
+        outputDiv.textContent = `Operation complete. Current Mode: ${newMode.toUpperCase()}${rebootMsg}`;
         setUILocked(false);
     }
 
@@ -336,10 +319,9 @@
         setUILocked(true);
         outputDiv.textContent = `Switching to ${modeName} mode...\nPlease wait...`;
         
-        // 1. Clean old log
         runCommand(`rm "${logFile}"`);
+        runCommand(`rm "${resultFile}"`);
 
-        // 2. Start script in background & get PID
         const cmd = `nohup sh ${scriptPath} ${mode} > /dev/null 2>&1 & echo $!`;
         const result = runCommand(cmd);
         const pid = parseInt(result.trim());
@@ -350,26 +332,23 @@
              return;
         }
 
-        // 3. Poll process status only (no log reading)
         let attempts = 0;
         
         pollInterval = setInterval(() => {
             attempts++;
-            
-            // kill -0 <pid> returns 0 if running, 1 if not found
             const check = runCommand(`kill -0 ${pid} 2>/dev/null; echo $?`).trim();
             
             if (check !== '0') {
                 clearInterval(pollInterval);
                 pollInterval = null;
                 finalizeSwitch();
-            } else if (attempts > 100) { // 20 seconds timeout
+            } else if (attempts > 100) { 
                 clearInterval(pollInterval);
                 pollInterval = null;
                 outputDiv.textContent += `\n[Timeout] Script execution timed out.`;
                 finalizeSwitch();
             }
-        }, 200); // Poll every 200ms
+        }, 200);
     }
 
     document.addEventListener('DOMContentLoaded', getInitialStatus);
@@ -377,6 +356,5 @@
     batteryButton.addEventListener('click', () => runSwitch('battery'));
     defaultButton.addEventListener('click', () => runSwitch('default'));
     </script>
-
 </body>
 </html>
