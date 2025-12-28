@@ -224,6 +224,7 @@
     const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh'; 
     const logFile = "/data/local/tmp/wifi_tweaks.log";
     const resultFile = "/data/local/tmp/wifi_tweaks_result";
+    const driverTypeFile = "/data/local/tmp/driver-type.conf";
     let pollInterval = null;
 
     function setUIMode(mode) {
@@ -307,6 +308,7 @@
         setTimeout(() => {
             const logs = readFileSafe(logFile);
             let resultStatus = readFileSafe(resultFile).trim();
+            const driverType = readFileSafe(driverTypeFile).trim();
             
             // Fallback: Scan logs if result file fails
             if (!resultStatus) {
@@ -317,8 +319,8 @@
             
             let message = logs + `\n\nOperation complete. Current Mode: ${newMode.toUpperCase()}`;
             
-            if (resultStatus === 'BUILTIN' || resultStatus === 'FAILED') {
-                message += `\n\n⚠️ REBOOT REQUIRED ⚠️\nDriver hot-reload could not be completed (Status: ${resultStatus || 'Log-Detected'}).\nPlease reboot your device to apply changes.`;
+            if (driverType === 'BUILTIN' || resultStatus === 'BUILTIN' || resultStatus === 'FAILED') {
+                message += `\n\n⚠️ REBOOT REQUIRED ⚠️\nDriver Type: ${driverType || 'Unknown'}\nDriver hot-reload could not be completed.\nPlease reboot your device to apply changes.`;
             } else if (resultStatus === 'SUCCESS') {
                 message += `\n\n✅ Driver reloaded successfully.`;
             }
@@ -337,6 +339,7 @@
         
         runCommand(`rm "${logFile}"`);
         runCommand(`rm "${resultFile}"`);
+        runCommand(`rm "${driverTypeFile}"`);
 
         const cmd = `nohup sh ${scriptPath} ${mode} > /dev/null 2>&1 & echo $!`;
         const result = runCommand(cmd);

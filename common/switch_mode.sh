@@ -25,6 +25,7 @@ readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 
 readonly LOG_FILE="/data/local/tmp/wifi_tweaks.log"
 readonly RESULT_FILE="/data/local/tmp/wifi_tweaks_result"
+readonly DRIVER_TYPE_FILE="/data/local/tmp/driver-type.conf"
 
 # Get version
 readonly VERSION=$(grep "^version=" "${MODULE_DIR}/module.prop" | cut -d= -f2 || echo "Unknown")
@@ -35,6 +36,31 @@ log() {
 }
 
 # --- Core Functions ---
+
+check_driver_type() {
+    local modules="wlan qca_cld3_wlan qca_cld3"
+    
+    # Check 1: /proc/modules existence
+    if [ ! -f /proc/modules ]; then
+        echo "BUILTIN" > "$DRIVER_TYPE_FILE"
+        return
+    fi
+    
+    # Check 2: Look for specific modules
+    local found=false
+    for mod in $modules; do
+        if lsmod 2>/dev/null | grep -q "^$mod "; then
+            found=true
+            break
+        fi
+    done
+    
+    if [ "$found" = true ]; then
+        echo "MODULAR" > "$DRIVER_TYPE_FILE"
+    else
+        echo "BUILTIN" > "$DRIVER_TYPE_FILE"
+    fi
+}
 
 get_status() {
     # Check if system file exists
@@ -132,6 +158,9 @@ perform_switch() {
 
     log "[*] Operation: Switch to $MODE"
     log "[*] Version: $VERSION"
+    
+    # Detect Driver Type
+    check_driver_type
     
     # Interference check
     if grep -q "susfs" /proc/filesystems; then

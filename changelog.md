@@ -1,5 +1,10 @@
 # WiFi Config Switcher Changelog
 
+## v3.0.3
+- **WebUI:** Fixed "Reboot Required" message logic by introducing `driver-type.conf`.
+- **Script:** Added reliable driver type detection (Modular vs Built-in) that persists to `driver-type.conf`.
+- **WebUI:** Now explicitly warns about reboot requirement if the driver is detected as Built-in.
+
 ## v3.0.2
 - **WebUI:** Adjusted button layout (same length, Default in middle).
 - **WebUI:** Simplified completion message and added log display.

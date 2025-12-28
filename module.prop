@@ -1,7 +1,7 @@
 id=wifi_tweaks
 name=WiFi-Config-Switcher
-version=3.0.2
-versionCode=32
+version=3.0.3
+versionCode=33
 author=sms1sis
 description=Switch between performance, battery, and default Wi-Fi configs.
 updateJson=https://raw.githubusercontent.com/sms1sis/WiFi-Tweaks-RN10PRO/main/update.json
