@@ -290,6 +290,9 @@
     function readFileSafe(path) {
         try {
             const result = ksu.exec(`cat "${path}" 2>/dev/null`);
+            if (typeof result === 'string') {
+                return result;
+            }
             if (result && typeof result.errno === 'number' && result.errno === 0) {
                 return String(result.stdout || "");
             }
