@@ -1,5 +1,10 @@
 # WiFi Config Switcher Changelog
 
+## v3.0.2
+- **WebUI:** Adjusted button layout (same length, Default in middle).
+- **WebUI:** Simplified completion message and added log display.
+- **Script:** Removed redundant reboot warnings from logs.
+
 ## v3.0.1
 - **Feature:** Changed default mode to 'Battery'.
 - **WebUI:** Reordered buttons to place 'Default' in the middle.

@@ -178,11 +178,9 @@ perform_switch() {
         echo "SUCCESS" > "$RESULT_FILE"
     elif [ $RET -eq 2 ]; then
         log "[!] Hot-reload skipped (Built-in driver)."
-        log "[!] *** REBOOT REQUIRED ***"
         echo "BUILTIN" > "$RESULT_FILE"
     else
         log "[!] Hot-reload failed."
-        log "[!] *** REBOOT REQUIRED ***"
         echo "FAILED" > "$RESULT_FILE"
     fi
 
