@@ -25,7 +25,6 @@ readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 
 readonly LOG_FILE="/data/local/tmp/wifi_tweaks.log"
 readonly RESULT_FILE="/data/local/tmp/wifi_tweaks_result"
-readonly DRIVER_TYPE_FILE="/data/local/tmp/driver-type.conf"
 
 # Get version
 readonly VERSION=$(grep "^version=" "${MODULE_DIR}/module.prop" | cut -d= -f2 || echo "Unknown")
@@ -35,32 +34,12 @@ log() {
     echo "[$(date +%T)] $1"
 }
 
-# --- Core Functions ---
-
-check_driver_type() {
-    local modules="wlan qca_cld3_wlan qca_cld3"
-    
-    # Check 1: /proc/modules existence
-    if [ ! -f /proc/modules ]; then
-        echo "BUILTIN" > "$DRIVER_TYPE_FILE"
-        return
-    fi
-    
-    # Check 2: Look for specific modules
-    local found=false
-    for mod in $modules; do
-        if lsmod 2>/dev/null | grep -q "^$mod "; then
-            found=true
-            break
-        fi
-    done
-    
-    if [ "$found" = true ]; then
-        echo "MODULAR" > "$DRIVER_TYPE_FILE"
-    else
-        echo "BUILTIN" > "$DRIVER_TYPE_FILE"
-    fi
+write_result() {
+    echo "$1" > "$2"
+    chmod 644 "$2"
 }
+
+# --- Core Functions ---
 
 get_status() {
     # Check if system file exists
@@ -159,9 +138,6 @@ perform_switch() {
     log "[*] Operation: Switch to $MODE"
     log "[*] Version: $VERSION"
     
-    # Detect Driver Type
-    check_driver_type
-    
     # Interference check
     if grep -q "susfs" /proc/filesystems; then
         log "[!] WARNING: SUSFS detected."
@@ -204,17 +180,19 @@ perform_switch() {
     
     if [ $RET -eq 0 ]; then
         log "[+] Driver hot-reload successful."
-        echo "SUCCESS" > "$RESULT_FILE"
+        write_result "SUCCESS" "$RESULT_FILE"
     elif [ $RET -eq 2 ]; then
         log "[!] Hot-reload skipped (Built-in driver)."
-        echo "BUILTIN" > "$RESULT_FILE"
+        write_result "BUILTIN" "$RESULT_FILE"
     else
         log "[!] Hot-reload failed."
-        echo "FAILED" > "$RESULT_FILE"
+        write_result "FAILED" "$RESULT_FILE"
     fi
 
     svc wifi enable
     log "[*] Wi-Fi service enabled."
+    log "[*] Switch operation completed."
+    sync
 }
 
 # --- Entry Point ---

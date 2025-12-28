@@ -224,7 +224,6 @@
     const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh'; 
     const logFile = "/data/local/tmp/wifi_tweaks.log";
     const resultFile = "/data/local/tmp/wifi_tweaks_result";
-    const driverTypeFile = "/data/local/tmp/driver-type.conf";
     let pollInterval = null;
 
     function setUIMode(mode) {
@@ -266,9 +265,10 @@
     function runCommand(command) {
         try {
             const result = ksu.exec(command);
+            if (!result) return "";
             if (typeof result === 'string') return result;
-            if (result && typeof result.errno === 'number') {
-                if (result.errno === 0) return result.stdout;
+            if (typeof result.errno === 'number') {
+                if (result.errno === 0) return String(result.stdout || "");
                 return `Error (Code ${result.errno}): ${result.stderr || 'Command failed'}`;
             }
             return String(result);
@@ -289,45 +289,52 @@
 
     function readFileSafe(path) {
         try {
-            const content = ksu.fs.readFile(path);
-            if (!content) return "";
-            if (typeof content !== 'string') {
-                return new TextDecoder('utf-8').decode(content);
+            const result = ksu.exec(`cat "${path}" 2>/dev/null`);
+            if (result && typeof result.errno === 'number' && result.errno === 0) {
+                return String(result.stdout || "");
             }
-            return content;
+            return "";
         } catch (e) {
             return "";
         }
+    }
+
+    function updateDisplay(logs, resultStatus, newMode) {
+        let finalStatus = resultStatus;
+        if (!finalStatus) {
+            if (logs.includes("Hot-reload skipped")) finalStatus = 'BUILTIN';
+            else if (logs.includes("Hot-reload failed")) finalStatus = 'FAILED';
+            else if (logs.includes("Driver hot-reload successful")) finalStatus = 'SUCCESS';
+        }
+
+        // Infer driver type from result
+        let driverType = "Unknown";
+        if (finalStatus === 'BUILTIN') driverType = "BUILTIN";
+        else if (finalStatus === 'SUCCESS' || finalStatus === 'FAILED') driverType = "MODULAR";
+        
+        let message = logs;
+        if (message) message += "\n\n";
+        message += `Operation complete. Current Mode: ${newMode.toUpperCase()}`;
+        
+        if (finalStatus === 'BUILTIN' || finalStatus === 'FAILED') {
+            message += `\n\n⚠️ REBOOT REQUIRED ⚠️\nDriver Type: ${driverType}\nDriver hot-reload could not be completed.\nPlease reboot your device to apply changes.`;
+        } else if (finalStatus === 'SUCCESS') {
+            message += `\n\n✅ Driver reloaded successfully.`;
+        }
+        
+        outputDiv.textContent = message;
+        setUILocked(false);
     }
 
     function finalizeSwitch() {
         const newMode = runCommand(`${scriptPath} status`).trim();
         setUIMode(newMode);
         
-        // Short delay to ensure file write flush
         setTimeout(() => {
             const logs = readFileSafe(logFile);
-            let resultStatus = readFileSafe(resultFile).trim();
-            const driverType = readFileSafe(driverTypeFile).trim();
-            
-            // Fallback: Scan logs if result file fails
-            if (!resultStatus) {
-                if (logs.includes("Hot-reload skipped")) resultStatus = 'BUILTIN';
-                else if (logs.includes("Hot-reload failed")) resultStatus = 'FAILED';
-                else if (logs.includes("Driver hot-reload successful")) resultStatus = 'SUCCESS';
-            }
-            
-            let message = logs + `\n\nOperation complete. Current Mode: ${newMode.toUpperCase()}`;
-            
-            if (driverType === 'BUILTIN' || resultStatus === 'BUILTIN' || resultStatus === 'FAILED') {
-                message += `\n\n⚠️ REBOOT REQUIRED ⚠️\nDriver Type: ${driverType || 'Unknown'}\nDriver hot-reload could not be completed.\nPlease reboot your device to apply changes.`;
-            } else if (resultStatus === 'SUCCESS') {
-                message += `\n\n✅ Driver reloaded successfully.`;
-            }
-            
-            outputDiv.textContent = message;
-            setUILocked(false);
-        }, 500);
+            const resultStatus = readFileSafe(resultFile).trim();
+            updateDisplay(logs, resultStatus, newMode);
+        }, 800);
     }
 
     function runSwitch(mode) {
@@ -339,7 +346,6 @@
         
         runCommand(`rm "${logFile}"`);
         runCommand(`rm "${resultFile}"`);
-        runCommand(`rm "${driverTypeFile}"`);
 
         const cmd = `nohup sh ${scriptPath} ${mode} > /dev/null 2>&1 & echo $!`;
         const result = runCommand(cmd);
