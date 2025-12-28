@@ -306,12 +306,19 @@
         // Short delay to ensure file write flush
         setTimeout(() => {
             const logs = readFileSafe(logFile);
-            const resultStatus = readFileSafe(resultFile).trim();
+            let resultStatus = readFileSafe(resultFile).trim();
+            
+            // Fallback: Scan logs if result file fails
+            if (!resultStatus) {
+                if (logs.includes("Hot-reload skipped")) resultStatus = 'BUILTIN';
+                else if (logs.includes("Hot-reload failed")) resultStatus = 'FAILED';
+                else if (logs.includes("Driver hot-reload successful")) resultStatus = 'SUCCESS';
+            }
             
             let message = logs + `\n\nOperation complete. Current Mode: ${newMode.toUpperCase()}`;
             
             if (resultStatus === 'BUILTIN' || resultStatus === 'FAILED') {
-                message += `\n\n⚠️ REBOOT REQUIRED ⚠️\nDriver hot-reload could not be completed (Status: ${resultStatus}).\nPlease reboot your device to apply changes.`;
+                message += `\n\n⚠️ REBOOT REQUIRED ⚠️\nDriver hot-reload could not be completed (Status: ${resultStatus || 'Log-Detected'}).\nPlease reboot your device to apply changes.`;
             } else if (resultStatus === 'SUCCESS') {
                 message += `\n\n✅ Driver reloaded successfully.`;
             }
