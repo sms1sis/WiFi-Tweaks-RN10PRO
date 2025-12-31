@@ -1,5 +1,11 @@
 # WiFi Config Switcher Changelog
 
+## v3.1.0
+- **New Feature:** "True Stock" Backup. Automatically backs up your original system config on first run.
+- **New Feature:** "Stock" Mode. Restore your original system config anytime via WebUI/CLI.
+- **New Feature:** Real-Time Diagnostics. WebUI now shows Signal Strength (RSSI), Link Speed, and Frequency.
+- **Major Refactor:** Dynamic Patching. Removed static `.ini` files. The module now patches your specific device's config file dynamically, improving compatibility with different ROMs and devices.
+
 ## v3.0.4
 - **Refactor:** Renamed "Battery" profile (`battery.ini`) to "Balanced" (`balanced.ini`) to better reflect its nature (MIMO/40MHz enabled).
 - **WebUI:** Updated interface to show "Balanced" instead of "Battery".

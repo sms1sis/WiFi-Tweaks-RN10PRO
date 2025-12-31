@@ -6,13 +6,15 @@ A KernelSU module to easily switch your device's Wi-Fi driver configuration betw
 
 ## ✨ Features
 
-*   **Easy Mode Selection:** Choose your preferred Wi-Fi mode (Performance, Balanced, or Default) via a simple WebUI or command-line interface.
-*   **Three Modes:**
-    *   **Performance (`perf.ini`):** Unleashes full power. Disables power saving for lowest latency, enables MIMO & 40MHz BW, and maximizes TX power.
-    *   **Balanced (`balanced.ini`):** A balanced sweet spot. Retains power saving for battery life but enables MIMO & 40MHz BW for better connectivity than stock. **(Default Mode)**
-    *   **Default (`default.ini`):** The restrictive stock config (SISO, low power, max power saving).
-*   **User-Friendly WebUI:** A modern, responsive web interface within the KernelSU app to switch modes with a single tap.
-*   **Command-Line Interface:** Advanced users can switch modes via a shell script.
+*   **Easy Mode Selection:** Choose your preferred Wi-Fi mode (Performance, Balanced, Default, or Stock) via a simple WebUI or command-line interface.
+*   **Four Modes:**
+    *   **Performance:** Unleashes full power. Disables power saving for lowest latency, enables MIMO & 40MHz BW, and maximizes TX power.
+    *   **Balanced:** A balanced sweet spot. Retains power saving for battery life but enables MIMO & 40MHz BW for better connectivity than stock. **(Default Mode)**
+    *   **Default:** The module's standard configuration (safe baseline).
+    *   **Stock:** Restores the exact configuration your device had before installing the module (Dynamic Backup).
+*   **Real-Time Diagnostics:** WebUI displays live RSSI, Link Speed, and Frequency.
+*   **Dynamic Patching:** Compatible with more devices by patching the system's original config instead of overwriting it with a static file.
+*   **User-Friendly WebUI:** A modern, responsive web interface within the KernelSU app.
 
 ## ⚙️ Technical Breakdown
 
@@ -53,8 +55,14 @@ Open a root shell (`su`) and execute the script directly:
 # For Balanced Mode
 /data/adb/modules/wifi_tweaks/common/switch_mode.sh balanced
 
-# For Default Mode
-/data/adb/modules/wifi_tweaks/common/switch_mode.sh default
+# For Default/Stock Mode
+/data/adb/modules/wifi_tweaks/common/switch_mode.sh stock
+```
+
+### Real-Time Stats
+
+```bash
+/data/adb/modules/wifi_tweaks/common/switch_mode.sh stats
 ```
 
 ### Viewing Logs
@@ -83,11 +91,9 @@ This will create `wifi_tweaks.zip`, which can be flashed in the KernelSU app.
 ## 📂 Key Files
 
 *   `module.prop`: Defines the metadata for the KernelSU module (ID, name, version, etc.).
-*   `common/switch_mode.sh`: The core shell script that handles the logic of switching the symlink and restarting Wi-Fi services.
+*   `common/switch_mode.sh`: The core shell script that handles dynamic patching, backups, and driver reloading.
 *   `webroot/index.html`: The modern, single-page web interface for the module.
-*   `system/vendor/etc/wifi/perf.ini`: The Wi-Fi configuration file optimized for performance.
-*   `system/vendor/etc/wifi/balanced.ini`: The Wi-Fi configuration file optimized for balanced usage.
-*   `system/vendor/etc/wifi/default.ini`: The default Wi-Fi configuration file.
+*   `common/original_stock.ini`: The backup of your device's original Wi-Fi configuration (created on first run).
 
 ---
 

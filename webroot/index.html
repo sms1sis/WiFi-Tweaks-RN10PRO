@@ -17,6 +17,8 @@
             --accent-balanced-dark: #c51162;
             --accent-default: #42a5f5;
             --accent-default-dark: #1976d2;
+            --accent-stock: #78909c;
+            --accent-stock-dark: #455a64;
             --shadow: rgba(0, 0, 0, 0.5);
         }
 
@@ -118,6 +120,13 @@
             transform: translateY(-2px);
         }
 
+        #stock-button { background-color: var(--accent-stock); }
+        #stock-button:hover:not(:disabled) {
+            background-color: var(--accent-stock-dark);
+            box-shadow: 0 0 15px var(--accent-stock);
+            transform: translateY(-2px);
+        }
+
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -128,6 +137,36 @@
         .icon {
             width: 20px;
             height: 20px;
+        }
+
+        #stats-container {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.8rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-label {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            color: var(--accent-perf);
+            font-family: 'Fira Code', monospace;
         }
 
         #output {
@@ -195,6 +234,22 @@
         <div id="status">
             <span id="mode-container">Current Mode: <span id="current-mode">Detecting...</span></span>
         </div>
+        
+        <div id="stats-container">
+            <div class="stat-item">
+                <span class="stat-label">Signal</span>
+                <span id="stat-rssi" class="stat-value">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Link Speed</span>
+                <span id="stat-speed" class="stat-value">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Frequency</span>
+                <span id="stat-freq" class="stat-value">--</span>
+            </div>
+        </div>
+
         <div class="button-group">
             <button id="perf-button">
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M21 10.12h-6.78l2.74-6.04-1.92-.88-3.43 7.54h-3.12L11.94 2 10 2.88 5.64 12H2v2h4.36l-4.22 9.28 1.92.88L7.5 16.62h3.12l-3.43 7.54 1.92.88L12.53 14h6.78l-2.74 6.04 1.92.88 3.43-7.54h3.12L18.06 22l1.92-.88L24.36 12H22v-2h-1v.01zM12.5 12H7.8l3.44-7.54L12.5 12z"/></svg>
@@ -208,6 +263,10 @@
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
                 Default
             </button>
+            <button id="stock-button">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 15v4H5v-4h14m1-2H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zM7 18.5c-.82 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM19 5v4H5V5h14m1-2H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM7 8.5c-.82 0-1.5-.67-1.5-1.5S6.18 5.5 7 5.5s1.5.67 1.5 1.5S7.82 8.5 7 8.5z"/></svg>
+                Stock
+            </button>
         </div>
         <div id="output">Initializing system hooks...</div>
     </div>
@@ -217,14 +276,19 @@
     const perfButton = document.getElementById('perf-button');
     const balancedButton = document.getElementById('balanced-button');
     const defaultButton = document.getElementById('default-button');
+    const stockButton = document.getElementById('stock-button');
     const outputDiv = document.getElementById('output');
     const currentModeSpan = document.getElementById('current-mode');
     const statusDiv = document.getElementById('status');
+    const statRssi = document.getElementById('stat-rssi');
+    const statSpeed = document.getElementById('stat-speed');
+    const statFreq = document.getElementById('stat-freq');
 
     const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh'; 
     const logFile = "/data/local/tmp/wifi_tweaks.log";
     const resultFile = "/data/local/tmp/wifi_tweaks_result";
     let pollInterval = null;
+    let statsInterval = null;
 
     function setUIMode(mode) {
         const existingDot = statusDiv.querySelector('.status-dot');
@@ -245,6 +309,9 @@
         } else if (mode.includes('default')) {
             modeText = 'Default';
             dotColor = 'var(--accent-default)';
+        } else if (mode.includes('stock')) {
+            modeText = 'Stock';
+            dotColor = 'var(--accent-stock)';
         }
 
         currentModeSpan.textContent = modeText;
@@ -254,12 +321,29 @@
     }
 
     function setUILocked(locked) {
-        [perfButton, balancedButton, defaultButton].forEach(btn => btn.disabled = locked);
+        [perfButton, balancedButton, defaultButton, stockButton].forEach(btn => btn.disabled = locked);
         if (locked) {
             outputDiv.classList.add('updating');
         } else {
             outputDiv.classList.remove('updating');
         }
+    }
+    
+    function fetchStats() {
+        // Run stats command and parse output "RSSI: -x | Speed: x | Freq: x"
+        // Since ksu.exec is sync, this might block slightly, but it's fast.
+        setTimeout(() => {
+             const result = runCommand(`${scriptPath} stats`);
+             if (result && result.includes('|')) {
+                 const parts = result.split('|');
+                 parts.forEach(part => {
+                     const [key, val] = part.split(':').map(s => s.trim());
+                     if (key === 'RSSI') statRssi.textContent = val;
+                     if (key === 'Speed') statSpeed.textContent = val;
+                     if (key === 'Freq') statFreq.textContent = val;
+                 });
+             }
+        }, 10);
     }
 
     function runCommand(command) {
@@ -284,6 +368,10 @@
             setUIMode(result.trim());
             outputDiv.textContent = `System Ready. Detected Mode: ${currentModeSpan.textContent}`;
             setUILocked(false);
+            
+            // Start polling stats
+            fetchStats();
+            statsInterval = setInterval(fetchStats, 3000);
         }, 300);
     }
 
@@ -383,6 +471,7 @@
     perfButton.addEventListener('click', () => runSwitch('perf'));
     balancedButton.addEventListener('click', () => runSwitch('balanced'));
     defaultButton.addEventListener('click', () => runSwitch('default'));
+    stockButton.addEventListener('click', () => runSwitch('stock'));
     </script>
 </body>
 </html>
