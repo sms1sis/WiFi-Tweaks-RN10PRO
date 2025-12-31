@@ -1,20 +1,38 @@
 #!/system/bin/sh
 # post-fs-data.sh for WiFi-Config-Switcher
-# Hybrid Mount Compatible
+# Handles boot-time setup for Hybrid Mount strategy
 
-# Determine the directory where this script resides dynamically
+# --- Dynamic Path Discovery ---
 MODDIR=$(dirname "$(readlink -f "$0")")
 
-# 1. Ensure the switcher script is executable
+# Logging
+LOG_FILE="/data/local/tmp/wifi_tweaks.log"
+exec >> "$LOG_FILE" 2>&1
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting post-fs-data..."
+
+# 1. Permission Fix
+# Ensure the core script is executable
 chmod +x "${MODDIR}/common/switch_mode.sh"
 
-# 2. Hybrid Support: Patch the module's system files at boot
-# This ensures meta-hybrid_mount sees the correct file during its overlay phase.
-# The 'apply_boot' command updates the physical files without manual bind mounts.
-sh "${MODDIR}/common/switch_mode.sh" apply_boot > /data/local/tmp/wifi_tweaks_boot.log 2>&1
+# 2. Hybrid Persistence Check
+# Call the script in 'boot' mode to ensure the physical module file matches the saved preference.
+# This does NOT mount anything; it prepares the file for the system's overlay mechanism.
+sh "${MODDIR}/common/switch_mode.sh" apply_boot
 
-# 3. Maintain WebUI Fallback for path-independent access
-if [ -f "${MODDIR}/common/original_stock.ini" ]; then
-    cp "${MODDIR}/common/original_stock.ini" "/data/local/tmp/wifi_tweaks_stock.ini"
-    chmod 666 "/data/local/tmp/wifi_tweaks_stock.ini"
+# 3. Stealth Fallback (WebUI Compatibility)
+# Copy the stock config to a world-readable temp location.
+# This is crucial for devices with strict namespace isolation (like SUSFS)
+# where the WebUI might not be able to read files inside /data/adb/modules.
+STOCK_BACKUP="${MODDIR}/common/original_stock.ini"
+FALLBACK_TARGET="/data/local/tmp/wifi_tweaks_stock.ini"
+
+if [ -f "$STOCK_BACKUP" ]; then
+    cp "$STOCK_BACKUP" "$FALLBACK_TARGET"
+    chmod 666 "$FALLBACK_TARGET"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stealth fallback created at $FALLBACK_TARGET"
+else
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Warning: Stock backup not found, skipping fallback creation."
 fi
+
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] post-fs-data setup complete."

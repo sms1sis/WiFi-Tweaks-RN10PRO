@@ -1,15 +1,14 @@
 #!/system/bin/sh
+# WiFi Config Switcher - Hybrid Mount Core Logic
+# optimized for meta-hybrid_mount, Magisk, and KernelSU
 
-# Wi-Fi Config Switcher Script (Hybrid Mount & KSU Optimized)
-# Supports: meta-hybrid_mount, meta-overlayfs, meta-magic_mount
-
-# --- Dynamic Path Discovery ---
-# Use readlink and dirname to ensure path independence
+# --- 1. Dynamic Path Discovery ---
+# Ensures compatibility regardless of mount point or overlay method.
 readonly SCRIPT_PATH=$(readlink -f "$0")
 readonly SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
-# The script is in 'common/', so MODULE_DIR is one level up
 readonly MODULE_DIR=$(dirname "$SCRIPT_DIR")
 
+# Key File Paths
 readonly MODULE_WIFI_DIR="${MODULE_DIR}/system/vendor/etc/wifi"
 readonly INTERNAL_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
 readonly SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
@@ -17,24 +16,20 @@ readonly ORIGINAL_STOCK_FILE="${MODULE_DIR}/common/original_stock.ini"
 readonly CUSTOM_CONFIG_FILE="${MODULE_DIR}/webroot/config.ini"
 readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 
+# Logging & State
 readonly LOG_FILE="/data/local/tmp/wifi_tweaks.log"
 readonly RESULT_FILE="/data/local/tmp/wifi_tweaks_result"
-readonly FALLBACK_FILE="/data/local/tmp/wifi_tweaks_stock.ini"
 
-# Get version
-readonly VERSION=$(grep "^version=" "${MODULE_DIR}/module.prop" | cut -d= -f2 || echo "Unknown")
+# --- 2. Helper Functions ---
 
-# --- Logging Helper ---
 log() {
-    echo "[$(date +%T)] $1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
 write_result() {
     echo "$1" > "$2"
     chmod 644 "$2"
 }
-
-# --- Core Functions ---
 
 get_status() {
     [ -f "${MODE_CONFIG_FILE}" ] && cat "${MODE_CONFIG_FILE}" || echo "unknown"
@@ -59,6 +54,7 @@ get_stats() {
 
 apply_param() {
     local file="$1" key="$2" value="$3"
+    # Use sed to replace existing key or append if missing
     if grep -q "^\s*${key}\s*=" "$file"; then
         sed -i "s/^\s*${key}\s*=.*/${key}=${value}/" "$file"
     else
@@ -68,7 +64,8 @@ apply_param() {
 
 patch_config() {
     local mode="$1" target="$2"
-    log "[*] Patching configuration: $mode"
+    log "Patching configuration for mode: $mode"
+    
     case "$mode" in
         "perf")
             apply_param "$target" "gEnableBmps" "0"
@@ -83,79 +80,94 @@ patch_config() {
             apply_param "$target" "gChannelBondingMode24GHz" "1"
             ;;
         "custom")
-            [ -f "${CUSTOM_CONFIG_FILE}" ] && cp "${CUSTOM_CONFIG_FILE}" "$target" || log "[!] Custom config missing!"
+            if [ -f "${CUSTOM_CONFIG_FILE}" ]; then
+                cp "${CUSTOM_CONFIG_FILE}" "$target"
+            else
+                log "Error: Custom config file not found!"
+            fi
             ;;
     esac
 }
 
 cleanup_mounts() {
-    # Check if the target is already a hybrid mount or manual bind
-    # Use nsenter to inspect the global mount table
+    # Check for existing bind mounts on the target file
     if nsenter -t 1 -m -- grep -q " ${SYSTEM_CONFIG_FILE} " /proc/mounts; then
-        log "[*] Existing mount detected on target. Cleaning up..."
+        log "Cleaning up existing mount..."
         nsenter -t 1 -m -- umount -l "${SYSTEM_CONFIG_FILE}" 2>/dev/null
     fi
 }
+
+# --- 3. Main Switch Logic ---
 
 perform_switch() {
     local MODE="$1"
     local CONTEXT="$2" # "boot" or "live"
     
-    log "[*] Operation: Switch to $MODE (Context: $CONTEXT)"
-    log "[*] Module Path: $MODULE_DIR"
+    log "--- Switching to $MODE ($CONTEXT) ---"
     
-    # 1. Ensure Stock Backup
+    # A. Ensure Stock Backup Exists
     if [ ! -f "${ORIGINAL_STOCK_FILE}" ]; then
-        # If live, we must unmount to see the TRUE stock file
+        # If we are live, unmount first to ensure we copy the REAL stock file
         [ "$CONTEXT" = "live" ] && cleanup_mounts
-        cp "${SYSTEM_CONFIG_FILE}" "${ORIGINAL_STOCK_FILE}"
-        log "[+] Stock backup created."
+        
+        if [ -f "${SYSTEM_CONFIG_FILE}" ]; then
+            cp "${SYSTEM_CONFIG_FILE}" "${ORIGINAL_STOCK_FILE}"
+            log "Created stock backup."
+        else
+            log "Error: System config file not found for backup!"
+            return 1
+        fi
     fi
     
-    # 2. Update Physical File (Hybrid Source of Truth)
-    # This ensures 'meta-hybrid_mount' picks it up on next boot
+    # B. Hybrid Persistence: Update the Physical Module File
+    # This ensures that on next boot, the overlay system (Magisk/KSU) sees the updated file.
     mkdir -p "$(dirname "${INTERNAL_CONFIG_FILE}")"
     cp "${ORIGINAL_STOCK_FILE}" "${INTERNAL_CONFIG_FILE}"
     patch_config "$MODE" "${INTERNAL_CONFIG_FILE}"
     chmod 644 "${INTERNAL_CONFIG_FILE}"
-    log "[+] Internal module file updated (Physical Patch)."
+    log "Physical module file updated."
 
-    # 3. Apply Live Mount if necessary
+    # C. Live Application (Hot-Reload)
+    # Only perform bind mounts if we are in 'live' mode.
     if [ "$CONTEXT" = "live" ]; then
         cleanup_mounts
-        log "[*] Applying manual bind mount via nsenter..."
+        
+        log "Applying live bind mount..."
         if nsenter -t 1 -m -- mount -o bind "${INTERNAL_CONFIG_FILE}" "${SYSTEM_CONFIG_FILE}"; then
-            log "[+] Live switch successful."
+            log "Live mount successful."
             write_result "SUCCESS" "$RESULT_FILE"
             
-            # Hot-Reload logic
+            # Restart Wi-Fi service to apply driver changes
             svc wifi disable
             sleep 1
             svc wifi enable
-            log "[*] Wi-Fi service restarted."
+            log "Wi-Fi service restarted."
         else
-            log "[!] Bind mount failed!"
+            log "Error: Bind mount failed."
             write_result "FAILED" "$RESULT_FILE"
         fi
     else
-        log "[*] Boot mode: Relying on hybrid overlay for mount."
+        log "Boot mode: Skipping live mount (relying on system overlay)."
     fi
 
-    # 4. Persist Mode
+    # D. Save State
     echo "${MODE}" > "${MODE_CONFIG_FILE}"
     sync
 }
 
-# --- CLI Entry ---
+# --- 4. CLI Router ---
+
 case "$1" in
     "status") get_status ;;
     "stats") get_stats ;;
     "apply_boot")
+        # Apply the saved mode (or balanced default) physically, without mounting
+        exec >> "$LOG_FILE" 2>&1
         MODE=$(cat "${MODE_CONFIG_FILE}" 2>/dev/null || echo "balanced")
         perform_switch "$MODE" "boot"
         ;;
     "perf"|"balanced"|"stock"|"custom")
-        # Setup Logging for switch operations
+        # Live switch with logging
         exec > "$LOG_FILE" 2>&1
         perform_switch "$1" "live"
         ;;
@@ -164,5 +176,3 @@ case "$1" in
         exit 1
         ;;
 esac
-
-exit 0
