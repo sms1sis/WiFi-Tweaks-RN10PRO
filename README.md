@@ -80,7 +80,7 @@ This is a "build-less" project. To package the module for installation, you need
 From the root of the project directory, run the following command:
 
 ```bash
-zip -r wifi_tweaks.zip . -x ".git*" "GEMINI.md" ".gitignore" "README.md" "update.json" "changelog.md" "wifi_tweaks.zip"
+zip -r WiFi-Config-Switcher.zip . -x ".git*" "GEMINI.md" ".gitignore" "README.md" "update.json" "changelog.md" "wifi_tweaks.zip"
 ```
 
 This will create `wifi_tweaks.zip`, which can be flashed in the KernelSU app.
