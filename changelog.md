@@ -1,5 +1,11 @@
 # WiFi Config Switcher Changelog
 
+## v3.4.0
+- **Refactor:** Standardized configuration handling to `webroot/config.ini` for KernelSU Next compatibility.
+- **Fix:** WebUI now robustly waits for KernelSU API injection, preventing race conditions.
+- **Fix:** "Load Stock" now persists changes to disk immediately.
+- **Fix:** Updated boot scripts (`post-fs-data.sh`) and installer (`customize.sh`) to use the new config path.
+
 ## v3.3.3
 - **Fix:** Implemented automated runtime creation of `common/config.ini` during installation (`customize.sh`) and boot (`post-fs-data.sh`).
 - **Fix:** Resolved persistent "Could not load configuration" error in WebUI when the runtime config file was missing.

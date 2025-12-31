@@ -10,15 +10,15 @@ MODDIR=${0%/*}
 chmod +x "${MODDIR}/common/switch_mode.sh"
 
 # 2. Ensure runtime config exists for WebUI
-if [ ! -f "${MODDIR}/webroot/custom.ini" ]; then
+if [ ! -f "${MODDIR}/webroot/config.ini" ]; then
     if [ -f "${MODDIR}/common/original_stock.ini" ]; then
-        cp "${MODDIR}/common/original_stock.ini" "${MODDIR}/webroot/custom.ini"
+        cp "${MODDIR}/common/original_stock.ini" "${MODDIR}/webroot/config.ini"
     elif [ -f "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" ]; then
-        cp "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" "${MODDIR}/webroot/custom.ini"
+        cp "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" "${MODDIR}/webroot/config.ini"
     else
-        touch "${MODDIR}/webroot/custom.ini"
+        touch "${MODDIR}/webroot/config.ini"
     fi
-    chmod 644 "${MODDIR}/webroot/custom.ini"
+    chmod 644 "${MODDIR}/webroot/config.ini"
 fi
 
 # 3. Delegate to the main switcher script in 'apply_boot' mode
