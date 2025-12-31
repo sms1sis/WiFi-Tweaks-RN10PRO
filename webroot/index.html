@@ -519,7 +519,7 @@
         function loadConfigIntoEditor(cmd) {
             textarea.value = "Loading configuration...";
             setTimeout(() => {
-                const content = runCommand(`${scriptPath} ${cmd}`);
+                const content = runCommand(`sh ${scriptPath} ${cmd}`);
                 if (!content || content.trim() === "") {
                      textarea.value = "# Error: Could not load configuration.\n# Check if file exists or permissions are correct.";
                 } else {
@@ -534,7 +534,7 @@
             if (!content.trim()) return;
             
             const encoded = btoa(content);
-            const res = runCommand(`${scriptPath} save_custom "${encoded}"`);
+            const res = runCommand(`sh ${scriptPath} save_custom "${encoded}"`);
             if (res.includes("Saved")) {
                 switchView('dashboard', document.querySelector('.nav-item'));
                 runSwitch('custom');
