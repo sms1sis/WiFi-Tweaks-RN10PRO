@@ -6,11 +6,10 @@ A KernelSU module to easily switch your device's Wi-Fi driver configuration betw
 
 ## ✨ Features
 
-*   **Easy Mode Selection:** Choose your preferred Wi-Fi mode (Performance, Balanced, Default, or Stock) via a simple WebUI or command-line interface.
-*   **Four Modes:**
+*   **Easy Mode Selection:** Choose your preferred Wi-Fi mode (Performance, Balanced, or Stock) via a simple WebUI or command-line interface.
+*   **Three Modes:**
     *   **Performance:** Unleashes full power. Disables power saving for lowest latency, enables MIMO & 40MHz BW, and maximizes TX power.
     *   **Balanced:** A balanced sweet spot. Retains power saving for battery life but enables MIMO & 40MHz BW for better connectivity than stock. **(Default Mode)**
-    *   **Default:** The module's standard configuration (safe baseline).
     *   **Stock:** Restores the exact configuration your device had before installing the module (Dynamic Backup).
 *   **Real-Time Diagnostics:** WebUI displays live RSSI, Link Speed, and Frequency.
 *   **Dynamic Patching:** Compatible with more devices by patching the system's original config instead of overwriting it with a static file.
@@ -40,7 +39,7 @@ Once the module is installed and the device is rebooted, you can switch modes us
 1.  Open the **KernelSU** app.
 2.  Navigate to the **Modules** tab.
 3.  Select **WiFi Config Switcher**.
-4.  Open the **WebUI** and use the "Performance", "Balanced", or "Default" buttons. The interface will display a status message indicating the current operation and result.
+4.  Open the **WebUI** and use the "Performance", "Balanced", or "Stock" buttons. The interface will display a status message indicating the current operation and result.
 
 **Note:** The WebUI does not display the full execution log. To view the detailed log for debugging, use the command line below.
 
@@ -55,7 +54,7 @@ Open a root shell (`su`) and execute the script directly:
 # For Balanced Mode
 /data/adb/modules/wifi_tweaks/common/switch_mode.sh balanced
 
-# For Default/Stock Mode
+# For Stock Mode
 /data/adb/modules/wifi_tweaks/common/switch_mode.sh stock
 ```
 

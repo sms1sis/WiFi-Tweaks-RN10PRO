@@ -119,8 +119,8 @@ patch_config() {
             apply_param "$target" "gEnableEGAP" "1"
             apply_param "$target" "arp_ac_category" "0"
             ;;
-        "default"|"stock")
-            # Stock/Default Mode
+        "stock")
+            # Stock Mode
             log "[*] Using stock configuration."
             ;;
     esac
@@ -270,7 +270,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ -z "$1" ]; then
-    echo "Usage: $0 [perf|balanced|default|stock|status|stats]"
+    echo "Usage: $0 [perf|balanced|stock|status|stats]"
     exit 1
 fi
 

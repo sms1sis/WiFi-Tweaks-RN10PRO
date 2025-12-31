@@ -1,5 +1,9 @@
 # WiFi Config Switcher Changelog
 
+## v3.1.1
+- **Cleanup:** Removed redundant "Default" mode. "Stock" mode is now the primary method for reverting to original settings.
+- **WebUI:** Updated interface to remove the "Default" button.
+
 ## v3.1.0
 - **New Feature:** "True Stock" Backup. Automatically backs up your original system config on first run.
 - **New Feature:** "Stock" Mode. Restore your original system config anytime via WebUI/CLI.

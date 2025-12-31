@@ -15,8 +15,6 @@
             --accent-perf-dark: #018786;
             --accent-balanced: #ff5252;
             --accent-balanced-dark: #c51162;
-            --accent-default: #42a5f5;
-            --accent-default-dark: #1976d2;
             --accent-stock: #78909c;
             --accent-stock-dark: #455a64;
             --shadow: rgba(0, 0, 0, 0.5);
@@ -95,7 +93,7 @@
             letter-spacing: 0.5px;
         }
 
-        #perf-button, #balanced-button, #default-button {
+        #perf-button, #balanced-button, #stock-button {
             flex: 0 0 calc(50% - 0.5rem);
         }
 
@@ -110,13 +108,6 @@
         #balanced-button:hover:not(:disabled) {
             background-color: var(--accent-balanced-dark);
             box-shadow: 0 0 15px var(--accent-balanced);
-            transform: translateY(-2px);
-        }
-
-        #default-button { background-color: var(--accent-default); }
-        #default-button:hover:not(:disabled) {
-            background-color: var(--accent-default-dark);
-            box-shadow: 0 0 15px var(--accent-default);
             transform: translateY(-2px);
         }
 
@@ -259,10 +250,6 @@
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l-5.5 9h11L12 2zm0 3.84L13.93 9h-3.86L12 5.84zM17.5 13c-2.49 0-4.5 2.01-4.5 4.5s2.01 4.5 4.5 4.5 4.5-2.01 4.5-4.5-2.01-4.5-4.5-4.5zm0 7c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM6.5 13C4.01 13 2 15.01 2 17.5S4.01 22 6.5 22 11 19.99 11 17.5 8.99 13 6.5 13zm0 7C5.12 20 4 18.88 4 17.5S5.12 15 6.5 15 9 16.12 9 17.5 7.88 20 6.5 20z"/></svg>
                 Balanced
             </button>
-            <button id="default-button">
-                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                Default
-            </button>
             <button id="stock-button">
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 15v4H5v-4h14m1-2H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zM7 18.5c-.82 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM19 5v4H5V5h14m1-2H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM7 8.5c-.82 0-1.5-.67-1.5-1.5S6.18 5.5 7 5.5s1.5.67 1.5 1.5S7.82 8.5 7 8.5z"/></svg>
                 Stock
@@ -275,7 +262,6 @@
     // ASYNCHRONOUS KernelSU WebUI Bridge
     const perfButton = document.getElementById('perf-button');
     const balancedButton = document.getElementById('balanced-button');
-    const defaultButton = document.getElementById('default-button');
     const stockButton = document.getElementById('stock-button');
     const outputDiv = document.getElementById('output');
     const currentModeSpan = document.getElementById('current-mode');
@@ -306,9 +292,6 @@
         } else if (mode.includes('balanced')) {
             modeText = 'Balanced';
             dotColor = 'var(--accent-balanced)';
-        } else if (mode.includes('default')) {
-            modeText = 'Default';
-            dotColor = 'var(--accent-default)';
         } else if (mode.includes('stock')) {
             modeText = 'Stock';
             dotColor = 'var(--accent-stock)';
@@ -321,7 +304,7 @@
     }
 
     function setUILocked(locked) {
-        [perfButton, balancedButton, defaultButton, stockButton].forEach(btn => btn.disabled = locked);
+        [perfButton, balancedButton, stockButton].forEach(btn => btn.disabled = locked);
         if (locked) {
             outputDiv.classList.add('updating');
         } else {
@@ -470,7 +453,6 @@
     document.addEventListener('DOMContentLoaded', getInitialStatus);
     perfButton.addEventListener('click', () => runSwitch('perf'));
     balancedButton.addEventListener('click', () => runSwitch('balanced'));
-    defaultButton.addEventListener('click', () => runSwitch('default'));
     stockButton.addEventListener('click', () => runSwitch('stock'));
     </script>
 </body>
