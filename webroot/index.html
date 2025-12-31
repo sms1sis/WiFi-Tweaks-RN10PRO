@@ -619,6 +619,17 @@
             }
         }
 
+        async function checkModulePath() {
+            const res = runCommand(`[ -f "${scriptPath}" ] && echo "FOUND" || echo "MISSING"`);
+            if (res.includes("MISSING")) {
+                const output = document.getElementById('console-output');
+                output.textContent = "⚠️ CRITICAL ERROR: Module files not found!\n\nThe path '/data/adb/modules/wifi_tweaks/' is not accessible.\n\nPossible causes:\n1. SUSFS or namespace isolation is hiding the module.\n2. The module is not installed correctly.\n\nIf using SUSFS, try rebooting or checking your mount hiding settings.";
+                document.querySelectorAll('.mode-btn').forEach(b => b.disabled = true);
+                return false;
+            }
+            return true;
+        }
+
         // Init
         document.addEventListener('DOMContentLoaded', async () => {
             const consoleOutput = document.getElementById('console-output');
@@ -626,6 +637,8 @@
             
             await waitForKSU();
             
+            if (!await checkModulePath()) return;
+
             consoleOutput.textContent = "KernelSU API ready. Initializing...";
             updateStatusUI(runCommand(`${scriptPath} status`));
             fetchStats();
