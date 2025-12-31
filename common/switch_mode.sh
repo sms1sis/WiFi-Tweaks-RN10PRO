@@ -18,7 +18,7 @@ readonly MODULE_WIFI_DIR="${MODULE_DIR}/system/vendor/etc/wifi"
 readonly INTERNAL_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
 readonly SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
 readonly ORIGINAL_STOCK_FILE="${MODULE_DIR}/common/original_stock.ini"
-readonly CUSTOM_CONFIG_FILE="${MODULE_DIR}/webroot/custom.ini"
+readonly CUSTOM_CONFIG_FILE="${MODULE_DIR}/webroot/config.ini"
 
 readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 

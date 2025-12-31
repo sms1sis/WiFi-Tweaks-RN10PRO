@@ -35,7 +35,7 @@
         }
 
         /* Views */
-        .view { 
+        .view {
             flex: 1;
             display: none;
             overflow-y: auto;
@@ -47,7 +47,7 @@
             .view { padding: 30px; }
         }
 
-        .view.active { 
+        .view.active {
             display: flex;
             flex-direction: column;
             height: 100%;
@@ -242,10 +242,10 @@
 
         .tool-btn:active { transform: translateY(2px); }
 
-        .tool-btn.primary { 
-            background: var(--accent-secondary); 
-            color: #1a1b26; 
-            font-weight: bold; 
+        .tool-btn.primary {
+            background: var(--accent-secondary);
+            color: #1a1b26;
+            font-weight: bold;
             border: none;
             box-shadow: 0 4px 15px rgba(187, 154, 247, 0.3);
         }
@@ -293,7 +293,7 @@
         <div class="container">
             <h1>Wi-Fi Tuner</h1>
             <div class="subtitle">Configuration Engine</div>
-            
+
             <div style="text-align: center;">
                 <div class="status-badge">
                     <span id="status-dot" class="status-dot"></span>
@@ -345,7 +345,7 @@
             <span style="font-family: monospace; font-size: 0.8rem; color: var(--accent-secondary);">micro: custom.ini</span>
             <span id="cursor-pos" style="font-size: 0.7rem; opacity: 0.6;">Ln 1, Col 1</span>
         </div>
-        
+
         <div class="editor-wrapper">
             <div id="line-numbers">1</div>
             <textarea id="editor-textarea" spellcheck="false" wrap="off"></textarea>
@@ -373,15 +373,17 @@
         const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh';
         const logFile = "/data/local/tmp/wifi_tweaks.log";
         const resultFile = "/data/local/tmp/wifi_tweaks_result";
-        const configPath = "/data/adb/modules/wifi_tweaks/webroot/custom.ini";
+        const configPath = "/data/adb/modules/wifi_tweaks/webroot/config.ini";
         const stockPath = "/data/adb/modules/wifi_tweaks/common/original_stock.ini";
         
         let pollInterval = null;
         let statsInterval = null;
 
         // KSU Initialization
-        async function waitForKSU() {
-            if (window.ksu && window.ksu.fs && window.ksu.fs.readFile) return;
+        function waitForKSU() {
+            if (window.ksu && window.ksu.fs && window.ksu.fs.readFile) {
+                return Promise.resolve();
+            }
 
             return new Promise(resolve => {
                 const timer = setInterval(() => {
@@ -416,7 +418,7 @@
                     return result.errno === 0 ? String(result.stdout || "") : `Error: ${result.stderr}`;
                 }
                 return String(result);
-            } catch (e) { return `Error: ${e.message}`; }
+            } catch (e) { return `Error: ${e.message}` }
         }
 
         // Stats & Status
@@ -545,19 +547,27 @@
                     } catch (e) {
                          content = runCommand(`${scriptPath} get_stock`);
                     }
-                } else {
-                    content = await ksu.fs.readFile(configPath, 'utf-8');
-                }
+                    
+                    // Decode if needed
+                    if (typeof content !== 'string' && content) {
+                        content = new TextDecoder("utf-8").decode(content);
+                    }
 
-                if (typeof content !== 'string' && content) {
-                    content = new TextDecoder("utf-8").decode(content);
+                    // PERSIST STOCK TO CONFIG FILE
+                    if (content) {
+                        await ksu.fs.writeFile(configPath, content);
+                    }
+
+                } else {
+                    // Load Custom
+                    content = await ksu.fs.readFile(configPath, 'utf-8');
+                    if (typeof content !== 'string' && content) {
+                        content = new TextDecoder("utf-8").decode(content);
+                    }
                 }
                 
-                if (!content || content.trim() === "") {
-                     textarea.value = "# New custom configuration";
-                } else {
-                     textarea.value = content;
-                }
+                textarea.value = content || "# New custom configuration";
+
             } catch (e) {
                 // If the custom file doesn't exist, try to load stock as a base template
                 if (cmd !== 'get_stock') {
