@@ -226,6 +226,7 @@ reload_driver() {
 
 perform_switch() {
     local MODE="$1"
+    local SKIP_RELOAD="$2"
     
     log "[*] Operation: Switch to $MODE"
     log "[*] Version: $VERSION"
@@ -269,27 +270,32 @@ perform_switch() {
     # 5. Persist Mode
     echo "${MODE}" > "${MODE_CONFIG_FILE}"
 
-    # 6. Restart Driver/Service
-    log "[*] Restarting Wi-Fi service..."
-    svc wifi disable
-    sleep 2
+    # 6. Restart Driver/Service (Only if not skipped)
+    if [ "$SKIP_RELOAD" != "noreload" ]; then
+        log "[*] Restarting Wi-Fi service..."
+        svc wifi disable
+        sleep 2
 
-    reload_driver
-    local RET=$?
-    
-    if [ $RET -eq 0 ]; then
-        log "[+] Driver hot-reload successful."
-        write_result "SUCCESS" "$RESULT_FILE"
-    elif [ $RET -eq 2 ]; then
-        log "[!] Hot-reload skipped (Built-in driver)."
-        write_result "BUILTIN" "$RESULT_FILE"
+        reload_driver
+        local RET=$?
+        
+        if [ $RET -eq 0 ]; then
+            log "[+] Driver hot-reload successful."
+            write_result "SUCCESS" "$RESULT_FILE"
+        elif [ $RET -eq 2 ]; then
+            log "[!] Hot-reload skipped (Built-in driver)."
+            write_result "BUILTIN" "$RESULT_FILE"
+        else
+            log "[!] Hot-reload failed."
+            write_result "FAILED" "$RESULT_FILE"
+        fi
+
+        svc wifi enable
+        log "[*] Wi-Fi service enabled."
     else
-        log "[!] Hot-reload failed."
-        write_result "FAILED" "$RESULT_FILE"
+        log "[*] Service restart skipped (Boot mode)."
     fi
-
-    svc wifi enable
-    log "[*] Wi-Fi service enabled."
+    
     log "[*] Switch operation completed."
     sync
 }
@@ -330,11 +336,19 @@ elif [ "$CMD" = "get_custom" ]; then
     fi
 elif [ "$CMD" = "save_custom" ]; then
     if [ -n "$2" ]; then
-        echo "$2" | base64 -d > "${CUSTOM_CONFIG_FILE}"
+        printf "%s" "$2" | base64 -d > "${CUSTOM_CONFIG_FILE}"
         echo "Saved"
     else
         echo "Error: No data provided"
     fi
+elif [ "$CMD" = "apply_boot" ]; then
+    # Read mode from config, default to balanced
+    if [ -f "${MODE_CONFIG_FILE}" ]; then
+        MODE=$(cat "${MODE_CONFIG_FILE}")
+    else
+        MODE="balanced"
+    fi
+    perform_switch "$MODE" "noreload"
 else
     # Setup Logging
     exec 3>&1
