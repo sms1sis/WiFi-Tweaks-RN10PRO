@@ -1,5 +1,11 @@
 # WiFi Config Switcher Changelog
 
+## v3.3.0
+- **WebUI Overhaul:** Introduced a completely new, modern interface with a "Single Page Application" design.
+- **Advanced Editor:** Added a dedicated "Micro-style" configuration editor with line numbering, cursor position tracking, and syntax-friendly font.
+- **Navigation:** Implemented a persistent bottom navigation bar for seamless switching between Dashboard and Editor.
+- **Theming:** Updated to a "Tokyo Night" inspired dark theme for better aesthetics and readability.
+
 ## v3.2.0
 - **New Feature:** Added "Custom" mode support.
 - **WebUI:** Added a built-in INI Configuration Editor. You can now modify the stock config and save it as a custom profile directly from the WebUI.
