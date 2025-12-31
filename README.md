@@ -4,6 +4,11 @@ A KernelSU module to easily switch your device's Wi-Fi driver configuration betw
 
 **Note:** A reboot is required for the selected mode to take effect if wifi driver is monolithic/built-in!
 
+## ⚠️ Warning
+
+> [!IMPORTANT]
+> This module i compatible with overlayfs mount system only. So don't use with magisk and on ksu/ksun use overlayfs.
+
 ## ✨ Features
 
 *   **Easy Mode Selection:** Choose your preferred Wi-Fi mode (Performance, Balanced, or Stock) via a simple WebUI or command-line interface.
