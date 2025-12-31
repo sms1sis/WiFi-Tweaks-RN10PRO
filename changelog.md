@@ -1,5 +1,12 @@
 # WiFi Config Switcher Changelog
 
+## v3.4.4
+- **Refactor (OverlayFS):** Major architectural update to support `meta-overlayfs` and KernelSU standard overlay structures.
+- **Path Independence:** Scripts now dynamically determine the module directory at runtime (`readlink -f "$0"`), ensuring compatibility with custom mount points and meta-modules.
+- **Static Boot Mode:** Optimized `post-fs-data.sh` to update the physical module file, allowing the system's OverlayFS to handle the mount naturally.
+- **SUSFS Awareness:** Added detection and safe handling for SUSFS environments.
+- **Improved Mount Logic:** Implemented robust unmounting and re-mounting sequences to prevent "mount loops" during live switching.
+
 ## v3.4.3
 # warning ⚠️ 
 - **NotFixed:**New custom configuration (Could not load existing settings due to isolation) This is not fixed yet. Don't expect soon!
