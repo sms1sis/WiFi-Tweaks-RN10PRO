@@ -21,7 +21,14 @@ if [ ! -f "${MODDIR}/webroot/config.ini" ]; then
     chmod 644 "${MODDIR}/webroot/config.ini"
 fi
 
-# 3. Delegate to the main switcher script in 'apply_boot' mode
+# 3. Expose stock config to /data/local/tmp for WebUI fallback
+# This helps when SUSFS/KSU hides the /data/adb/modules directory
+if [ -f "${MODDIR}/common/original_stock.ini" ]; then
+    cp "${MODDIR}/common/original_stock.ini" "/data/local/tmp/wifi_tweaks_stock.ini"
+    chmod 644 "/data/local/tmp/wifi_tweaks_stock.ini"
+fi
+
+# 4. Delegate to the main switcher script in 'apply_boot' mode
 # This ensures consistency with the WebUI and handles all modes (perf, balanced, stock, custom)
 # correctly without duplicating logic.
 sh "${MODDIR}/common/switch_mode.sh" apply_boot > /dev/null 2>&1

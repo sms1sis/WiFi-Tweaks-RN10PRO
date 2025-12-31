@@ -375,6 +375,7 @@
         const resultFile = "/data/local/tmp/wifi_tweaks_result";
         const configPath = "/data/adb/modules/wifi_tweaks/webroot/config.ini";
         const stockPath = "/data/adb/modules/wifi_tweaks/common/original_stock.ini";
+        const stockPathFallback = "/data/local/tmp/wifi_tweaks_stock.ini";
         
         let pollInterval = null;
         let statsInterval = null;
@@ -573,8 +574,14 @@
                 if (cmd === 'get_stock') {
                     try {
                         content = await ksuReadFile(stockPath);
-                    } catch (e) {
-                         content = runCommand(`${scriptPath} get_stock`);
+                    } catch (e1) {
+                        console.warn("Primary stock path failed, trying fallback...");
+                        try {
+                            content = await ksuReadFile(stockPathFallback);
+                        } catch (e2) {
+                            console.warn("Fallback stock path failed, trying shell...");
+                            content = runCommand(`${scriptPath} get_stock`);
+                        }
                     }
                     
                     // PERSIST STOCK TO CONFIG FILE
