@@ -1,14 +1,12 @@
 #!/system/bin/sh
 
-# Wi-Fi Config Switcher Script (OverlayFS & KSU Compatible)
-# Improved logic for meta-overlayfs, SUSFS, and Live Switching
+# Wi-Fi Config Switcher Script (Meta-Magic_Mount Compatible)
+# Optimized for KernelSU with meta-magic_mount support
 
 # --- Constants & Paths ---
 readonly SCRIPT_NAME=$(basename "$0")
 
 # Detect Module Directory Dynamically
-# This is crucial for meta-overlayfs/magic_mount compatibility
-# as the mount path may differ from standard /data/adb/modules
 readonly SCRIPT_PATH=$(readlink -f "$0")
 readonly SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 # Assuming structure is: .../MODULE_ROOT/common/switch_mode.sh
@@ -188,11 +186,11 @@ reload_driver() {
 }
 
 cleanup_mounts() {
-    # Clean up any existing bind mounts on the target file
-    # Loop to handle potential stacked mounts
+    # Clean up ANY existing mounts on the target file
+    # This is critical for meta-magic_mount which may already have a mount active
     local count=0
     while grep -q " ${SYSTEM_CONFIG_FILE} " /proc/mounts; do
-        log "[*] Cleaning up existing mount on ${SYSTEM_CONFIG_FILE}..."
+        log "[*] Cleaning up existing mount (Meta/Previous) on ${SYSTEM_CONFIG_FILE}..."
         nsenter -t 1 -m -- umount "${SYSTEM_CONFIG_FILE}" 2>/dev/null
         local ret=$?
         if [ $ret -ne 0 ]; then
@@ -219,15 +217,15 @@ perform_switch() {
     
     # SUSFS Detection
     if grep -q "susfs" /proc/filesystems 2>/dev/null; then
-        log "[!] SUSFS Environment detected. Proceeding with caution."
+        log "[!] SUSFS Environment detected."
     fi
 
     # 1. Prepare Stock Backup
-    # Only if missing, to preserve original system state.
+    # Check if stock backup exists. If not, we need to grab it.
     if [ ! -f "${ORIGINAL_STOCK_FILE}" ]; then
         log "[*] Original stock backup missing."
         
-        # If in live mode, ensure we aren't copying a bind-mounted file
+        # If in live mode, ensure we aren't copying a mounted file
         if [ "$CONTEXT" != "boot" ]; then
             cleanup_mounts
         fi
@@ -243,9 +241,9 @@ perform_switch() {
     fi
     
     # 2. Patch Internal Config (Physical File Update)
-    # This is crucial for "Static" mode (Boot) and consistency.
+    # This is the PRIMARY method for meta-magic_mount at boot.
     mkdir -p "$(dirname "${INTERNAL_CONFIG_FILE}")"
-    log "[*] Updating internal module file: ${INTERNAL_CONFIG_FILE}"
+    log "[*] Updating internal module file for meta-magic_mount: ${INTERNAL_CONFIG_FILE}"
     cp "${ORIGINAL_STOCK_FILE}" "${INTERNAL_CONFIG_FILE}"
     chmod 644 "${INTERNAL_CONFIG_FILE}"
     
@@ -253,18 +251,22 @@ perform_switch() {
 
     # 3. Apply Changes
     if [ "$CONTEXT" = "boot" ]; then
-        # BOOT MODE: Static update only.
-        # Magisk/KernelSU will overlay the modified 'system' folder naturally.
-        log "[*] Boot mode: Internal file updated. Skipping bind mount."
+        # BOOT MODE:
+        # We rely entirely on meta-magic_mount to overlay/mount our modified 
+        # ${INTERNAL_CONFIG_FILE} over the system file.
+        log "[*] Boot mode: Internal file updated."
+        log "[*] Skipping manual bind mount. Relying on meta-magic_mount/overlay."
         
     else
-        # LIVE MODE: Bind mount for immediate effect.
-        cleanup_mounts
+        # LIVE MODE:
+        # We must manually bind mount because the system is already up.
+        # CRITICAL: Remove ANY existing mount first to prevent stacking.
         
-        # Check for OverlayFS on parent directory (Informational)
-        local parent_dir=$(dirname "${SYSTEM_CONFIG_FILE}")
-        if grep -q "overlay.*${parent_dir}" /proc/mounts; then
-            log "[!] Notice: Parent directory is an OverlayFS mount."
+        if grep -q " ${SYSTEM_CONFIG_FILE} " /proc/mounts; then
+            log "[*] Existing mount detected (meta-magic_mount or previous switch)."
+            cleanup_mounts
+        else
+            log "[*] No existing mount detected on target."
         fi
 
         log "[*] Applying live bind mount..."
