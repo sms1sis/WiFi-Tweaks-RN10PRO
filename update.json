@@ -1,6 +1,6 @@
 {
-  "version": "3.5.0",
-  "versionCode": 50,
-  "zipUrl": "https://github.com/sms1sis/WiFi-Config-Switcher/releases/download/v3.5.0/WiFi-Switcher-OverlayFS.zip",
+  "version": "3.6.0",
+  "versionCode": 60,
+  "zipUrl": "https://github.com/sms1sis/WiFi-Config-Switcher/releases/download/v3.6.0/WiFi-Config-Switcher.zip",
   "changelog": "https://raw.githubusercontent.com/sms1sis/WiFi-Config-Switcher/main/changelog.md"
 }

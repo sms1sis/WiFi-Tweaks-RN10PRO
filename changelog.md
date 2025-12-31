@@ -1,5 +1,11 @@
 # WiFi Config Switcher Changelog
 
+## v3.6.0
+- **Architectural Shift:** Fully transitioned to a **Hybrid Mount** strategy as the primary method, merging Magisk and KernelSU logic into a single robust implementation.
+- **Cleanup:** Removed legacy `magisk` and `dev` branches to focus on a unified `main` codebase.
+- **Documentation:** Updated `README.md` to reflect the hybrid approach and its benefits for both Magisk and KernelSU users.
+- **Refactor:** Simplified internal logic to prioritize dynamic patching and `nsenter`-based live switching.
+
 ## v3.5.0
 - **Feature:** Added full support for `meta-hybrid_mount` for KernelSU.
 - **Refactor:** Unified script logic to handle Hybrid, OverlayFS, and Magic Mount architectures automatically.
