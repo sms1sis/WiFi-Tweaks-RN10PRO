@@ -1,5 +1,11 @@
 # WiFi Config Switcher Changelog
 
+## v3.3.3
+- **Fix:** Implemented automated runtime creation of `common/config.ini` during installation (`customize.sh`) and boot (`post-fs-data.sh`).
+- **Fix:** Resolved persistent "Could not load configuration" error in WebUI when the runtime config file was missing.
+- **Documentation:** Added "Magisk / KernelSU Module Runtime Files" section to `GEMINI.md` to document runtime file generation.
+- **Maintenance:** Added `.gitignore` to prevent tracking of runtime configuration files.
+
 ## v3.3.2
 - **WebUI:** Centered the Dashboard for better vertical alignment.
 - **WebUI:** Text Editor improvements:
