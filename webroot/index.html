@@ -601,9 +601,16 @@
                 if (cmd !== 'get_stock') {
                      try {
                         content = await ksuReadFile(stockPath);
+                        if (!content) throw new Error("Primary stock path empty");
                         textarea.value = content || "# New custom configuration";
                      } catch (err) {
-                        textarea.value = `# Error: Could not load configuration.\n# ${e.message}`;
+                        console.warn("Primary stock path failed, trying fallback...");
+                        try {
+                            content = await ksuReadFile(stockPathFallback);
+                            textarea.value = content || "# New custom configuration";
+                        } catch (err2) {
+                            textarea.value = `# Error: Could not load configuration.\n# ${e.message}`;
+                        }
                      }
                 } else {
                     textarea.value = `# Error: Could not load configuration.\n# ${e.message}`;

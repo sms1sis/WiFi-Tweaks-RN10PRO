@@ -25,6 +25,7 @@ fi
 # This helps when SUSFS/KSU hides the /data/adb/modules directory
 if [ -f "${MODDIR}/common/original_stock.ini" ]; then
     cp "${MODDIR}/common/original_stock.ini" "/data/local/tmp/wifi_tweaks_stock.ini"
+    chown shell:shell "/data/local/tmp/wifi_tweaks_stock.ini"
     chmod 644 "/data/local/tmp/wifi_tweaks_stock.ini"
 fi
 
