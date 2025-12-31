@@ -379,6 +379,20 @@
         let pollInterval = null;
         let statsInterval = null;
 
+        // KSU Initialization
+        async function waitForKSU() {
+            if (window.ksu && window.ksu.fs && window.ksu.fs.readFile) return;
+
+            return new Promise(resolve => {
+                const timer = setInterval(() => {
+                    if (window.ksu && window.ksu.fs && window.ksu.fs.readFile) {
+                        clearInterval(timer);
+                        resolve();
+                    }
+                }, 50);
+            });
+        }
+
         // UI Routing
         function switchView(viewId, el) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -393,6 +407,7 @@
         }
 
         function runCommand(command) {
+            if (!window.ksu) return "Error: KSU not ready";
             try {
                 const result = ksu.exec(command);
                 if (!result) return "";
@@ -463,7 +478,8 @@
             updateStatusUI(newMode);
         }
 
-        function runSwitch(mode) {
+        async function runSwitch(mode) {
+            await waitForKSU();
             const output = document.getElementById('console-output');
             output.textContent = `[*] Initializing ${mode} switch...`;
             
@@ -520,6 +536,7 @@
 
         async function loadConfigIntoEditor(cmd) {
             textarea.value = "Loading configuration...";
+            await waitForKSU();
             let content;
             try {
                 if (cmd === 'get_stock') {
@@ -542,7 +559,18 @@
                      textarea.value = content;
                 }
             } catch (e) {
-                textarea.value = `# Error: Could not load configuration.\n# ${e.message}`;
+                // If the custom file doesn't exist, try to load stock as a base template
+                if (cmd !== 'get_stock') {
+                     try {
+                        content = await ksu.fs.readFile(stockPath, 'utf-8');
+                        if (typeof content !== 'string' && content) content = new TextDecoder("utf-8").decode(content);
+                        textarea.value = content || "# New custom configuration";
+                     } catch (err) {
+                        textarea.value = `# Error: Could not load configuration.\n# ${e.message}`;
+                     }
+                } else {
+                    textarea.value = `# Error: Could not load configuration.\n# ${e.message}`;
+                }
             }
             textarea.dispatchEvent(new Event('input'));
         }
@@ -551,6 +579,7 @@
             const content = textarea.value;
             if (!content.trim()) return;
             
+            await waitForKSU();
             try {
                 await ksu.fs.writeFile(configPath, content);
                 switchView('dashboard', document.querySelector('.nav-item'));
@@ -561,7 +590,13 @@
         }
 
         // Init
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            const consoleOutput = document.getElementById('console-output');
+            consoleOutput.textContent = "Waiting for KernelSU API...";
+            
+            await waitForKSU();
+            
+            consoleOutput.textContent = "KernelSU API ready. Initializing...";
             updateStatusUI(runCommand(`${scriptPath} status`));
             fetchStats();
             statsInterval = setInterval(fetchStats, 4000);
