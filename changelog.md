@@ -1,5 +1,9 @@
 # WiFi Config Switcher Changelog
 
+## v3.4.1
+- **Fix:** Resolved "Waiting for KernelSU API..." WebUI stall by removing strict filesystem API checks.
+- **Improvement:** Implemented robust file system fallback mechanisms using shell commands for broader compatibility.
+
 ## v3.4.0
 - **Refactor:** Standardized configuration handling to `webroot/config.ini` for KernelSU Next compatibility.
 - **Fix:** WebUI now robustly waits for KernelSU API injection, preventing race conditions.
