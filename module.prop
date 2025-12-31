@@ -1,7 +1,7 @@
 id=wifi_tweaks
 name=WiFi-Config-Switcher
-version=3.4.4
-versionCode=46
+version=3.5.0
+versionCode=50
 author=sms1sis
 description=Switch between performance, balanced, and default Wi-Fi configs.
 updateJson=https://raw.githubusercontent.com/sms1sis/WiFi-Config-Switcher/magisk_mount/update.json
