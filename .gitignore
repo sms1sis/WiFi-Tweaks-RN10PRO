@@ -1,0 +1,5 @@
+# Runtime configuration file generated on install/boot
+common/config.ini
+
+# System build artifacts (if any)
+*.zip
