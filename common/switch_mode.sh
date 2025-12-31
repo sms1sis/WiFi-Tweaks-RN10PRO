@@ -350,15 +350,6 @@ elif [ "$CMD" = "save_custom" ]; then
     else
         echo "Error: No data provided"
     fi
-elif [ "$CMD" = "save_from_file" ]; then
-    TEMP_FILE="$2"
-    if [ -f "$TEMP_FILE" ]; then
-        cat "$TEMP_FILE" | base64 -d > "${CUSTOM_CONFIG_FILE}"
-        echo "Saved"
-        rm -f "$TEMP_FILE"
-    else
-        echo "Error: Temp file not found"
-    fi
 elif [ "$CMD" = "apply_boot" ]; then
     # Read mode from config, default to balanced
     if [ -f "${MODE_CONFIG_FILE}" ]; then
