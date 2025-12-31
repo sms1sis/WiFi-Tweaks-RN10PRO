@@ -48,18 +48,18 @@ get_status() {
 }
 
 get_stats() {
-    # Suggestion 4: Real-time diagnostics
     local rssi="N/A"
     local speed="N/A"
     local freq="N/A"
     
-    # Try using iw
+    # Try using iw (Preferred)
     if command -v iw >/dev/null 2>&1; then
         local link_info=$(iw dev wlan0 link 2>/dev/null)
         if [ -n "$link_info" ]; then
-            rssi=$(echo "$link_info" | grep "signal:" | awk '{print $2 " " $3}')
-            speed=$(echo "$link_info" | grep "tx bitrate:" | cut -d: -f2 | xargs)
-            freq=$(echo "$link_info" | grep "freq:" | awk '{print $2 " MHz"}')
+            # Parse all info in one pass from the variable
+            rssi=$(echo "$link_info" | awk '/signal:/ {print $2 " " $3}')
+            speed=$(echo "$link_info" | awk '/tx bitrate:/ {print $3 " " $4}')
+            freq=$(echo "$link_info" | awk '/freq:/ {print $2 " MHz"}')
         else
             rssi="Disconnected"
         fi
