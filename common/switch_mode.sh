@@ -19,7 +19,7 @@ readonly INTERNAL_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
 readonly SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
 
 readonly PERF_CONFIG_FILE="${MODULE_WIFI_DIR}/perf.ini"
-readonly BATTERY_CONFIG_FILE="${MODULE_WIFI_DIR}/battery.ini"
+readonly BALANCED_CONFIG_FILE="${MODULE_WIFI_DIR}/balanced.ini"
 readonly DEFAULT_CONFIG_FILE="${MODULE_WIFI_DIR}/default.ini"
 readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 
@@ -51,8 +51,8 @@ get_status() {
     # Compare content to determine mode
     if cmp -s "${SYSTEM_CONFIG_FILE}" "${PERF_CONFIG_FILE}"; then
         echo "perf"
-    elif cmp -s "${SYSTEM_CONFIG_FILE}" "${BATTERY_CONFIG_FILE}"; then
-        echo "battery"
+    elif cmp -s "${SYSTEM_CONFIG_FILE}" "${BALANCED_CONFIG_FILE}"; then
+        echo "balanced"
     elif cmp -s "${SYSTEM_CONFIG_FILE}" "${DEFAULT_CONFIG_FILE}"; then
         echo "default"
     else
@@ -204,7 +204,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ -z "$1" ]; then
-    echo "Usage: $0 [perf|battery|default|status]"
+    echo "Usage: $0 [perf|balanced|default|status]"
     exit 1
 fi
 

@@ -18,8 +18,8 @@ chmod +x "${MODDIR}/common/switch_mode.sh"
 if [ -f "${MODE_CONFIG_FILE}" ]; then
     MODE=$(cat "${MODE_CONFIG_FILE}")
 else
-    # Default to battery mode if not set
-    MODE="battery"
+    # Default to balanced mode if not set
+    MODE="balanced"
     echo "$MODE" > "${MODE_CONFIG_FILE}"
 fi
 

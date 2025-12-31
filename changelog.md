@@ -1,5 +1,10 @@
 # WiFi Config Switcher Changelog
 
+## v3.0.4
+- **Refactor:** Renamed "Battery" profile (`battery.ini`) to "Balanced" (`balanced.ini`) to better reflect its nature (MIMO/40MHz enabled).
+- **WebUI:** Updated interface to show "Balanced" instead of "Battery".
+- **Script:** Updated logic to handle the new "balanced" mode.
+
 ## v3.0.3
 - **WebUI:** Fixed "Reboot Required" message logic by introducing `driver-type.conf`.
 - **Script:** Added reliable driver type detection (Modular vs Built-in) that persists to `driver-type.conf`.
