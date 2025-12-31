@@ -331,8 +331,17 @@ elif [ "$CMD" = "get_stock" ]; then
 elif [ "$CMD" = "get_custom" ]; then
     if [ -f "${CUSTOM_CONFIG_FILE}" ]; then
         cat "${CUSTOM_CONFIG_FILE}"
-    elif [ -f "${ORIGINAL_STOCK_FILE}" ]; then
-        cat "${ORIGINAL_STOCK_FILE}"
+    else
+        # Fallback to stock, ensuring it exists first
+        if [ ! -f "${ORIGINAL_STOCK_FILE}" ]; then
+            if [ -f "${SYSTEM_CONFIG_FILE}" ]; then
+                cp "${SYSTEM_CONFIG_FILE}" "${ORIGINAL_STOCK_FILE}"
+            fi
+        fi
+        
+        if [ -f "${ORIGINAL_STOCK_FILE}" ]; then
+            cat "${ORIGINAL_STOCK_FILE}"
+        fi
     fi
 elif [ "$CMD" = "save_custom" ]; then
     if [ -n "$2" ]; then

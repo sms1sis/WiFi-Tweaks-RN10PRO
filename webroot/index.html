@@ -39,8 +39,12 @@
             flex: 1;
             display: none;
             overflow-y: auto;
-            padding: 20px;
+            padding: 10px;
             padding-bottom: 80px; /* Space for nav */
+        }
+
+        @media (min-width: 600px) {
+            .view { padding: 30px; }
         }
 
         .view.active { 
@@ -54,7 +58,13 @@
         }
 
         #dashboard .container {
-            transform: translateY(-12.5vh);
+            /* transform: translateY(-12.5vh); Removed to center */
+        }
+
+        #editor.active {
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         /* Dashboard Styles */
@@ -167,7 +177,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            padding: 0 5px;
         }
 
         .editor-wrapper {
@@ -175,22 +186,24 @@
             display: flex;
             position: relative;
             background: var(--editor-bg);
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid rgba(255,255,255,0.1);
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         #line-numbers {
-            width: 40px;
-            padding: 12px 0;
+            min-width: 35px;
+            width: auto;
+            padding: 12px 10px;
             background: var(--editor-gutter);
             color: #565f89;
             font-family: 'Fira Code', monospace;
             font-size: 13px;
             text-align: right;
-            padding-right: 8px;
             user-select: none;
             line-height: 20px;
+            border-right: 1px solid rgba(255,255,255,0.05);
         }
 
         #editor-textarea {
@@ -210,22 +223,32 @@
 
         .editor-toolbar {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             margin-top: 15px;
         }
 
         .tool-btn {
             flex: 1;
-            padding: 10px;
+            padding: 12px;
             border: 1px solid rgba(255,255,255,0.1);
             background: var(--bg-card);
             color: var(--text-bright);
-            border-radius: 8px;
-            font-size: 0.8rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 500;
             cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .tool-btn.primary { background: var(--accent-secondary); color: #1a1b26; font-weight: bold; }
+        .tool-btn:active { transform: translateY(2px); }
+
+        .tool-btn.primary { 
+            background: var(--accent-secondary); 
+            color: #1a1b26; 
+            font-weight: bold; 
+            border: none;
+            box-shadow: 0 4px 15px rgba(187, 154, 247, 0.3);
+        }
 
         /* Navigation */
         nav {

@@ -1,5 +1,14 @@
 # WiFi Config Switcher Changelog
 
+## v3.3.2
+- **WebUI:** Centered the Dashboard for better vertical alignment.
+- **WebUI:** Text Editor improvements:
+    - Increased editor width for better readability on larger screens.
+    - Implemented dynamic line number width.
+    - Enhanced visual styling (shadows, better spacing).
+- **Fix:** Resolved "Could not load configuration" error in the Editor by implementing a robust stock config fallback.
+- **Config:** "Balanced" is now the default mode if no configuration is set.
+
 ## v3.3.1
 - **WebUI:** Centered dashboard layout for improved aesthetics.
 - **WebUI:** Enhanced log display and status reporting logic with better error handling.
