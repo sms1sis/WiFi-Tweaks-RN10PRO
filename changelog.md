@@ -1,5 +1,10 @@
 # WiFi Config Switcher Changelog
 
+## v3.4.2
+- **Fix (SUSFS/KSU):** Added robust fallback mechanism for devices with strict mount namespace isolation (SUSFS). The module now exposes the stock configuration to a world-readable temporary location at boot, allowing the WebUI to function even when the module directory is hidden.
+- **WebUI:** Added a diagnostic startup check to detect if the module files are inaccessible and display a helpful error message instead of failing silently.
+- **WebUI:** Editor now automatically attempts to load the fallback stock configuration if the primary path is inaccessible.
+
 ## v3.4.1
 - **Fix:** Resolved "Waiting for KernelSU API..." WebUI stall by removing strict filesystem API checks.
 - **Improvement:** Implemented robust file system fallback mechanisms using shell commands for broader compatibility.
