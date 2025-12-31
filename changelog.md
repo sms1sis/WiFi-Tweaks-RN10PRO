@@ -1,5 +1,10 @@
 # WiFi Config Switcher Changelog
 
+## v3.3.1
+- **WebUI:** Centered dashboard layout for improved aesthetics.
+- **WebUI:** Enhanced log display and status reporting logic with better error handling.
+- **Fix:** Corrected repository URLs for update checks.
+
 ## v3.3.0
 - **WebUI Overhaul:** Introduced a completely new, modern interface with a "Single Page Application" design.
 - **Advanced Editor:** Added a dedicated "Micro-style" configuration editor with line numbering, cursor position tracking, and syntax-friendly font.
