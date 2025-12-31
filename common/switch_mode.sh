@@ -18,7 +18,7 @@ readonly MODULE_WIFI_DIR="${MODULE_DIR}/system/vendor/etc/wifi"
 readonly INTERNAL_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
 readonly SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
 readonly ORIGINAL_STOCK_FILE="${MODULE_DIR}/common/original_stock.ini"
-readonly CUSTOM_CONFIG_FILE="${MODULE_DIR}/common/custom.ini"
+readonly CUSTOM_CONFIG_FILE="${MODULE_DIR}/webroot/custom.ini"
 
 readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 
@@ -342,13 +342,6 @@ elif [ "$CMD" = "get_custom" ]; then
         if [ -f "${ORIGINAL_STOCK_FILE}" ]; then
             cat "${ORIGINAL_STOCK_FILE}"
         fi
-    fi
-elif [ "$CMD" = "save_custom" ]; then
-    if [ -n "$2" ]; then
-        printf "%s" "$2" | base64 -d > "${CUSTOM_CONFIG_FILE}"
-        echo "Saved"
-    else
-        echo "Error: No data provided"
     fi
 elif [ "$CMD" = "apply_boot" ]; then
     # Read mode from config, default to balanced

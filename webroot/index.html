@@ -373,6 +373,8 @@
         const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh';
         const logFile = "/data/local/tmp/wifi_tweaks.log";
         const resultFile = "/data/local/tmp/wifi_tweaks_result";
+        const configPath = "/data/adb/modules/wifi_tweaks/webroot/custom.ini";
+        const stockPath = "/data/adb/modules/wifi_tweaks/common/original_stock.ini";
         
         let pollInterval = null;
         let statsInterval = null;
@@ -516,28 +518,45 @@
         textarea.addEventListener('keyup', updateCursorPos);
         textarea.addEventListener('click', updateCursorPos);
 
-        function loadConfigIntoEditor(cmd) {
+        async function loadConfigIntoEditor(cmd) {
             textarea.value = "Loading configuration...";
-            setTimeout(() => {
-                const content = runCommand(`${scriptPath} ${cmd}`);
+            let content;
+            try {
+                if (cmd === 'get_stock') {
+                    try {
+                        content = await ksu.fs.readFile(stockPath, 'utf-8');
+                    } catch (e) {
+                         content = runCommand(`${scriptPath} get_stock`);
+                    }
+                } else {
+                    content = await ksu.fs.readFile(configPath, 'utf-8');
+                }
+
+                if (typeof content !== 'string' && content) {
+                    content = new TextDecoder("utf-8").decode(content);
+                }
+                
                 if (!content || content.trim() === "") {
-                     textarea.value = "# Error: Could not load configuration.\n# Check if file exists or permissions are correct.";
+                     textarea.value = "# New custom configuration";
                 } else {
                      textarea.value = content;
                 }
-                textarea.dispatchEvent(new Event('input'));
-            }, 100);
+            } catch (e) {
+                textarea.value = `# Error: Could not load configuration.\n# ${e.message}`;
+            }
+            textarea.dispatchEvent(new Event('input'));
         }
 
-        function saveAndApply() {
+        async function saveAndApply() {
             const content = textarea.value;
             if (!content.trim()) return;
             
-            const encoded = btoa(content);
-            const res = runCommand(`${scriptPath} save_custom "${encoded}"`);
-            if (res.includes("Saved")) {
+            try {
+                await ksu.fs.writeFile(configPath, content);
                 switchView('dashboard', document.querySelector('.nav-item'));
                 runSwitch('custom');
+            } catch (e) {
+                alert("Failed to save config: " + e.message);
             }
         }
 
