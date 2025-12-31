@@ -2,7 +2,10 @@
 # This script runs at boot time (post-fs-data) to set the Wi-Fi configuration.
 
 # --- Configuration ---
-MODDIR=${0%/*}
+# Dynamically determine the module directory for path independence
+# This ensures compatibility with meta-modules like meta-overlayfs
+MODDIR=$(readlink -f "$0")
+MODDIR=$(dirname "$MODDIR")
 
 # --- Execution ---
 

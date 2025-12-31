@@ -5,15 +5,14 @@
 
 # --- Constants & Paths ---
 readonly SCRIPT_NAME=$(basename "$0")
-# Detect Module Directory
-if echo "$0" | grep -q "/data/adb/modules/"; then
-    readonly MODULE_DIR="/data/adb/modules/wifi_tweaks"
-else
-    # Fallback logic
-    readonly SCRIPT_PATH=$(readlink -f "$0")
-    readonly SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
-    readonly MODULE_DIR=$(dirname "$SCRIPT_DIR")
-fi
+
+# Detect Module Directory Dynamically
+# This is crucial for meta-overlayfs/magic_mount compatibility
+# as the mount path may differ from standard /data/adb/modules
+readonly SCRIPT_PATH=$(readlink -f "$0")
+readonly SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+# Assuming structure is: .../MODULE_ROOT/common/switch_mode.sh
+readonly MODULE_DIR=$(dirname "$SCRIPT_DIR")
 
 readonly MODULE_WIFI_DIR="${MODULE_DIR}/system/vendor/etc/wifi"
 readonly INTERNAL_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
@@ -216,6 +215,7 @@ perform_switch() {
     
     log "[*] Operation: Switch to $MODE (Context: ${CONTEXT:-live})"
     log "[*] Version: $VERSION"
+    log "[*] Module Dir: $MODULE_DIR"
     
     # SUSFS Detection
     if grep -q "susfs" /proc/filesystems 2>/dev/null; then
