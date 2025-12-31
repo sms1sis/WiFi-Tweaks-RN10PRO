@@ -18,6 +18,7 @@ readonly MODULE_WIFI_DIR="${MODULE_DIR}/system/vendor/etc/wifi"
 readonly INTERNAL_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
 readonly SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
 readonly ORIGINAL_STOCK_FILE="${MODULE_DIR}/common/original_stock.ini"
+readonly CUSTOM_CONFIG_FILE="${MODULE_DIR}/common/custom.ini"
 
 readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 
@@ -125,6 +126,15 @@ patch_config() {
             apply_param "$target" "gEnableGreenAp" "1"
             apply_param "$target" "gEnableEGAP" "1"
             apply_param "$target" "arp_ac_category" "0"
+            ;;
+        "custom")
+            # Custom Mode
+            if [ -f "${CUSTOM_CONFIG_FILE}" ]; then
+                log "[*] Loading custom configuration..."
+                cp "${CUSTOM_CONFIG_FILE}" "$target"
+            else
+                log "[!] Custom config not found! Falling back to stock."
+            fi
             ;;
         "stock")
             # Stock Mode
@@ -293,7 +303,7 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ -z "$1" ]; then
-    echo "Usage: $0 [perf|balanced|stock|status|stats]"
+    echo "Usage: $0 [perf|balanced|stock|custom|status|stats|get_stock|get_custom|save_custom]"
     exit 1
 fi
 
@@ -303,6 +313,28 @@ if [ "$CMD" = "status" ]; then
     get_status
 elif [ "$CMD" = "stats" ]; then
     get_stats
+elif [ "$CMD" = "get_stock" ]; then
+    # Ensure stock file exists first
+    if [ ! -f "${ORIGINAL_STOCK_FILE}" ]; then
+        # Try to grab it from system if missing (best effort without unmount)
+        if [ -f "${SYSTEM_CONFIG_FILE}" ]; then
+            cp "${SYSTEM_CONFIG_FILE}" "${ORIGINAL_STOCK_FILE}"
+        fi
+    fi
+    cat "${ORIGINAL_STOCK_FILE}"
+elif [ "$CMD" = "get_custom" ]; then
+    if [ -f "${CUSTOM_CONFIG_FILE}" ]; then
+        cat "${CUSTOM_CONFIG_FILE}"
+    elif [ -f "${ORIGINAL_STOCK_FILE}" ]; then
+        cat "${ORIGINAL_STOCK_FILE}"
+    fi
+elif [ "$CMD" = "save_custom" ]; then
+    if [ -n "$2" ]; then
+        echo "$2" | base64 -d > "${CUSTOM_CONFIG_FILE}"
+        echo "Saved"
+    else
+        echo "Error: No data provided"
+    fi
 else
     # Setup Logging
     exec 3>&1

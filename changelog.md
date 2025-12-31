@@ -1,5 +1,10 @@
 # WiFi Config Switcher Changelog
 
+## v3.2.0
+- **New Feature:** Added "Custom" mode support.
+- **WebUI:** Added a built-in INI Configuration Editor. You can now modify the stock config and save it as a custom profile directly from the WebUI.
+- **Security:** Implemented safe configuration saving using Base64 encoding to prevent data corruption.
+
 ## v3.1.1
 - **Cleanup:** Removed redundant "Default" mode. "Stock" mode is now the primary method for reverting to original settings.
 - **WebUI:** Updated interface to remove the "Default" button.

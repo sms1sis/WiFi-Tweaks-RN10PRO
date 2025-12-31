@@ -17,6 +17,8 @@
             --accent-balanced-dark: #c51162;
             --accent-stock: #78909c;
             --accent-stock-dark: #455a64;
+            --accent-custom: #bb86fc;
+            --accent-custom-dark: #3700b3;
             --shadow: rgba(0, 0, 0, 0.5);
         }
 
@@ -93,7 +95,7 @@
             letter-spacing: 0.5px;
         }
 
-        #perf-button, #balanced-button, #stock-button {
+        #perf-button, #balanced-button, #stock-button, #custom-button {
             flex: 0 0 calc(50% - 0.5rem);
         }
 
@@ -115,6 +117,13 @@
         #stock-button:hover:not(:disabled) {
             background-color: var(--accent-stock-dark);
             box-shadow: 0 0 15px var(--accent-stock);
+            transform: translateY(-2px);
+        }
+
+        #custom-button { background-color: var(--accent-custom); }
+        #custom-button:hover:not(:disabled) {
+            background-color: var(--accent-custom-dark);
+            box-shadow: 0 0 15px var(--accent-custom);
             transform: translateY(-2px);
         }
 
@@ -216,6 +225,73 @@
             50% { opacity: 0.6; transform: scale(1.1); }
             100% { opacity: 1; transform: scale(1); }
         }
+
+        /* Editor Styles */
+        #toggle-editor {
+            margin-top: 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            width: 100%;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        #toggle-editor:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .editor-container {
+            margin-top: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .editor-container.visible {
+            display: flex;
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.5);
+            color: #03dac6;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-custom);
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .editor-actions button {
+            flex: 1;
+            font-size: 0.8rem;
+        }
+
+        #save-btn {
+            background-color: var(--accent-custom);
+        }
+        #save-btn:hover {
+            background-color: var(--accent-custom-dark);
+        }
+        #load-stock-btn {
+            background-color: rgba(255,255,255,0.2);
+            color: var(--text-primary);
+        }
     </style>
 </head>
 <body>
@@ -254,7 +330,22 @@
                 <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19 15v4H5v-4h14m1-2H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1zM7 18.5c-.82 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM19 5v4H5V5h14m1-2H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zM7 8.5c-.82 0-1.5-.67-1.5-1.5S6.18 5.5 7 5.5s1.5.67 1.5 1.5S7.82 8.5 7 8.5z"/></svg>
                 Stock
             </button>
+            <button id="custom-button">
+                <svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                Custom
+            </button>
         </div>
+        
+        <button id="toggle-editor">Config Editor ▼</button>
+        
+        <div class="editor-container" id="editor-container">
+            <textarea id="config-editor" placeholder="Loading configuration..."></textarea>
+            <div class="editor-actions">
+                <button id="load-stock-btn">Reset to Stock Base</button>
+                <button id="save-btn">Save & Apply</button>
+            </div>
+        </div>
+
         <div id="output">Initializing system hooks...</div>
     </div>
 
@@ -263,6 +354,14 @@
     const perfButton = document.getElementById('perf-button');
     const balancedButton = document.getElementById('balanced-button');
     const stockButton = document.getElementById('stock-button');
+    const customButton = document.getElementById('custom-button');
+    
+    const toggleEditorBtn = document.getElementById('toggle-editor');
+    const editorContainer = document.getElementById('editor-container');
+    const configEditor = document.getElementById('config-editor');
+    const loadStockBtn = document.getElementById('load-stock-btn');
+    const saveBtn = document.getElementById('save-btn');
+
     const outputDiv = document.getElementById('output');
     const currentModeSpan = document.getElementById('current-mode');
     const statusDiv = document.getElementById('status');
@@ -295,6 +394,9 @@
         } else if (mode.includes('stock')) {
             modeText = 'Stock';
             dotColor = 'var(--accent-stock)';
+        } else if (mode.includes('custom')) {
+            modeText = 'Custom';
+            dotColor = 'var(--accent-custom)';
         }
 
         currentModeSpan.textContent = modeText;
@@ -304,7 +406,7 @@
     }
 
     function setUILocked(locked) {
-        [perfButton, balancedButton, stockButton].forEach(btn => btn.disabled = locked);
+        [perfButton, balancedButton, stockButton, customButton, saveBtn, loadStockBtn].forEach(btn => btn.disabled = locked);
         if (locked) {
             outputDiv.classList.add('updating');
         } else {
@@ -313,8 +415,6 @@
     }
     
     function fetchStats() {
-        // Run stats command and parse output "RSSI: -x | Speed: x | Freq: x"
-        // Since ksu.exec is sync, this might block slightly, but it's fast.
         setTimeout(() => {
              const result = runCommand(`${scriptPath} stats`);
              if (result && result.includes('|')) {
@@ -355,6 +455,9 @@
             // Start polling stats
             fetchStats();
             statsInterval = setInterval(fetchStats, 3000);
+            
+            // Preload Editor
+            loadConfigIntoEditor('get_custom');
         }, 300);
     }
 
@@ -381,7 +484,6 @@
             else if (logs.includes("Driver hot-reload successful")) finalStatus = 'SUCCESS';
         }
 
-        // Infer driver type from result
         let driverType = "Unknown";
         if (finalStatus === 'BUILTIN') driverType = "BUILTIN";
         else if (finalStatus === 'SUCCESS' || finalStatus === 'FAILED') driverType = "MODULAR";
@@ -457,11 +559,53 @@
             }
         }, 200);
     }
+    
+    // --- Editor Functions ---
+    
+    function loadConfigIntoEditor(cmd) {
+        configEditor.value = "Loading...";
+        setTimeout(() => {
+            const content = runCommand(`${scriptPath} ${cmd}`);
+            configEditor.value = content;
+        }, 100);
+    }
+    
+    function saveAndApply() {
+        const content = configEditor.value;
+        if (!content.trim()) {
+            outputDiv.textContent = "Error: Configuration cannot be empty.";
+            return;
+        }
+        
+        setUILocked(true);
+        outputDiv.textContent = "Saving custom configuration...";
+        
+        setTimeout(() => {
+             // Encode to Base64 to avoid shell escaping hell
+             const encoded = btoa(content);
+             const saveResult = runCommand(`${scriptPath} save_custom "${encoded}"`);
+             
+             if (saveResult.includes("Saved")) {
+                 runSwitch('custom');
+             } else {
+                 outputDiv.textContent = "Failed to save config: " + saveResult;
+                 setUILocked(false);
+             }
+        }, 100);
+    }
 
     document.addEventListener('DOMContentLoaded', getInitialStatus);
     perfButton.addEventListener('click', () => runSwitch('perf'));
     balancedButton.addEventListener('click', () => runSwitch('balanced'));
     stockButton.addEventListener('click', () => runSwitch('stock'));
+    customButton.addEventListener('click', () => runSwitch('custom'));
+    
+    toggleEditorBtn.addEventListener('click', () => {
+        editorContainer.classList.toggle('visible');
+    });
+    
+    loadStockBtn.addEventListener('click', () => loadConfigIntoEditor('get_stock'));
+    saveBtn.addEventListener('click', saveAndApply);
     </script>
 </body>
 </html>
