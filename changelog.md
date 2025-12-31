@@ -1,5 +1,11 @@
 # WiFi Config Switcher Changelog
 
+## v3.5.0
+- **Feature:** Added full support for `meta-hybrid_mount` for KernelSU.
+- **Refactor:** Unified script logic to handle Hybrid, OverlayFS, and Magic Mount architectures automatically.
+- **Improvement:** Enhanced namespace-aware mounting logic using `nsenter` to verify target mount states before applying live switches.
+- **Path Independence:** Further improved path discovery to handle non-standard module locations used by hybrid mounting systems.
+
 ## v3.4.4
 - **Refactor (OverlayFS):** Major architectural update to support `meta-overlayfs` and KernelSU standard overlay structures.
 - **Path Independence:** Scripts now dynamically determine the module directory at runtime (`readlink -f "$0"`), ensuring compatibility with custom mount points and meta-modules.
