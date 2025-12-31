@@ -534,7 +534,19 @@
             if (!content.trim()) return;
             
             const encoded = btoa(content);
-            const res = runCommand(`sh ${scriptPath} save_custom "${encoded}"`);
+            const tempFile = "/data/local/tmp/wifi_tweaks_upload.tmp";
+            
+            // Clean up previous temp file
+            runCommand(`rm "${tempFile}"`);
+            
+            // Chunked write to avoid argument length limits
+            const chunkSize = 1024;
+            for (let i = 0; i < encoded.length; i += chunkSize) {
+                const chunk = encoded.substring(i, i + chunkSize);
+                runCommand(`echo -n "${chunk}" >> "${tempFile}"`);
+            }
+            
+            const res = runCommand(`sh ${scriptPath} save_from_file "${tempFile}"`);
             if (res.includes("Saved")) {
                 switchView('dashboard', document.querySelector('.nav-item'));
                 runSwitch('custom');
