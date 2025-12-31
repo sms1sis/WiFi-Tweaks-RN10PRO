@@ -15,3 +15,6 @@ if [ ! -f "$MODPATH/webroot/config.ini" ]; then
         ui_print "! Warning: common/original_stock.ini not found!"
     fi
 fi
+
+# Set execute permission for the main script
+set_perm "$MODPATH/common/switch_mode.sh" 0 0 0755

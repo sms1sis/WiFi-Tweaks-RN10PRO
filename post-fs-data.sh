@@ -10,6 +10,7 @@ MODDIR=${0%/*}
 chmod +x "${MODDIR}/common/switch_mode.sh"
 
 # 2. Ensure runtime config exists for WebUI
+# If webroot/config.ini is missing, try to create it from stock
 if [ ! -f "${MODDIR}/webroot/config.ini" ]; then
     if [ -f "${MODDIR}/common/original_stock.ini" ]; then
         cp "${MODDIR}/common/original_stock.ini" "${MODDIR}/webroot/config.ini"
@@ -18,15 +19,18 @@ if [ ! -f "${MODDIR}/webroot/config.ini" ]; then
     else
         touch "${MODDIR}/webroot/config.ini"
     fi
-    chmod 644 "${MODDIR}/webroot/config.ini"
+    # Set generous permissions so WebUI can read/write it
+    chmod 666 "${MODDIR}/webroot/config.ini"
 fi
 
 # 3. Expose stock config to /data/local/tmp for WebUI fallback
-# This helps when SUSFS/KSU hides the /data/adb/modules directory
+# This is CRITICAL for SUSFS/KSU isolation. The WebUI can always read /data/local/tmp
+# even if /data/adb/modules is hidden from the webview process.
 if [ -f "${MODDIR}/common/original_stock.ini" ]; then
     cp "${MODDIR}/common/original_stock.ini" "/data/local/tmp/wifi_tweaks_stock.ini"
+    # Set permissions so the non-root WebUI process can read it
     chown shell:shell "/data/local/tmp/wifi_tweaks_stock.ini"
-    chmod 644 "/data/local/tmp/wifi_tweaks_stock.ini"
+    chmod 666 "/data/local/tmp/wifi_tweaks_stock.ini"
 fi
 
 # 4. Delegate to the main switcher script in 'apply_boot' mode
