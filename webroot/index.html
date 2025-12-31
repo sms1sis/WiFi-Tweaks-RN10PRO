@@ -46,6 +46,11 @@
         .view.active { 
             display: flex;
             flex-direction: column;
+            height: 100%;
+        }
+
+        #dashboard.active {
+            justify-content: center;
         }
 
         /* Dashboard Styles */
@@ -400,6 +405,35 @@
         }
 
         // Engine Logic
+        function updateDisplay(logs, resultStatus, newMode) {
+            const output = document.getElementById('console-output');
+            let finalStatus = resultStatus;
+            
+            // Fallback inference if result file is empty or missing
+            if (!finalStatus) {
+                if (logs.includes("Hot-reload skipped")) finalStatus = 'BUILTIN';
+                else if (logs.includes("Hot-reload failed")) finalStatus = 'FAILED';
+                else if (logs.includes("Driver hot-reload successful")) finalStatus = 'SUCCESS';
+            }
+
+            let driverType = "Unknown";
+            if (finalStatus === 'BUILTIN') driverType = "BUILTIN";
+            else if (finalStatus === 'SUCCESS' || finalStatus === 'FAILED') driverType = "MODULAR";
+            
+            let message = logs;
+            if (message) message += "\n\n";
+            message += `Operation complete. Current Mode: ${newMode.toUpperCase()}`;
+            
+            if (finalStatus === 'BUILTIN' || finalStatus === 'FAILED') {
+                message += `\n\n⚠️ REBOOT REQUIRED ⚠️\nDriver Type: ${driverType}\nDriver hot-reload could not be completed.\nPlease reboot your device to apply changes.`;
+            } else if (finalStatus === 'SUCCESS') {
+                message += `\n\n✅ Driver reloaded successfully.`;
+            }
+            
+            output.textContent = message;
+            updateStatusUI(newMode);
+        }
+
         function runSwitch(mode) {
             const output = document.getElementById('console-output');
             output.textContent = `[*] Initializing ${mode} switch...`;
@@ -418,8 +452,9 @@
                 if (active !== '0') {
                     clearInterval(pollInterval);
                     const logs = runCommand(`cat "${logFile}"`);
-                    output.textContent = logs;
-                    updateStatusUI(runCommand(`${scriptPath} status`));
+                    const resultStatus = runCommand(`cat "${resultFile}"`).trim();
+                    const newMode = runCommand(`${scriptPath} status`).trim();
+                    updateDisplay(logs, resultStatus, newMode);
                 }
             }, 500);
         }
@@ -458,7 +493,11 @@
             textarea.value = "Loading configuration...";
             setTimeout(() => {
                 const content = runCommand(`${scriptPath} ${cmd}`);
-                textarea.value = content;
+                if (!content || content.trim() === "") {
+                     textarea.value = "# Error: Could not load configuration.\n# Check if file exists or permissions are correct.";
+                } else {
+                     textarea.value = content;
+                }
                 textarea.dispatchEvent(new Event('input'));
             }, 100);
         }
