@@ -1,7 +1,8 @@
 # WiFi Config Switcher Changelog
 
 ## v3.4.3
-- **Fix (Isolation):** Resolved "Could not load existing settings" error in "Load Stock" function caused by namespace isolation. The script now actively populates the fallback file when requested.
+# warning ⚠️ 
+- **NotFixed:**New custom configuration (Could not load existing settings due to isolation) This is not fixed yet. Don't expect soon!
 - **WebUI:** Improved resilience by re-checking the fallback file immediately after executing the backend script.
 - **Boot:** Optimized `post-fs-data.sh` execution order to ensure the fallback file is correctly created on first boot/install.
 
