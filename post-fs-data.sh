@@ -59,8 +59,8 @@ patch_config() {
             apply_param "$target" "gEnableEGAP" "1"
             apply_param "$target" "arp_ac_category" "0"
             ;;
-        "default"|"stock")
-            # Stock/Default Mode - No patching needed (already copied from stock)
+        "stock")
+            # Stock Mode - No patching needed (already copied from stock)
             log "[*] Using stock configuration."
             ;;
     esac

@@ -408,11 +408,19 @@
             const logs = readFileSafe(logFile);
             const resultStatus = readFileSafe(resultFile).trim();
             updateDisplay(logs, resultStatus, newMode);
+            
+            // Resume stats polling
+            fetchStats();
+            statsInterval = setInterval(fetchStats, 3000);
         }, 800);
     }
 
     function runSwitch(mode) {
         if (pollInterval) clearInterval(pollInterval);
+        if (statsInterval) {
+            clearInterval(statsInterval);
+            statsInterval = null;
+        }
 
         const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
         setUILocked(true);

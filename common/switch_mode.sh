@@ -63,9 +63,18 @@ get_stats() {
         else
             rssi="Disconnected"
         fi
+    elif command -v dumpsys >/dev/null 2>&1; then
+        # Fallback to dumpsys wifi
+        local dump=$(dumpsys wifi | grep -E "RSSI:|Link speed:|Frequency:")
+        if [ -n "$dump" ]; then
+            rssi=$(echo "$dump" | grep "RSSI:" | awk '{print $2 " dBm"}')
+            speed=$(echo "$dump" | grep "Link speed:" | awk '{print $3 " " $4}')
+            freq=$(echo "$dump" | grep "Frequency:" | awk '{print $2 " MHz"}')
+        else
+            rssi="No iw/dumpsys data"
+        fi
     else
-        # Fallback to simple dumpsys check (less parsing, just existence)
-        rssi="iw tool missing"
+        rssi="Tools missing"
     fi
     
     echo "RSSI: $rssi | Speed: $speed | Freq: $freq"
@@ -90,8 +99,6 @@ patch_config() {
     local target="$2"
     
     log "[*] Patching config for mode: $mode"
-    
-    # Base params (Reset to known state if needed, but we start from stock)
     
     case "$mode" in
         "perf")
@@ -128,66 +135,82 @@ patch_config() {
 
 reload_driver() {
     log "[*] Starting driver reload sequence..."
-    local modules="wlan qca_cld3_wlan qca_cld3"
-    local reloaded=false
-    local found_any=false
-
+    # Module list ordered by dependency (dependent first)
+    # e.g., wlan depends on qca_cld3_wlan, which depends on qca_cld3
+    local modules="wlan qca_cld3_wlan qca_cld3" 
+    local active_modules=""
+    
     if [ ! -f /proc/modules ]; then
         log "[!] /proc/modules missing. Assuming monolithic kernel."
         return 2
     fi
 
+    # 1. Unload Phase
     for mod in $modules; do
         if lsmod 2>/dev/null | grep -q "^$mod "; then
-            found_any=true
-            log "[*] Found active module: $mod. Attempting reload..."
-            
+            log "[*] Found active module: $mod. Unloading..."
             ip link set wlan0 down 2>/dev/null
-            sleep 0.5
             rmmod "$mod"
-            sleep 1
+            sleep 0.5
             
             if lsmod 2>/dev/null | grep -q "^$mod "; then
                 log "[!] Failed to unload $mod (Resource busy?)"
-                continue
-            fi
-            
-            local mod_path=""
-            for path in "/vendor/lib/modules/$mod.ko" "/system/lib/modules/$mod.ko"; do
-                if [ -f "$path" ]; then
-                    mod_path="$path"
-                    break
-                fi
-            done
-
-            if [ -n "$mod_path" ]; then
-                log "[*] Loading from: $mod_path"
-                insmod "$mod_path"
+                # If we fail to unload a top-level module, we shouldn't try to unload dependencies
+                # But we should try to reload what we unloaded?
+                # For now, we continue but record it?
+                # Actually, if unload fails, we might as well abort the whole thing and try to reload whatever we unloaded.
+                # But for simplicity, we just continue and see what happens (insmod will just say 'exists').
             else
-                log "[*] Loading via modprobe..."
-                modprobe "$mod"
-            fi
-            
-            sleep 1
-            if lsmod 2>/dev/null | grep -q "^$mod "; then
-                log "[+] $mod reloaded successfully."
-                reloaded=true
-            else
-                log "[!] Failed to reload $mod."
+                active_modules="$active_modules $mod"
             fi
         fi
     done
 
-    if [ "$found_any" = false ]; then
+    if [ -z "$active_modules" ]; then
         log "[!] No supported Wi-Fi modules found active."
         log "[?] System likely uses a Monolithic/Built-in Wi-Fi driver."
         return 2
     fi
+    
+    # 2. Load Phase (Reverse Order)
+    # We need to reverse the order of $active_modules
+    local modules_to_load=""
+    for mod in $active_modules; do
+        modules_to_load="$mod $modules_to_load"
+    done
+    
+    local all_loaded=true
+    
+    for mod in $modules_to_load; do
+        log "[*] Reloading module: $mod"
+        
+        local mod_path=""
+        for path in "/vendor/lib/modules/$mod.ko" "/system/lib/modules/$mod.ko"; do
+            if [ -f "$path" ]; then
+                mod_path="$path"
+                break
+            fi
+        done
 
-    if [ "$reloaded" = false ]; then
-        log "[!] Driver reload failed."
+        if [ -n "$mod_path" ]; then
+            insmod "$mod_path"
+        else
+            modprobe "$mod"
+        fi
+        
+        sleep 0.5
+        if ! lsmod 2>/dev/null | grep -q "^$mod "; then
+             log "[!] Failed to reload $mod!"
+             all_loaded=false
+        fi
+    done
+
+    if [ "$all_loaded" = false ]; then
+        log "[!] Driver reload incomplete."
         return 1
     fi
+    
+    log "[+] All modules reloaded successfully."
     return 0
 }
 
