@@ -7,6 +7,13 @@ MODDIR=$(dirname "$(readlink -f "$0")")
 
 # Logging
 LOG_FILE="/data/local/tmp/wifi_tweaks.log"
+
+# Ensure Log File Exists and is Writable (666)
+if [ ! -f "$LOG_FILE" ]; then
+    touch "$LOG_FILE"
+fi
+chmod 666 "$LOG_FILE"
+
 exec >> "$LOG_FILE" 2>&1
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting post-fs-data..."
@@ -17,7 +24,8 @@ chmod +x "${MODDIR}/common/switch_mode.sh"
 
 # 2. Hybrid Persistence Check
 # Call the script in 'boot' mode to ensure the physical module file matches the saved preference.
-# This does NOT mount anything; it prepares the file for the system's overlay mechanism.
+# This does NOT mount anything and NO SERVICES are restarted.
+# It prepares the file for the system's overlay mechanism (Magisk/KSU).
 sh "${MODDIR}/common/switch_mode.sh" apply_boot
 
 # 3. Stealth Fallback (WebUI Compatibility)

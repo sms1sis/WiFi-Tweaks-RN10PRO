@@ -1,9 +1,8 @@
 #!/system/bin/sh
 # WiFi Config Switcher - Hybrid Mount Core Logic
-# optimized for meta-hybrid_mount, Magisk, and KernelSU
+# Refactored for Version 3.6.0+
 
 # --- 1. Dynamic Path Discovery ---
-# Ensures compatibility regardless of mount point or overlay method.
 readonly SCRIPT_PATH=$(readlink -f "$0")
 readonly SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 readonly MODULE_DIR=$(dirname "$SCRIPT_DIR")
@@ -20,6 +19,12 @@ readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 readonly LOG_FILE="/data/local/tmp/wifi_tweaks.log"
 readonly RESULT_FILE="/data/local/tmp/wifi_tweaks_result"
 
+# Initialize Log with correct permissions immediately
+if [ ! -f "$LOG_FILE" ]; then
+    touch "$LOG_FILE"
+fi
+chmod 666 "$LOG_FILE"
+
 # --- 2. Helper Functions ---
 
 log() {
@@ -28,7 +33,7 @@ log() {
 
 write_result() {
     echo "$1" > "$2"
-    chmod 644 "$2"
+    chmod 666 "$2"
 }
 
 get_status() {
@@ -97,6 +102,19 @@ cleanup_mounts() {
     fi
 }
 
+restart_wifi_service() {
+    local ctx="$1"
+    if [ "$ctx" = "live" ]; then
+        log "Restarting Wi-Fi service (Live Mode)..."
+        svc wifi disable
+        sleep 1
+        svc wifi enable
+        log "Wi-Fi service restarted."
+    else
+        log "Boot Mode: Skipping service restart to prevent boot loop."
+    fi
+}
+
 # --- 3. Main Switch Logic ---
 
 perform_switch() {
@@ -137,17 +155,14 @@ perform_switch() {
             log "Live mount successful."
             write_result "SUCCESS" "$RESULT_FILE"
             
-            # Restart Wi-Fi service to apply driver changes
-            svc wifi disable
-            sleep 1
-            svc wifi enable
-            log "Wi-Fi service restarted."
+            # Restart Wi-Fi service ONLY in live mode
+            restart_wifi_service "live"
         else
             log "Error: Bind mount failed."
             write_result "FAILED" "$RESULT_FILE"
         fi
     else
-        log "Boot mode: Skipping live mount (relying on system overlay)."
+        log "Boot mode: Skipping live mount and service restart."
     fi
 
     # D. Save State
@@ -168,7 +183,7 @@ case "$1" in
         ;;
     "perf"|"balanced"|"stock"|"custom")
         # Live switch with logging
-        exec > "$LOG_FILE" 2>&1
+        exec >> "$LOG_FILE" 2>&1
         perform_switch "$1" "live"
         ;;
     *)
