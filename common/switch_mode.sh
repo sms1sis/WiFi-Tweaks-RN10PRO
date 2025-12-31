@@ -24,6 +24,7 @@ readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 
 readonly LOG_FILE="/data/local/tmp/wifi_tweaks.log"
 readonly RESULT_FILE="/data/local/tmp/wifi_tweaks_result"
+readonly FALLBACK_FILE="/data/local/tmp/wifi_tweaks_stock.ini"
 
 # Get version
 readonly VERSION=$(grep "^version=" "${MODULE_DIR}/module.prop" | cut -d= -f2 || echo "Unknown")
@@ -327,6 +328,11 @@ elif [ "$CMD" = "get_stock" ]; then
             cp "${SYSTEM_CONFIG_FILE}" "${ORIGINAL_STOCK_FILE}"
         fi
     fi
+    
+    # Copy to fallback location for WebUI isolation bypass
+    cp "${ORIGINAL_STOCK_FILE}" "${FALLBACK_FILE}"
+    chmod 644 "${FALLBACK_FILE}"
+    
     cat "${ORIGINAL_STOCK_FILE}"
 elif [ "$CMD" = "get_custom" ]; then
     if [ -f "${CUSTOM_CONFIG_FILE}" ]; then

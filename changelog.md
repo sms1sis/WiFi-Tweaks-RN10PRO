@@ -1,5 +1,10 @@
 # WiFi Config Switcher Changelog
 
+## v3.4.3
+- **Fix (Isolation):** Resolved "Could not load existing settings" error in "Load Stock" function caused by namespace isolation. The script now actively populates the fallback file when requested.
+- **WebUI:** Improved resilience by re-checking the fallback file immediately after executing the backend script.
+- **Boot:** Optimized `post-fs-data.sh` execution order to ensure the fallback file is correctly created on first boot/install.
+
 ## v3.4.2
 - **Fix (SUSFS/KSU):** Added robust fallback mechanism for devices with strict mount namespace isolation (SUSFS). The module now exposes the stock configuration to a world-readable temporary location at boot, allowing the WebUI to function even when the module directory is hidden.
 - **WebUI:** Added a diagnostic startup check to detect if the module files are inaccessible and display a helpful error message instead of failing silently.

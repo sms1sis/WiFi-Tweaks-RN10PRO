@@ -23,7 +23,12 @@ if [ ! -f "${MODDIR}/webroot/config.ini" ]; then
     chmod 666 "${MODDIR}/webroot/config.ini"
 fi
 
-# 3. Expose stock config to /data/local/tmp for WebUI fallback
+# 3. Delegate to the main switcher script in 'apply_boot' mode
+# This ensures consistency with the WebUI and handles all modes (perf, balanced, stock, custom)
+# correctly without duplicating logic.
+sh "${MODDIR}/common/switch_mode.sh" apply_boot > /dev/null 2>&1
+
+# 4. Expose stock config to /data/local/tmp for WebUI fallback
 # This is CRITICAL for SUSFS/KSU isolation. The WebUI can always read /data/local/tmp
 # even if /data/adb/modules is hidden from the webview process.
 if [ -f "${MODDIR}/common/original_stock.ini" ]; then
@@ -32,8 +37,3 @@ if [ -f "${MODDIR}/common/original_stock.ini" ]; then
     chown shell:shell "/data/local/tmp/wifi_tweaks_stock.ini"
     chmod 666 "/data/local/tmp/wifi_tweaks_stock.ini"
 fi
-
-# 4. Delegate to the main switcher script in 'apply_boot' mode
-# This ensures consistency with the WebUI and handles all modes (perf, balanced, stock, custom)
-# correctly without duplicating logic.
-sh "${MODDIR}/common/switch_mode.sh" apply_boot > /dev/null 2>&1

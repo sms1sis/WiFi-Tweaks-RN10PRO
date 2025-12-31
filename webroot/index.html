@@ -584,6 +584,10 @@
                 if (!content || content.trim() === "") { 
                     content = runCommand(`sh ${scriptPath} get_stock`); 
                 }
+                // Check fallback again if script output failed (it might have written to fallback)
+                if (!content || content.trim() === "") { 
+                    try { content = await ksuReadFile(fallbackPath); } catch(e){}
+                }
             } else {
                 // Strategy for Custom: configPath -> fallbackPath -> script
                 // Note: The prompt specifically asks to try fallbackPath if configPath fails.
@@ -594,6 +598,10 @@
                 } 
                 if (!content || content.trim() === "") { 
                     content = runCommand(`sh ${scriptPath} get_custom`); 
+                }
+                // Check fallback again if script output failed
+                if (!content || content.trim() === "") { 
+                    try { content = await ksuReadFile(fallbackPath); } catch(e){}
                 }
             }
 
