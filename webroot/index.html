@@ -483,8 +483,12 @@
                 }
 
                 // Fix: Filter out shell/toybox "END marker" warnings that pollute stdout.
-                // Regex removes the specific warning and the entire line it appears on to ensure clean parsing.
-                output = output.replace(/.*read anything past the end marker.*/gi, "");
+                // We use line-by-line filtering to prevent over-matching and ensure clean output.
+                if (output.includes("read anything past the") || output.includes("end marker")) {
+                    output = output.split('\n')
+                        .filter(line => !/read anything past the.*end marker/i.test(line))
+                        .join('\n');
+                }
 
                 return output;
             } catch (e) { return `Error: ${e.message}` }
@@ -610,56 +614,33 @@
             await waitForKSU();
             
             let content = "";
-            
-            // Define loading strategies
-            if (cmd === 'get_stock') {
-                // Strategy for Stock: stockPath -> fallbackPath -> script
-                try { content = await ksuReadFile(stockPath); } catch(e){}
-                if (!content || content.trim() === "") { 
-                    try { content = await ksuReadFile(fallbackPath); } catch(e){}
-                } 
-                if (!content || content.trim() === "") { 
-                    // Try base64 from script first
-                    const b64 = runCommand(`sh ${scriptPath} get_stock | base64 2>/dev/null`);
-                    if (b64 && !b64.startsWith("Error:") && b64.trim()) {
-                        try {
-                            content = decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
-                        } catch(e) {}
-                    }
-                    // Fallback to plain text
-                    if (!content) {
-                        content = runCommand(`sh ${scriptPath} get_stock`); 
-                    }
+            const tmpStock = "/data/local/tmp/wifi_tweaks_stock.ini";
+            const tmpCustom = "/data/local/tmp/wifi_tweaks_custom.ini";
+
+            // 1. Trigger the script to dump the latest config to world-readable temp files
+            runCommand(`sh ${scriptPath} ${cmd}`);
+
+            // 2. Try to read from temp files first (most reliable for large files)
+            const targetTmp = (cmd === 'get_stock') ? tmpStock : tmpCustom;
+            try { 
+                content = await ksuReadFile(targetTmp);
+            } catch(e) { console.warn("Temp file read failed", e); }
+
+            // 3. Fallback to direct script output if temp file read failed or is empty
+            if (!content || content.trim() === "" || content.startsWith("Error")) {
+                const b64 = runCommand(`sh ${scriptPath} ${cmd} | base64 2>/dev/null`);
+                if (b64 && !b64.startsWith("Error:") && b64.trim()) {
+                    try {
+                        content = decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
+                    } catch(e) {}
                 }
-                // Check fallback again if script output failed (it might have written to fallback)
-                if (!content || content.trim() === "") { 
-                    try { content = await ksuReadFile(fallbackPath); } catch(e){}
-                }
-            } else {
-                // Strategy for Custom: configPath -> fallbackPath -> script
-                try { content = await ksuReadFile(configPath); } catch(e){}
-                if (!content || content.trim() === "") { 
-                    try { content = await ksuReadFile(fallbackPath); } catch(e){}
-                } 
-                if (!content || content.trim() === "") { 
-                    // Try base64 from script first
-                    const b64 = runCommand(`sh ${scriptPath} get_custom | base64 2>/dev/null`);
-                    if (b64 && !b64.startsWith("Error:") && b64.trim()) {
-                        try {
-                            content = decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
-                        } catch(e) {}
-                    }
-                    if (!content) {
-                        content = runCommand(`sh ${scriptPath} get_custom`); 
-                    }
-                }
-                // Check fallback again if script output failed
-                if (!content || content.trim() === "") { 
-                    try { content = await ksuReadFile(fallbackPath); } catch(e){}
+                
+                if (!content || content.trim() === "") {
+                    content = runCommand(`sh ${scriptPath} ${cmd}`);
                 }
             }
 
-            if (content && !content.startsWith("Error")) {
+            if (content && !content.startsWith("Error") && content.trim() !== "") {
                 textarea.value = content;
             } else {
                 textarea.value = "# New custom configuration\n# (Could not load existing settings due to isolation)";

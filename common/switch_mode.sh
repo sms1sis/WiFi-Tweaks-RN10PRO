@@ -18,11 +18,11 @@ readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
 readonly LOG_FILE="/data/local/tmp/wifi_tweaks.log"
 readonly RESULT_FILE="/data/local/tmp/wifi_tweaks_result"
 
-# Initialize Log with correct permissions immediately
+# Initialize Log safely
 if [ ! -f "$LOG_FILE" ]; then
-    touch "$LOG_FILE"
+    touch "$LOG_FILE" 2>/dev/null
+    chmod 666 "$LOG_FILE" 2>/dev/null
 fi
-chmod 666 "$LOG_FILE"
 
 # --- 2. Helper Functions ---
 
@@ -186,6 +186,9 @@ case "$1" in
     "stats") get_stats ;;
     "get_stock")
         if [ -f "${ORIGINAL_STOCK_FILE}" ]; then
+            # Also dump to a world-readable location for WebUI fallback
+            cp "${ORIGINAL_STOCK_FILE}" "/data/local/tmp/wifi_tweaks_stock.ini" 2>/dev/null
+            chmod 666 "/data/local/tmp/wifi_tweaks_stock.ini" 2>/dev/null
             cat "${ORIGINAL_STOCK_FILE}"
         else
             # Try fallback if internal backup not found
@@ -193,7 +196,12 @@ case "$1" in
         fi
         ;;
     "get_custom")
-        [ -f "${CUSTOM_CONFIG_FILE}" ] && cat "${CUSTOM_CONFIG_FILE}"
+        if [ -f "${CUSTOM_CONFIG_FILE}" ]; then
+             # Also dump to a world-readable location for WebUI fallback
+            cp "${CUSTOM_CONFIG_FILE}" "/data/local/tmp/wifi_tweaks_custom.ini" 2>/dev/null
+            chmod 666 "/data/local/tmp/wifi_tweaks_custom.ini" 2>/dev/null
+            cat "${CUSTOM_CONFIG_FILE}"
+        fi
         ;;
     "save_custom")
         # Read from stdin and save to custom config file
