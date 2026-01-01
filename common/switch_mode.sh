@@ -59,8 +59,9 @@ get_stats() {
 apply_param() {
     local file="$1" key="$2" value="$3"
     # Use sed to replace existing key or append if missing
-    if grep -q "^\s*${key}\s*=" "$file"; then
-        sed -i "s/^\s*${key}\s*=.*/${key}=${value}/" "$file"
+    # Fixed for Android toybox/busybox: replaced \s with [[:space:]]
+    if grep -q "^[[:space:]]*${key}[[:space:]]*=" "$file"; then
+        sed -i "s/^[[:space:]]*${key}[[:space:]]*=.*/${key}=${value}/" "$file"
     else
         echo "${key}=${value}" >> "$file"
     fi
