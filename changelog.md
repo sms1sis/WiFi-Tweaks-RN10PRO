@@ -1,5 +1,10 @@
 # WiFi Config Switcher Changelog
 
+## v3.6.1
+- **Fix (WebUI):** Resolved "Could not load existing settings due to isolation" error by implementing a robust Base64-based file reading fallback.
+- **Fix (Compatibility):** Replaced non-portable `grep` and `sed` regex usage with POSIX-compliant character classes for broader Android support (Toybox/Busybox).
+- **Fix (Core):** Corrected `svc` command path resolution to ensure reliable service restarts.
+
 ## v3.6.0
 - **Architectural Shift:** Fully transitioned to a **Hybrid Mount** strategy as the primary method, merging Magisk and KernelSU logic into a single robust implementation.
 - **Cleanup:** Removed legacy `magisk` and `dev` branches to focus on a unified `main` codebase.
