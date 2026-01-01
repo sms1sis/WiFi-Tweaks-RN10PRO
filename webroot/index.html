@@ -453,12 +453,22 @@
             if (!window.ksu) return "Error: KSU not ready";
             try {
                 const result = ksu.exec(command);
-                if (!result) return "";
-                if (typeof result === 'string') return result;
-                if (typeof result.errno === 'number') {
-                    return result.errno === 0 ? String(result.stdout || "") : `Error: ${result.stderr}`;
+                let output = "";
+
+                if (!result) output = "";
+                else if (typeof result === 'string') output = result;
+                else if (typeof result.errno === 'number') {
+                    output = result.errno === 0 ? String(result.stdout || "") : `Error: ${result.stderr}`;
+                } else {
+                    output = String(result);
                 }
-                return String(result);
+
+                // Workaround for a specific KernelSU/Shell stream error
+                if (output.includes("would not read anything past the END marker")) {
+                    return "Error: KSU Stream IO Error";
+                }
+
+                return output;
             } catch (e) { return `Error: ${e.message}` }
         }
 
