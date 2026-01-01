@@ -409,6 +409,15 @@
                     return content;
                 } catch (e) { console.warn("ksu.fs.read failed", e); }
             }
+            
+            // Try base64 reading first for robustness (handles newlines/encoding better)
+            const b64 = runCommand(`base64 "${path}"`);
+            if (b64 && !b64.startsWith("Error:") && b64.trim()) {
+                try {
+                    return decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
+                } catch(e) { console.warn("Base64 decode failed", e); }
+            }
+
             const res = runCommand(`cat "${path}"`);
             if (res.startsWith("Error:")) throw new Error(res);
             return res;
@@ -582,7 +591,17 @@
                     try { content = await ksuReadFile(fallbackPath); } catch(e){}
                 } 
                 if (!content || content.trim() === "") { 
-                    content = runCommand(`sh ${scriptPath} get_stock`); 
+                    // Try base64 from script first
+                    const b64 = runCommand(`sh ${scriptPath} get_stock | base64`);
+                    if (b64 && !b64.startsWith("Error:") && b64.trim()) {
+                        try {
+                            content = decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
+                        } catch(e) {}
+                    }
+                    // Fallback to plain text
+                    if (!content) {
+                        content = runCommand(`sh ${scriptPath} get_stock`); 
+                    }
                 }
                 // Check fallback again if script output failed (it might have written to fallback)
                 if (!content || content.trim() === "") { 
@@ -590,14 +609,21 @@
                 }
             } else {
                 // Strategy for Custom: configPath -> fallbackPath -> script
-                // Note: The prompt specifically asks to try fallbackPath if configPath fails.
-                // It implicitly means "if we can't read the custom file, give us the stock fallback so we have *something*".
                 try { content = await ksuReadFile(configPath); } catch(e){}
                 if (!content || content.trim() === "") { 
                     try { content = await ksuReadFile(fallbackPath); } catch(e){}
                 } 
                 if (!content || content.trim() === "") { 
-                    content = runCommand(`sh ${scriptPath} get_custom`); 
+                    // Try base64 from script first
+                    const b64 = runCommand(`sh ${scriptPath} get_custom | base64`);
+                    if (b64 && !b64.startsWith("Error:") && b64.trim()) {
+                        try {
+                            content = decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
+                        } catch(e) {}
+                    }
+                    if (!content) {
+                        content = runCommand(`sh ${scriptPath} get_custom`); 
+                    }
                 }
                 // Check fallback again if script output failed
                 if (!content || content.trim() === "") { 
