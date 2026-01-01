@@ -106,9 +106,9 @@ restart_wifi_service() {
     local ctx="$1"
     if [ "$ctx" = "live" ]; then
         log "Restarting Wi-Fi service (Live Mode)..."
-        svc wifi disable
+        /system/bin/svc wifi disable
         sleep 1
-        svc wifi enable
+        /system/bin/svc wifi enable
         log "Wi-Fi service restarted."
     else
         log "Boot Mode: Skipping service restart to prevent boot loop."
@@ -184,6 +184,23 @@ perform_switch() {
 case "$1" in
     "status") get_status ;;
     "stats") get_stats ;;
+    "get_stock")
+        if [ -f "${ORIGINAL_STOCK_FILE}" ]; then
+            cat "${ORIGINAL_STOCK_FILE}"
+        else
+            # Try fallback if internal backup not found
+            [ -f "/data/local/tmp/wifi_tweaks_stock.ini" ] && cat "/data/local/tmp/wifi_tweaks_stock.ini"
+        fi
+        ;;
+    "get_custom")
+        [ -f "${CUSTOM_CONFIG_FILE}" ] && cat "${CUSTOM_CONFIG_FILE}"
+        ;;
+    "save_custom")
+        # Read from stdin and save to custom config file
+        # Used by WebUI via: echo "base64" | base64 -d | sh switch_mode.sh save_custom
+        cat > "${CUSTOM_CONFIG_FILE}"
+        chmod 666 "${CUSTOM_CONFIG_FILE}"
+        ;;
     "apply_boot")
         # Apply the saved mode (or balanced default) physically, without mounting
         exec >> "$LOG_FILE" 2>&1
