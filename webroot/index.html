@@ -370,13 +370,32 @@
     </nav>
 
     <script>
-        const scriptPath = '/data/adb/modules/wifi_tweaks/common/switch_mode.sh';
+        // Dynamic Path Detection
+        function getModuleRoot() {
+            // Default fallback
+            let root = "/data/adb/modules/wifi_tweaks";
+            
+            // Try to derive from URL (works if loaded via file://)
+            try {
+                const path = decodeURIComponent(window.location.pathname);
+                // Handle standard file path structure
+                if (path.includes("/webroot/index.html")) {
+                    root = path.split("/webroot/index.html")[0];
+                }
+            } catch(e) {
+                console.warn("Could not detect module path from URL, using default.");
+            }
+            return root;
+        }
+
+        const moduleRoot = getModuleRoot();
+        const scriptPath = `${moduleRoot}/common/switch_mode.sh`;
         const logFile = "/data/local/tmp/wifi_tweaks.log";
         const resultFile = "/data/local/tmp/wifi_tweaks_result";
         
         // Paths defined as per requirements
-        const configPath = "/data/adb/modules/wifi_tweaks/webroot/config.ini";
-        const stockPath = "/data/adb/modules/wifi_tweaks/common/original_stock.ini";
+        const configPath = `${moduleRoot}/webroot/config.ini`;
+        const stockPath = `${moduleRoot}/common/original_stock.ini`;
         const fallbackPath = "/data/local/tmp/wifi_tweaks_stock.ini";
 
         let pollInterval = null;
@@ -668,7 +687,7 @@
             const res = runCommand(`[ -f "${scriptPath}" ] && echo "FOUND" || echo "MISSING"`);
             if (res.includes("MISSING")) {
                 const output = document.getElementById('console-output');
-                output.textContent = "⚠️ CRITICAL ERROR: Module files not found!\n\nThe path '/data/adb/modules/wifi_tweaks/' is not accessible.\n\nPossible causes:\n1. SUSFS or namespace isolation is hiding the module.\n2. The module is not installed correctly.\n\nIf using SUSFS, try rebooting or checking your mount hiding settings.";
+                output.textContent = `⚠️ CRITICAL ERROR: Module files not found!\n\nThe path '${moduleRoot}/' is not accessible.\n\nPossible causes:\n1. SUSFS or namespace isolation is hiding the module.\n2. The module is not installed correctly.\n\nIf using SUSFS, try rebooting or checking your mount hiding settings.`;
                 document.querySelectorAll('.mode-btn').forEach(b => b.disabled = true);
                 return false;
             }
