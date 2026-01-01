@@ -8,8 +8,7 @@ readonly SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 readonly MODULE_DIR=$(dirname "$SCRIPT_DIR")
 
 # Key File Paths
-readonly MODULE_WIFI_DIR="${MODULE_DIR}/system/vendor/etc/wifi"
-readonly INTERNAL_CONFIG_FILE="${MODULE_WIFI_DIR}/WCNSS_qcom_cfg.ini"
+readonly INTERNAL_CONFIG_FILE="${MODULE_DIR}/common/active_config.ini"
 readonly SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
 readonly ORIGINAL_STOCK_FILE="${MODULE_DIR}/common/original_stock.ini"
 readonly CUSTOM_CONFIG_FILE="${MODULE_DIR}/webroot/config.ini"
@@ -143,6 +142,15 @@ perform_switch() {
     cp "${ORIGINAL_STOCK_FILE}" "${INTERNAL_CONFIG_FILE}"
     patch_config "$MODE" "${INTERNAL_CONFIG_FILE}"
     chmod 644 "${INTERNAL_CONFIG_FILE}"
+    
+    # SELinux Context Fix (Critical for KSU/Android 14+)
+    # Try to copy context from system file, fallback to generic vendor type
+    if [ -f "${SYSTEM_CONFIG_FILE}" ]; then
+        chcon --reference="${SYSTEM_CONFIG_FILE}" "${INTERNAL_CONFIG_FILE}" 2>/dev/null
+    else
+        chcon u:object_r:vendor_configs_file:s0 "${INTERNAL_CONFIG_FILE}" 2>/dev/null
+    fi
+    
     log "Physical module file updated."
 
     # C. Live Application (Hot-Reload)

@@ -18,3 +18,5 @@ fi
 
 # Set execute permission for the main script
 set_perm "$MODPATH/common/switch_mode.sh" 0 0 0755
+set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
+set_perm "$MODPATH/service.sh" 0 0 0755

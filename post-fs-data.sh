@@ -18,6 +18,14 @@ exec >> "$LOG_FILE" 2>&1
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting post-fs-data..."
 
+# 0. Safety Cleanup (Critical for KSU Next / Xiaomi)
+# Remove the system/ directory to PREVENT Magisk/KSU from auto-mounting 
+# the vendor file early in boot. We handle this manually in service.sh.
+if [ -d "${MODDIR}/system" ]; then
+    echo "Removing dangerous system overlay..."
+    rm -rf "${MODDIR}/system"
+fi
+
 # 1. Permission Fix
 # Ensure the core script is executable
 chmod +x "${MODDIR}/common/switch_mode.sh"
