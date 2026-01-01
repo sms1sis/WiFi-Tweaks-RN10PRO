@@ -430,7 +430,7 @@
             }
             
             // Try base64 reading first for robustness (handles newlines/encoding better)
-            const b64 = runCommand(`base64 "${path}"`);
+            const b64 = runCommand(`base64 "${path}" 2>/dev/null`);
             if (b64 && !b64.startsWith("Error:") && b64.trim()) {
                 try {
                     return decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
@@ -482,10 +482,9 @@
                     output = String(result);
                 }
 
-                // Workaround for a specific KernelSU/Shell stream error
-                if (output.includes("would not read anything past the END marker")) {
-                    return "Error: KSU Stream IO Error";
-                }
+                // Fix: Filter out shell/toybox "END marker" warnings that pollute stdout.
+                // Regex removes the specific warning and the entire line it appears on to ensure clean parsing.
+                output = output.replace(/.*read anything past the end marker.*/gi, "");
 
                 return output;
             } catch (e) { return `Error: ${e.message}` }
@@ -621,7 +620,7 @@
                 } 
                 if (!content || content.trim() === "") { 
                     // Try base64 from script first
-                    const b64 = runCommand(`sh ${scriptPath} get_stock | base64`);
+                    const b64 = runCommand(`sh ${scriptPath} get_stock | base64 2>/dev/null`);
                     if (b64 && !b64.startsWith("Error:") && b64.trim()) {
                         try {
                             content = decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
@@ -644,7 +643,7 @@
                 } 
                 if (!content || content.trim() === "") { 
                     // Try base64 from script first
-                    const b64 = runCommand(`sh ${scriptPath} get_custom | base64`);
+                    const b64 = runCommand(`sh ${scriptPath} get_custom | base64 2>/dev/null`);
                     if (b64 && !b64.startsWith("Error:") && b64.trim()) {
                         try {
                             content = decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
