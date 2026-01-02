@@ -5,14 +5,16 @@
 # --- 1. Dynamic Path Discovery ---
 readonly SCRIPT_PATH=$(readlink -f "$0")
 readonly SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
+# MODULE_DIR is parent of common
 readonly MODULE_DIR=$(dirname "$SCRIPT_DIR")
 
 # Key File Paths
-readonly INTERNAL_CONFIG_FILE="${MODULE_DIR}/common/active_config.ini"
+# All config files are now located in common/ as per actual deployment
+readonly INTERNAL_CONFIG_FILE="${SCRIPT_DIR}/active_config.ini"
 readonly SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
-readonly ORIGINAL_STOCK_FILE="${MODULE_DIR}/common/original_stock.ini"
-readonly CUSTOM_CONFIG_FILE="${MODULE_DIR}/webroot/config.ini"
-readonly MODE_CONFIG_FILE="${MODULE_DIR}/common/mode.conf"
+readonly ORIGINAL_STOCK_FILE="${SCRIPT_DIR}/original_stock.ini"
+readonly CUSTOM_CONFIG_FILE="${SCRIPT_DIR}/config.ini"
+readonly MODE_CONFIG_FILE="${SCRIPT_DIR}/mode.conf"
 
 # Logging & State
 readonly LOG_FILE="/data/local/tmp/wifi_tweaks.log"
