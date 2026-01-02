@@ -37,18 +37,26 @@ chmod +x "${MODDIR}/common/switch_mode.sh"
 sh "${MODDIR}/common/switch_mode.sh" apply_boot
 
 # 3. Stealth Fallback (WebUI Compatibility)
-# Copy the stock config to a world-readable temp location.
+# Copy the stock config and core script to a world-readable temp location.
 # This is crucial for devices with strict namespace isolation (like SUSFS)
 # where the WebUI might not be able to read files inside /data/adb/modules.
 STOCK_BACKUP="${MODDIR}/common/original_stock.ini"
 FALLBACK_TARGET="/data/local/tmp/wifi_tweaks_stock.ini"
+SCRIPT_SOURCE="${MODDIR}/common/switch_mode.sh"
+SCRIPT_TARGET="/data/local/tmp/switch_mode.sh"
 
 if [ -f "$STOCK_BACKUP" ]; then
     cp "$STOCK_BACKUP" "$FALLBACK_TARGET"
     chmod 666 "$FALLBACK_TARGET"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stealth fallback created at $FALLBACK_TARGET"
+fi
+
+if [ -f "$SCRIPT_SOURCE" ]; then
+    cp "$SCRIPT_SOURCE" "$SCRIPT_TARGET"
+    chmod 755 "$SCRIPT_TARGET"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Stealth script deployed at $SCRIPT_TARGET"
 else
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Warning: Stock backup not found, skipping fallback creation."
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Warning: Source script not found, skipping fallback creation."
 fi
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] post-fs-data setup complete."

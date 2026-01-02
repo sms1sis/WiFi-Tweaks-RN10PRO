@@ -20,3 +20,8 @@ fi
 set_perm "$MODPATH/common/switch_mode.sh" 0 0 0755
 set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/service.sh" 0 0 0755
+
+# Deploy stealth script for WebUI
+ui_print "- Deploying stealth script for WebUI..."
+cp "$MODPATH/common/switch_mode.sh" "/data/local/tmp/switch_mode.sh"
+chmod 755 "/data/local/tmp/switch_mode.sh"
