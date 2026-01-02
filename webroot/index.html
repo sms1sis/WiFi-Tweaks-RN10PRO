@@ -389,7 +389,7 @@
         }
 
         const moduleRoot = getModuleRoot();
-        const scriptPath = `${moduleRoot}/common/switch_mode.sh`;
+        const scriptPath = "/data/local/tmp/switch_mode.sh";
         const logFile = "/data/local/tmp/wifi_tweaks.log";
         const resultFile = "/data/local/tmp/wifi_tweaks_result";
         
@@ -593,7 +593,7 @@
             if (content && !content.startsWith("Error") && content.trim() !== "") {
                 textarea.value = content;
             } else {
-                textarea.value = "Error: Could not load configuration.";
+                textarea.value = "Error: Configuration could not be fetched.\n\nPossible reasons:\n1. /data/local/tmp/switch_mode.sh is missing.\n2. Permissions are incorrect.\n\nTry running: su -c 'cp /data/adb/modules/wifi_tweaks/common/switch_mode.sh /data/local/tmp/switch_mode.sh && chmod 755 /data/local/tmp/switch_mode.sh' in a terminal.";
             }
             
             textarea.dispatchEvent(new Event('input'));
@@ -617,7 +617,7 @@
             const res = await runCommand(`[ -f "${scriptPath}" ] && echo "FOUND" || echo "MISSING"`);
             if (res.includes("MISSING")) {
                 const output = document.getElementById('console-output');
-                output.textContent = `⚠️ CRITICAL ERROR: Module files not found!\n\nThe path '${moduleRoot}/' is not accessible.\n\nPossible causes:\n1. SUSFS or namespace isolation is hiding the module.\n2. The module is not installed correctly.\n\nIf using SUSFS, try rebooting or checking your mount hiding settings.`;
+                output.textContent = `⚠️ CRITICAL ERROR: Stealth script not found!\n\nThe path '${scriptPath}' is not accessible.\n\nPossible causes:\n1. The script was not copied to /data/local/tmp/.\n2. Permissions are incorrect.\n\nTry running the manual copy command provided in the Editor's error message.`;
                 document.querySelectorAll('.mode-btn').forEach(b => b.disabled = true);
                 return false;
             }
