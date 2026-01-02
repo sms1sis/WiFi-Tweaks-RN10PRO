@@ -1,5 +1,8 @@
 # WiFi Config Switcher Changelog
 
+## v3.6.2
+- **Fix (WebUI):** Resolved "Unknown Mode" issue on the Dashboard by correcting the configuration file path lookup. The script now correctly prioritizes the persistent module directory even when running from the temporary WebUI location.
+
 ## v3.6.1
 - **Fix (WebUI):** Resolved "Could not load existing settings due to isolation" error by implementing a robust Base64-based file reading fallback.
 - **Fix (Compatibility):** Replaced non-portable `grep` and `sed` regex usage with POSIX-compliant character classes for broader Android support (Toybox/Busybox).

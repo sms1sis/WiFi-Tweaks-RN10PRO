@@ -1,6 +1,6 @@
 {
-  "version": "3.6.1",
-  "versionCode": 61,
-  "zipUrl": "https://github.com/sms1sis/WiFi-Config-Switcher/releases/download/v3.6.1/WiFi-Config-Switcher.zip",
+  "version": "3.6.2",
+  "versionCode": 62,
+  "zipUrl": "https://github.com/sms1sis/WiFi-Config-Switcher/releases/download/v3.6.2/WiFi-Config-Switcher.zip",
   "changelog": "https://raw.githubusercontent.com/sms1sis/WiFi-Config-Switcher/main/changelog.md"
 }

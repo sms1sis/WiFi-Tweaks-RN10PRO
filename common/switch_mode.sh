@@ -10,11 +10,22 @@ readonly MODULE_DIR=$(dirname "$SCRIPT_DIR")
 
 # Key File Paths
 # All config files are now located in common/ as per actual deployment
-readonly INTERNAL_CONFIG_FILE="${SCRIPT_DIR}/active_config.ini"
+
+# Detect if we are running from a temp location but the module is actually installed
+# This ensures we always read/write from the persistent module storage
+readonly PERSISTENT_DIR="/data/adb/modules/wifi_tweaks/common"
+
+if [ -d "$PERSISTENT_DIR" ]; then
+    WORK_DIR="$PERSISTENT_DIR"
+else
+    WORK_DIR="$SCRIPT_DIR"
+fi
+
+readonly INTERNAL_CONFIG_FILE="${WORK_DIR}/active_config.ini"
 readonly SYSTEM_CONFIG_FILE="/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
-readonly ORIGINAL_STOCK_FILE="${SCRIPT_DIR}/original_stock.ini"
-readonly CUSTOM_CONFIG_FILE="${SCRIPT_DIR}/config.ini"
-readonly MODE_CONFIG_FILE="${SCRIPT_DIR}/mode.conf"
+readonly ORIGINAL_STOCK_FILE="${WORK_DIR}/original_stock.ini"
+readonly CUSTOM_CONFIG_FILE="${WORK_DIR}/config.ini"
+readonly MODE_CONFIG_FILE="${WORK_DIR}/mode.conf"
 
 # Logging & State
 readonly LOG_FILE="/data/local/tmp/wifi_tweaks.log"
