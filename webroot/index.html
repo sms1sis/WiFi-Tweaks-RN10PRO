@@ -613,30 +613,17 @@
             textarea.value = "Loading configuration...";
             await waitForKSU();
             
-            let content = "";
-            const tmpStock = "/data/local/tmp/wifi_tweaks_stock.ini";
-            const tmpCustom = "/data/local/tmp/wifi_tweaks_custom.ini";
+            // FIX: Avoid ksu.fs.readFile as it truncates large files.
+            // Instead, capture stdout directly from the script which cats the full file.
+            let content = runCommand(`sh ${scriptPath} ${cmd}`);
 
-            // 1. Trigger the script to dump the latest config to world-readable temp files
-            runCommand(`sh ${scriptPath} ${cmd}`);
-
-            // 2. Try to read from temp files first (most reliable for large files)
-            const targetTmp = (cmd === 'get_stock') ? tmpStock : tmpCustom;
-            try { 
-                content = await ksuReadFile(targetTmp);
-            } catch(e) { console.warn("Temp file read failed", e); }
-
-            // 3. Fallback to direct script output if temp file read failed or is empty
+            // Fallback to base64 if direct output is problematic
             if (!content || content.trim() === "" || content.startsWith("Error")) {
                 const b64 = runCommand(`sh ${scriptPath} ${cmd} | base64 2>/dev/null`);
                 if (b64 && !b64.startsWith("Error:") && b64.trim()) {
                     try {
                         content = decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
                     } catch(e) {}
-                }
-                
-                if (!content || content.trim() === "") {
-                    content = runCommand(`sh ${scriptPath} ${cmd}`);
                 }
             }
 
