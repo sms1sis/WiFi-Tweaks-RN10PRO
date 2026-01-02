@@ -395,8 +395,6 @@
         
         // Paths defined as per requirements
         const configPath = `${moduleRoot}/webroot/config.ini`;
-        const stockPath = `${moduleRoot}/common/original_stock.ini`;
-        const fallbackPath = "/data/local/tmp/wifi_tweaks_stock.ini";
 
         let pollInterval = null;
         let statsInterval = null;
@@ -417,31 +415,6 @@
             });
         }
 
-        // Helper for FS operations with fallback
-        async function ksuReadFile(path) {
-            if (window.ksu.fs && window.ksu.fs.readFile) {
-                try {
-                    const content = await window.ksu.fs.readFile(path, 'utf-8');
-                    if (typeof content !== 'string' && content) {
-                        return new TextDecoder("utf-8").decode(content);
-                    }
-                    return content;
-                } catch (e) { console.warn("ksu.fs.read failed", e); }
-            }
-            
-            // Try base64 reading first for robustness (handles newlines/encoding better)
-            const b64 = runCommand(`base64 "${path}" 2>/dev/null`);
-            if (b64 && !b64.startsWith("Error:") && b64.trim()) {
-                try {
-                    return decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
-                } catch(e) { console.warn("Base64 decode failed", e); }
-            }
-
-            const res = runCommand(`cat "${path}"`);
-            if (res.startsWith("Error:")) throw new Error(res);
-            return res;
-        }
-
         async function ksuWriteFile(path, content) {
             if (window.ksu.fs && window.ksu.fs.writeFile) {
                 try {
@@ -451,7 +424,7 @@
             }
             // Base64 encode to safely transfer content via shell
             const b64 = btoa(unescape(encodeURIComponent(content)));
-            const res = runCommand(`echo "${b64}" | base64 -d > "${path}"`);
+            const res = await runCommand(`echo "${b64}" | base64 -d > "${path}"`);
             if (res.startsWith("Error:")) throw new Error(res);
         }
 
@@ -468,10 +441,10 @@
             }
         }
 
-        function runCommand(command) {
+        async function runCommand(command) {
             if (!window.ksu) return "Error: KSU not ready";
             try {
-                const result = ksu.exec(command);
+                const result = await window.ksu.exec(command);
                 let output = "";
 
                 if (!result) output = "";
@@ -483,7 +456,6 @@
                 }
 
                 // Fix: Filter out shell/toybox "END marker" warnings that pollute stdout.
-                // We use line-by-line filtering to prevent over-matching and ensure clean output.
                 if (output.includes("read anything past the") || output.includes("end marker")) {
                     output = output.split('\n')
                         .filter(line => !/read anything past the.*end marker/i.test(line))
@@ -513,8 +485,8 @@
             label.textContent = text;
         }
 
-        function fetchStats() {
-            const res = runCommand(`sh ${scriptPath} stats`);
+        async function fetchStats() {
+            const res = await runCommand(`sh ${scriptPath} stats`);
             if (res && res.includes('|')) {
                 const p = res.split('|');
                 document.getElementById('stat-rssi').textContent = p[0].split(':')[1].trim();
@@ -558,8 +530,9 @@
             const output = document.getElementById('console-output');
             output.textContent = `[*] Initializing ${mode} switch...`;
             
-            runCommand(`rm "${logFile}" "${resultFile}"`);
-            const pid = parseInt(runCommand(`nohup sh ${scriptPath} ${mode} > /dev/null 2>&1 & echo $!`));
+            await runCommand(`rm "${logFile}" "${resultFile}"`);
+            const pidStr = await runCommand(`nohup sh ${scriptPath} ${mode} > /dev/null 2>&1 & echo $!`);
+            const pid = parseInt(pidStr);
 
             if (isNaN(pid)) {
                 output.textContent = "[!] Failed to start background engine.";
@@ -567,13 +540,13 @@
             }
 
             if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(() => {
-                const active = runCommand(`kill -0 ${pid} 2>/dev/null; echo $?`).trim();
+            pollInterval = setInterval(async () => {
+                const active = (await runCommand(`kill -0 ${pid} 2>/dev/null; echo $?`)).trim();
                 if (active !== '0') {
                     clearInterval(pollInterval);
-                    const logs = runCommand(`cat "${logFile}"`);
-                    const resultStatus = runCommand(`cat "${resultFile}"`).trim();
-                    const newMode = runCommand(`sh ${scriptPath} status`).trim();
+                    const logs = await runCommand(`cat "${logFile}"`);
+                    const resultStatus = (await runCommand(`cat "${resultFile}"`)).trim();
+                    const newMode = (await runCommand(`sh ${scriptPath} status`)).trim();
                     updateDisplay(logs, resultStatus, newMode);
                 }
             }, 500);
@@ -613,24 +586,14 @@
             textarea.value = "Loading configuration...";
             await waitForKSU();
             
-            // FIX: Avoid ksu.fs.readFile as it truncates large files.
-            // Instead, capture stdout directly from the script which cats the full file.
-            let content = runCommand(`sh ${scriptPath} ${cmd}`);
-
-            // Fallback to base64 if direct output is problematic
-            if (!content || content.trim() === "" || content.startsWith("Error")) {
-                const b64 = runCommand(`sh ${scriptPath} ${cmd} | base64 2>/dev/null`);
-                if (b64 && !b64.startsWith("Error:") && b64.trim()) {
-                    try {
-                        content = decodeURIComponent(escape(atob(b64.replace(/\s/g, ''))));
-                    } catch(e) {}
-                }
-            }
+            // FIX: Completely removed ksu.fs.readFile usage.
+            // Using await runCommand to prevent race condition.
+            let content = await runCommand(`sh ${scriptPath} ${cmd}`);
 
             if (content && !content.startsWith("Error") && content.trim() !== "") {
                 textarea.value = content;
             } else {
-                textarea.value = "# New custom configuration\n# (Could not load existing settings due to isolation)";
+                textarea.value = "Error: Could not load configuration.";
             }
             
             textarea.dispatchEvent(new Event('input'));
@@ -651,7 +614,7 @@
         }
 
         async function checkModulePath() {
-            const res = runCommand(`[ -f "${scriptPath}" ] && echo "FOUND" || echo "MISSING"`);
+            const res = await runCommand(`[ -f "${scriptPath}" ] && echo "FOUND" || echo "MISSING"`);
             if (res.includes("MISSING")) {
                 const output = document.getElementById('console-output');
                 output.textContent = `⚠️ CRITICAL ERROR: Module files not found!\n\nThe path '${moduleRoot}/' is not accessible.\n\nPossible causes:\n1. SUSFS or namespace isolation is hiding the module.\n2. The module is not installed correctly.\n\nIf using SUSFS, try rebooting or checking your mount hiding settings.`;
@@ -671,7 +634,7 @@
             if (!await checkModulePath()) return;
 
             consoleOutput.textContent = "KernelSU API ready. Initializing...";
-            updateStatusUI(runCommand(`sh ${scriptPath} status`));
+            updateStatusUI(await runCommand(`sh ${scriptPath} status`));
             fetchStats();
             statsInterval = setInterval(fetchStats, 4000);
         });

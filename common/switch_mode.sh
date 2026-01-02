@@ -186,20 +186,11 @@ case "$1" in
     "stats") get_stats ;;
     "get_stock")
         if [ -f "${ORIGINAL_STOCK_FILE}" ]; then
-            # Also dump to a world-readable location for WebUI fallback
-            cp "${ORIGINAL_STOCK_FILE}" "/data/local/tmp/wifi_tweaks_stock.ini" 2>/dev/null
-            chmod 666 "/data/local/tmp/wifi_tweaks_stock.ini" 2>/dev/null
             cat "${ORIGINAL_STOCK_FILE}"
-        else
-            # Try fallback if internal backup not found
-            [ -f "/data/local/tmp/wifi_tweaks_stock.ini" ] && cat "/data/local/tmp/wifi_tweaks_stock.ini"
         fi
         ;;
     "get_custom")
         if [ -f "${CUSTOM_CONFIG_FILE}" ]; then
-             # Also dump to a world-readable location for WebUI fallback
-            cp "${CUSTOM_CONFIG_FILE}" "/data/local/tmp/wifi_tweaks_custom.ini" 2>/dev/null
-            chmod 666 "/data/local/tmp/wifi_tweaks_custom.ini" 2>/dev/null
             cat "${CUSTOM_CONFIG_FILE}"
         fi
         ;;
