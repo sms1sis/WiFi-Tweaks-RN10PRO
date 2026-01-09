@@ -33,6 +33,16 @@ find_module_config() {
         return 0
     fi
     
+    # Priority 3: Dev/Test Fallback
+    if [ -f "$MODDIR/WCNSS_qcom_cfg.ini" ]; then
+        echo "$MODDIR/WCNSS_qcom_cfg.ini"
+        return 0
+    fi
+    if [ -f "$MODDIR/webroot/config.ini" ]; then
+        echo "$MODDIR/webroot/config.ini"
+        return 0
+    fi
+    
     return 1
 }
 
@@ -117,7 +127,17 @@ case "$1" in
         
         # Sync changes to disk
         sync
+        echo "$MODE" > "$MODDIR/mode_status.txt"
         log_json "success" "Applied $MODE to module config."
+        ;;
+
+    "get_mode")
+        if [ -f "$MODDIR/mode_status.txt" ]; then
+            CURRENT_MODE=$(cat "$MODDIR/mode_status.txt")
+            echo "{\"mode\": \"$CURRENT_MODE\"}"
+        else
+            echo "{\"mode\": \"unknown\"}"
+        fi
         ;;
 
     "read_config")

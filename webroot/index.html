@@ -498,7 +498,32 @@
                 this.fetchStats();
                 
                 await this.checkKPatch();
+                await this.checkMode();
                 await this.loadConfig(); // Preload editor
+            }
+            
+            async checkMode() {
+                const resRaw = await this.ksu.runAction("get_mode");
+                try {
+                    const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
+                    const res = JSON.parse(jsonStr);
+                    const mode = res.mode || "Ready";
+                    
+                    const dot = document.getElementById('status-dot');
+                    const label = document.getElementById('current-mode');
+                    
+                    if (mode !== "unknown") {
+                        label.innerText = mode.toUpperCase();
+                        if(mode == 'perf') dot.style.color = 'var(--accent-success)';
+                        else if(mode == 'balanced') dot.style.color = 'var(--accent-warning)';
+                        else dot.style.color = 'var(--text-main)';
+                    } else {
+                        label.innerText = "Stock / Ready";
+                        dot.style.color = 'var(--text-main)';
+                    }
+                } catch (e) {
+                   // console.log("Mode check error", e);
+                }
             }
 
             log(msg, append = true) {
