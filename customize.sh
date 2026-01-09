@@ -2,26 +2,10 @@
 
 SKIPUNZIP=0
 
-ui_print "- Installing WiFi-Config-Switcher..."
+ui_print "- Installing WiFi Config Switcher V4..."
 
-# Ensure config.ini exists for WebUI
-# The WebUI expects common/config.ini to exist.
-if [ ! -f "$MODPATH/common/config.ini" ]; then
-    if [ -f "$MODPATH/common/original_stock.ini" ]; then
-        ui_print "- Creating default config.ini from stock backup..."
-        cp "$MODPATH/common/original_stock.ini" "$MODPATH/common/config.ini"
-        chmod 644 "$MODPATH/common/config.ini"
-    else
-        ui_print "! Warning: common/original_stock.ini not found!"
-    fi
-fi
-
-# Set execute permission for the main script
-set_perm "$MODPATH/common/switch_mode.sh" 0 0 0755
-set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
+# Set execute permissions
+set_perm "$MODPATH/action.sh" 0 0 0755
 set_perm "$MODPATH/service.sh" 0 0 0755
 
-# Deploy stealth script for WebUI
-ui_print "- Deploying stealth script for WebUI..."
-cp "$MODPATH/common/switch_mode.sh" "/data/local/tmp/switch_mode.sh"
-chmod 755 "/data/local/tmp/switch_mode.sh"
+ui_print "- Module ready."

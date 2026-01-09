@@ -1,715 +1,479 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Wi-Fi Config Tuner</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <title>WiFi Config Tuner V4</title>
+    <!-- Simple, robust font stack -->
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #1a1b26;
-            --bg-card: rgba(36, 40, 59, 0.7);
-            --accent-primary: #7aa2f7;
-            --accent-secondary: #bb9af7;
-            --accent-success: #9ece6a;
-            --accent-warning: #e0af68;
-            --accent-danger: #f7768e;
-            --text-main: #a9b1d6;
-            --text-bright: #c0caf5;
-            --nav-bg: #16161e;
-            --editor-bg: #1a1b26;
-            --editor-gutter: #24283b;
+            --bg-body: #0f172a;
+            --bg-panel: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --code-bg: #020617;
+            --border: rgba(255, 255, 255, 0.1);
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            margin: 0;
-            padding: 0;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* Views */
-        .view {
-            flex: 1;
-            display: none;
-            overflow-y: auto;
-            padding: 10px;
-            padding-bottom: 80px; /* Space for nav */
-        }
-
-        @media (min-width: 600px) {
-            .view { padding: 30px; }
-        }
-
-        .view.active {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        #dashboard.active {
-            justify-content: flex-start; /* Changed from center to allow scrolling */
-        }
-
-        /* Dashboard Styles */
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            width: 100%;
-            padding-top: 20px;
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            color: var(--text-bright);
-            margin-bottom: 5px;
-            text-align: center;
-        }
-
-        .subtitle {
-            text-align: center;
-            font-size: 0.9rem;
-            color: var(--accent-primary);
-            margin-bottom: 25px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .section-title {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            color: var(--accent-secondary);
-            margin: 20px 0 10px 0;
-            letter-spacing: 1px;
-            font-weight: bold;
-        }
-
-        .card {
-            background: var(--bg-card);
-            padding: 15px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.05);
-            margin-bottom: 15px;
-        }
-
-        .status-badge {
-            background: var(--bg-card);
-            padding: 8px 16px;
-            border-radius: 30px;
-            display: inline-flex;
-            align-items: center;
-            margin: 0 auto 20px auto;
-            border: 1px solid rgba(255,255,255,0.1);
-            justify-content: center;
-        }
-
-        .status-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 12px;
-            box-shadow: 0 0 8px currentColor;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: var(--bg-card);
-            padding: 12px;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .stat-label { font-size: 0.65rem; text-transform: uppercase; color: var(--accent-primary); opacity: 0.8; }
-        .stat-value { font-family: 'Fira Code', monospace; font-size: 0.85rem; font-weight: 700; display: block; margin-top: 4px; color: var(--text-bright); }
-
-        .button-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 10px;
-        }
-
-        .mode-btn {
-            padding: 15px;
-            border: none;
-            border-radius: 14px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            color: #1a1b26;
-            text-transform: uppercase;
-        }
-
-        .mode-btn:active { transform: scale(0.96); }
-        .mode-btn:disabled { opacity: 0.4; pointer-events: none; }
-
-        .btn-perf { background-color: var(--accent-success); }
-        .btn-balanced { background-color: var(--accent-warning); }
-        .btn-stock { background-color: var(--text-main); }
-        .btn-custom { background-color: var(--accent-secondary); }
-
-        .mode-btn svg { width: 24px; height: 24px; }
-
-        /* KPatch & Tools Styles */
-        .tools-row {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .action-btn {
-            flex: 1;
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.05);
-            color: var(--text-bright);
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            font-size: 0.8rem;
-        }
-
-        .action-btn.primary { background: var(--accent-primary); color: #1a1b26; font-weight: bold; }
-        .action-btn.danger { border-color: var(--accent-danger); color: var(--accent-danger); }
-        .action-btn.success { border-color: var(--accent-success); color: var(--accent-success); }
-
-        #console-output {
-            background: #16161e;
-            border-radius: 12px;
-            padding: 15px;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.75rem;
-            min-height: 100px;
-            max-height: 180px;
-            overflow-y: auto;
-            border: 1px solid rgba(255,255,255,0.1);
-            white-space: pre-wrap;
-            margin-top: 20px;
-        }
-
-        /* Editor Styles */
-        .editor-header {
+        /* Layout */
+        header {
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-            padding: 0 5px;
+            backdrop-filter: blur(10px);
+            z-index: 10;
         }
 
-        .editor-wrapper {
+        h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+        .badge { font-size: 0.7rem; background: var(--accent); color: #000; padding: 2px 8px; border-radius: 12px; font-weight: 700; margin-left: 8px; }
+
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-panel);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Actions Grid */
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+        button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 14px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:active { transform: scale(0.98); }
+        button.primary { background: var(--accent); color: #0f172a; border: none; }
+        button.danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+        button.success { background: rgba(34, 197, 94, 0.15); color: var(--success); border-color: rgba(34, 197, 94, 0.3); }
+
+        /* Editor */
+        .editor-container {
             flex: 1;
             display: flex;
-            position: relative;
-            background: var(--editor-bg);
+            flex-direction: column;
+            min-height: 400px;
             border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.1);
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            min-height: 300px;
-        }
-
-        #line-numbers {
-            min-width: 35px;
-            width: auto;
-            padding: 12px 10px;
-            background: var(--editor-gutter);
-            color: #565f89;
-            font-family: 'Fira Code', monospace;
-            font-size: 13px;
-            text-align: right;
-            user-select: none;
-            line-height: 20px;
-            border-right: 1px solid rgba(255,255,255,0.05);
-        }
-
-        #editor-textarea {
-            flex: 1;
-            background: transparent;
-            color: #9ece6a;
-            border: none;
-            padding: 12px;
-            font-family: 'Fira Code', monospace;
-            font-size: 13px;
-            line-height: 20px;
-            resize: none;
-            outline: none;
-            white-space: pre;
-            overflow-x: auto;
+            border: 1px solid var(--border);
+            background: var(--code-bg);
         }
 
         .editor-toolbar {
+            background: #1e293b;
+            padding: 8px 12px;
             display: flex;
-            gap: 12px;
-            margin-top: 15px;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .tool-btn {
+        .editor-toolbar span { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-secondary); margin-right: auto; align-self: center; }
+
+        .editor-area {
             flex: 1;
-            padding: 12px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: var(--bg-card);
-            color: var(--text-bright);
-            border-radius: 10px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
+            position: relative;
+            display: flex;
+            overflow: hidden;
         }
 
-        .tool-btn:active { transform: translateY(2px); }
-        .tool-btn.primary { background: var(--accent-secondary); color: #1a1b26; font-weight: bold; border: none; }
+        #line-numbers {
+            width: 40px;
+            background: #0f172a;
+            color: #475569;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            text-align: right;
+            padding: 10px 8px;
+            border-right: 1px solid var(--border);
+            user-select: none;
+        }
 
-        /* Navigation */
-        nav {
+        textarea {
+            flex: 1;
+            background: transparent;
+            color: #e2e8f0;
+            border: none;
+            padding: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: none;
+            white-space: pre;
+            overflow: auto;
+        }
+
+        /* Toast */
+        #toast {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 70px;
-            background: var(--nav-bg);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            border-top: 1px solid rgba(255,255,255,0.05);
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 100;
-        }
-
-        .nav-item {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            color: #565f89;
-            text-decoration: none;
-            font-size: 0.75rem;
-            gap: 4px;
-            cursor: pointer;
-            transition: color 0.2s;
+            gap: 10px;
         }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+        #toast.error { border-color: var(--danger); color: var(--danger); }
+        #toast.success { border-color: var(--success); color: var(--success); }
 
-        .nav-item.active { color: var(--accent-primary); }
-        .nav-item svg { width: 22px; height: 22px; }
-
-        /* KPatch Specifics */
-        .kpatch-status {
-            font-size: 0.8rem;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .tag { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
-        .tag.green { background: rgba(158, 206, 106, 0.2); color: #9ece6a; }
-        .tag.red { background: rgba(247, 118, 142, 0.2); color: #f7768e; }
-        .tag.gray { background: rgba(169, 177, 214, 0.2); color: #a9b1d6; }
+        /* Loader */
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.1); border-top-color: currentColor; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
     </style>
 </head>
 <body>
 
-    <!-- Dashboard View -->
-    <div id="dashboard" class="view active">
-        <div class="container">
-            <h1>Wi-Fi Tuner</h1>
-            <div class="subtitle">KernelSU Next V3 Ready</div>
-
-            <div style="text-align: center;">
-                <div class="status-badge">
-                    <span id="status-dot" class="status-dot"></span>
-                    <span id="current-mode">Detecting...</span>
-                </div>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <span class="stat-label">Signal</span>
-                    <span id="stat-rssi" class="stat-value">--</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-label">Speed</span>
-                    <span id="stat-speed" class="stat-value">--</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-label">Frequency</span>
-                    <span id="stat-freq" class="stat-value">--</span>
-                </div>
-            </div>
-
-            <div class="section-title">Performance Profiles</div>
-            <div class="button-grid">
-                <button class="mode-btn btn-perf" onclick="runSwitch('perf')">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,10h7l-9,11v-7H4l9-11V10z"/></svg>
-                    Performance
-                </button>
-                <button class="mode-btn btn-balanced" onclick="runSwitch('balanced')">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z"/></svg>
-                    Balanced
-                </button>
-                <button class="mode-btn btn-stock" onclick="runSwitch('stock')">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,3H6V21H18V8L13,3M12,18H8V16H12V18M15,14H8V12H15V14M15,10H8V8H15V10M13,9V4.5L17.5,9H13Z"/></svg>
-                    Stock
-                </button>
-                <button class="mode-btn btn-custom" onclick="runSwitch('custom')">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M15,11V13H9V11H15M11,7H13V17H11V7Z"/></svg>
-                    Custom
-                </button>
-            </div>
-
-            <div class="section-title">Advanced Actions</div>
-            <div class="card">
-                <div class="kpatch-status">
-                    <span>Kernel Patch Support:</span>
-                    <span id="kpatch-tag" class="tag gray">Checking...</span>
-                </div>
-                <div class="tools-row">
-                    <button class="action-btn" onclick="checkCompatibility()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"/></svg>
-                        Check Compat
-                    </button>
-                    <button class="action-btn" id="btn-inject" onclick="injectPatch()" disabled>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2,12A10,10 0 0,1 12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12M13,7H11V11H7V13H11V17H13V13H17V11H13V7Z"/></svg>
-                        Inject Patch
-                    </button>
-                </div>
-                <div class="tools-row">
-                    <button class="action-btn danger" onclick="performSoftReset()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,5V1L7,6L12,11V7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12H5A7,7 0 0,0 12,19A7,7 0 0,0 19,12A7,7 0 0,0 12,5Z"/></svg>
-                        Soft Driver Reset
-                    </button>
-                </div>
-            </div>
-
-            <div id="console-output">Initializing system hooks...</div>
+    <header>
+        <div>
+            <h1>WiFi Tuner <span class="badge">V4.0</span></h1>
         </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary);">KSU-Next</div>
+    </header>
+
+    <main>
+        <!-- KPatch Section -->
+        <div class="card" id="kpatch-card" style="display:none;">
+            <div class="card-header">
+                <span class="card-title">Kernel Patching</span>
+                <span id="kpatch-status" style="font-size: 0.75rem; color: var(--warning);">Checking...</span>
+            </div>
+            <div class="grid">
+                <button id="btn-inject" disabled onclick="app.injectPatch()">
+                    Inject Patch
+                </button>
+            </div>
+        </div>
+
+        <!-- Editor Section -->
+        <div class="card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; height: 500px;">
+            <div class="editor-toolbar">
+                <span>/vendor/etc/wifi/WCNSS_qcom_cfg.ini</span>
+                <button style="padding: 6px 12px; font-size: 0.75rem;" onclick="app.loadConfig()">
+                    Reload
+                </button>
+                <button class="primary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="app.saveConfig()">
+                    Save & Apply
+                </button>
+            </div>
+            <div class="editor-container" style="border: none; border-radius: 0;">
+                <div class="editor-area">
+                    <div id="line-numbers">1</div>
+                    <textarea id="editor" spellcheck="false"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Driver Control</span>
+            </div>
+            <div class="grid">
+                <button class="danger" onclick="app.softReset()">
+                    Soft Reset Driver
+                </button>
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 12px; line-height: 1.4;">
+                Soft Reset performs a safe <code>unbind</code> / <code>bind</code> sequence on the active WLAN driver. 
+                This applies configuration changes without a full device reboot.
+            </p>
+        </div>
+    </main>
+
+    <div id="toast">
+        <span id="toast-icon"></span>
+        <span id="toast-msg">Notification</span>
     </div>
 
-    <!-- Editor View -->
-    <div id="editor" class="view">
-        <div class="editor-header">
-            <span style="font-family: monospace; font-size: 0.8rem; color: var(--accent-secondary);">micro: custom.ini</span>
-            <span id="cursor-pos" style="font-size: 0.7rem; opacity: 0.6;">Ln 1, Col 1</span>
-        </div>
-
-        <div class="editor-wrapper">
-            <div id="line-numbers">1</div>
-            <textarea id="editor-textarea" spellcheck="false" wrap="off"></textarea>
-        </div>
-
-        <div class="editor-toolbar">
-            <button class="tool-btn" onclick="loadStockFromSystem()">Load System Default</button>
-            <button class="tool-btn primary" onclick="saveAndApply()">Save & Apply</button>
-        </div>
-    </div>
-
-    <!-- Navigation Bar -->
-    <nav>
-        <div class="nav-item active" onclick="switchView('dashboard', this)">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg>
-            Dashboard
-        </div>
-        <div class="nav-item" onclick="switchView('editor', this)">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.06,9L15,9.94L5.92,19H5V18.08L14.06,9M17.66,3C17.41,3 17.15,3.1 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18.17,3.09 17.92,3 17.66,3M14.06,8.19L3,19.25V23H6.75L17.81,11.94L14.06,8.19Z"/></svg>
-            Config Editor
-        </div>
-    </nav>
-
-    <script>
-        // Paths
-        // We attempt to find the module root dynamically
-        function getModuleRoot() {
-            let root = "/data/adb/modules/wifi_tweaks";
-            try {
-                const path = decodeURIComponent(window.location.pathname);
-                if (path.includes("/webroot/index.html")) {
-                    root = path.split("/webroot/index.html")[0];
-                }
-            } catch(e) {}
-            return root;
-        }
-
-        const moduleRoot = getModuleRoot();
-        const scriptPath = "/data/local/tmp/switch_mode.sh";
-        const actionScript = `${moduleRoot}/common/action.sh`;
-        const logFile = "/data/local/tmp/wifi_tweaks.log";
-        const resultFile = "/data/local/tmp/wifi_tweaks_result";
-        const configPath = `${moduleRoot}/common/config.ini`;
-
-        let pollInterval = null;
-        let statsInterval = null;
-
-        // KSU Initialization
-        function waitForKSU() {
-            if (window.ksu) return Promise.resolve();
-            return new Promise(resolve => {
-                const timer = setInterval(() => {
-                    if (window.ksu) {
-                        clearInterval(timer);
-                        resolve();
-                    }
-                }, 50);
-            });
-        }
-
-        async function runCommand(command) {
-            if (!window.ksu) return "Error: KSU not ready";
-            try {
-                const result = await window.ksu.exec(command);
-                let output = "";
-                if (!result) output = "";
-                else if (typeof result === 'string') output = result;
-                else if (typeof result.errno === 'number') {
-                    output = result.errno === 0 ? String(result.stdout || "") : `Error: ${result.stderr}`;
-                } else {
-                    output = String(result);
-                }
-                // Filter shell noise
-                if (output.includes("read anything past the") || output.includes("end marker")) {
-                    output = output.split('\n')
-                        .filter(line => !/read anything past the.*end marker/i.test(line))
-                        .join('\n');
-                }
-                return output;
-            } catch (e) { return `Error: ${e.message}` }
-        }
-
-        function logToConsole(msg, append = false) {
-            const output = document.getElementById('console-output');
-            if (append) output.textContent += "\n" + msg;
-            else output.textContent = msg;
-            output.scrollTop = output.scrollHeight;
-        }
-
-        // --- Core Features ---
-
-        async function checkCompatibility() {
-            logToConsole("Checking Kernel Patch support...");
-            const res = await runCommand(`sh ${actionScript} check_kpatch`);
-            
-            try {
-                // Parse JSON output from action.sh
-                // The shell script might output extra noise, try to find the JSON line
-                const jsonMatch = res.match(/\{.*\}/);
-                if (jsonMatch) {
-                    const data = JSON.parse(jsonMatch[0]);
-                    const tag = document.getElementById('kpatch-tag');
-                    const btn = document.getElementById('btn-inject');
-                    
-                    if (data.supported) {
-                        tag.textContent = "Supported";
-                        tag.className = "tag green";
-                        
-                        if (data.has_kpm) {
-                            btn.disabled = false;
-                            logToConsole("Kernel supports patching. KPM file found.");
-                        } else {
-                            btn.disabled = true;
-                            logToConsole("Kernel supports patching, but no .kpm file found in module.");
-                        }
-                    } else {
-                        tag.textContent = "Unsupported";
-                        tag.className = "tag red";
-                        btn.disabled = true;
-                        logToConsole("Your kernel does not appear to support Live Patching.");
-                    }
-                } else {
-                    throw new Error("Invalid response format");
-                }
-            } catch (e) {
-                logToConsole(`Error parsing compatibility check: ${e.message}\nRaw: ${res}`);
-            }
-        }
-
-        async function injectPatch() {
-            logToConsole("Injecting kernel patch...");
-            const res = await runCommand(`sh ${actionScript} inject_patch`);
-            logToConsole(res, true);
-        }
-
-        async function performSoftReset() {
-            if (!confirm("This will restart the Wi-Fi driver. Your connection will drop momentarily. Continue?")) return; 
-            
-            logToConsole("[*] Initiating Soft Driver Reset...");
-            // Run in background so UI doesn't freeze, but we want to see output
-            // ksu.exec is usually blocking or async, we await it.
-            const res = await runCommand(`sh ${actionScript} soft_reset`);
-            logToConsole(res, true);
-        }
-
-        async function loadStockFromSystem() {
-            const textarea = document.getElementById('editor-textarea');
-            textarea.value = "Scanning for system config...";
-            
-            let content = await runCommand(`sh ${actionScript} read_stock`);
-            
-            if (content && !content.startsWith("Error")) {
-                textarea.value = content;
-            } else {
-                // If auto-detection fails, ask user for path
-                const userPath = prompt("Could not automatically find WCNSS_qcom_cfg.ini.\n\nPlease enter the full path to your Wi-Fi config file:", "/vendor/etc/wifi/WCNSS_qcom_cfg.ini");
-                if (userPath) {
-                    textarea.value = `Reading from ${userPath}...`;
-                    // We use cat directly via shell for custom path to be safe/flexible
-                    const customContent = await runCommand(`cat "${userPath}"`);
-                    if (customContent && !customContent.includes("No such file")) {
-                        textarea.value = customContent;
-                    } else {
-                        textarea.value = "Failed to read file at provided path.\n" + customContent;
-                    }
-                } else {
-                    textarea.value = "Failed to read system config.\n" + content;
-                }
-            }
-            textarea.dispatchEvent(new Event('input'));
-        }
-
-        // --- Standard Features ---
-
-        function updateStatusUI(mode) {
-            const dot = document.getElementById('status-dot');
-            const label = document.getElementById('current-mode');
-            
-            mode = mode.trim().toLowerCase();
-            let color = '#565f89';
-            let text = mode.charAt(0).toUpperCase() + mode.slice(1);
-
-            if (mode === 'perf') color = '#9ece6a';
-            else if (mode === 'balanced') color = '#e0af68';
-            else if (mode === 'stock') color = '#a9b1d6';
-            else if (mode === 'custom') color = '#bb9af7';
-
-            dot.style.color = color;
-            dot.style.backgroundColor = color;
-            label.textContent = text;
-        }
-
-        async function fetchStats() {
-            const res = await runCommand(`sh ${scriptPath} stats`);
-            if (res && res.includes('|')) {
-                const p = res.split('|');
-                document.getElementById('stat-rssi').textContent = p[0].split(':')[1].trim();
-                document.getElementById('stat-speed').textContent = p[1].split(':')[1].trim();
-                document.getElementById('stat-freq').textContent = p[2].split(':')[1].trim();
-            }
-        }
-
-        async function runSwitch(mode) {
-            logToConsole(`[*] Switching to ${mode}...`);
-            await runCommand(`rm "${logFile}" "${resultFile}"`);
-            
-            const pidStr = await runCommand(`nohup sh ${scriptPath} ${mode} > /dev/null 2>&1 & echo $!`);
-            const pid = parseInt(pidStr);
-
-            if (isNaN(pid)) {
-                logToConsole("[!] Failed to start background engine.", true);
-                return;
+    <script type="module">
+        /**
+         * Modern KSU-Next V3 Bridge Wrapper
+         * Handles the communication between WebUI and Root Shell
+         */
+        class KsuBridge {
+            constructor() {
+                this.bridge = window.ksu;
+                this.hasKsu = !!(window.ksu && window.ksu.exec);
+                this.actionScript = "/data/adb/modules/wifi_config_switcher/action.sh";
             }
 
-            if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(async () => {
-                const active = (await runCommand(`kill -0 ${pid} 2>/dev/null; echo $?`)).trim();
-                if (active !== '0') {
-                    clearInterval(pollInterval);
-                    const logs = await runCommand(`cat "${logFile}"`);
-                    const resultStatus = (await runCommand(`cat "${resultFile}"`)).trim();
-                    const newMode = (await runCommand(`sh ${scriptPath} status`)).trim();
-                    
-                    logToConsole(logs);
-                    logToConsole(`Done. Mode: ${newMode}`, true);
-                    updateStatusUI(newMode);
-                }
-            }, 500);
-        }
-
-        // Editor Logic
-        const textarea = document.getElementById('editor-textarea');
-        const lineNums = document.getElementById('line-numbers');
-
-        textarea.addEventListener('input', () => {
-            const lines = textarea.value.split('\n').length;
-            lineNums.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('<br>');
-        });
-        textarea.addEventListener('scroll', () => { lineNums.scrollTop = textarea.scrollTop; });
-        textarea.addEventListener('keydown', e => {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                const start = textarea.selectionStart;
-                textarea.value = textarea.value.substring(0, start) + "    " + textarea.value.substring(textarea.selectionEnd);
-                textarea.selectionStart = textarea.selectionEnd = start + 4;
-            }
-        });
-
-        async function saveAndApply() {
-            const content = textarea.value;
-            if (!content.trim()) return; 
-            
-            await waitForKSU();
-            try {
-                // Save directly to common/config.ini using ksu fs or shell
-                if (window.ksu.fs && window.ksu.fs.writeFile) {
-                    await window.ksu.fs.writeFile(configPath, content);
-                } else {
-                    const b64 = btoa(unescape(encodeURIComponent(content)));
-                    await runCommand(`echo "${b64}" | base64 -d > "${configPath}"`);
+            async exec(command) {
+                if (!this.hasKsu) {
+                    console.warn("Mocking KSU exec:", command);
+                    return "Error: KSU not detected. Are you in the Manager?";
                 }
                 
-                switchView('dashboard', document.querySelector('.nav-item'));
-                runSwitch('custom');
-            } catch (e) {
-                alert("Failed to save: " + e.message);
+                try {
+                    const result = await this.bridge.exec(command);
+                    if (typeof result === 'object' && result.errno !== undefined) {
+                        // KSU Next V3 object return style
+                        return result.errno === 0 ? result.stdout : `Error ${result.errno}: ${result.stderr}`;
+                    }
+                    return result || "";
+                } catch (e) {
+                    return `Exception: ${e.message}`;
+                }
+            }
+
+            async runAction(action, arg = "") {
+                // Ensure we find the script path dynamically if possible or assume standard path
+                // For robustness, we assume the module is mounted at standard location or we can find it
+                // We'll use a relative path trick if we were serving files, but here we are raw.
+                // Best bet: Use the 'action.sh' we just wrote.
+                
+                // Escape argument if it contains quotes
+                const safeArg = arg.replace(/"/g, '\"');
+                
+                return await this.exec(`sh "${this.actionScript}" "${action}" "${safeArg}"`);
             }
         }
 
-        // View Routing
-        function switchView(viewId, el) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            el.classList.add('active');
+        /**
+         * Application Logic
+         */
+        class App {
+            constructor() {
+                this.ksu = new KsuBridge();
+                this.ui = {
+                    editor: document.getElementById('editor'),
+                    lines: document.getElementById('line-numbers'),
+                    toast: document.getElementById('toast'),
+                    kpatchCard: document.getElementById('kpatch-card'),
+                    kpatchStatus: document.getElementById('kpatch-status'),
+                    btnInject: document.getElementById('btn-inject')
+                };
 
-            if (viewId === 'editor') {
-                // Load existing custom config by default
-                runCommand(`sh ${scriptPath} get_custom`).then(res => {
-                    if (res) textarea.value = res;
-                    textarea.dispatchEvent(new Event('input'));
+                this.setupEditor();
+                this.init();
+            }
+
+            async init() {
+                // Check if KSU is ready
+                if (!this.ksu.hasKsu) {
+                    this.showToast("KernelSU API missing!", "error");
+                    // return; // Don't return, let UI render for debugging
+                }
+
+                // Initial Load
+                await this.loadConfig();
+                await this.checkKPatch();
+            }
+
+            // -- Editor --
+            setupEditor() {
+                const { editor, lines } = this.ui;
+                
+                const updateLines = () => {
+                    const lineCount = editor.value.split('\n').length;
+                    lines.innerHTML = Array(lineCount).fill(0).map((_, i) => i + 1).join('<br>');
+                };
+
+                editor.addEventListener('input', updateLines);
+                editor.addEventListener('scroll', () => { lines.scrollTop = editor.scrollTop; });
+                
+                // Tab handling
+                editor.addEventListener('keydown', (e) => {
+                    if (e.key === 'Tab') {
+                        e.preventDefault();
+                        const start = editor.selectionStart;
+                        const end = editor.selectionEnd;
+                        editor.value = editor.value.substring(0, start) + "    " + editor.value.substring(end);
+                        editor.selectionStart = editor.selectionEnd = start + 4;
+                    }
                 });
             }
+
+            async loadConfig() {
+                this.showToast("Loading config...");
+                const content = await this.ksu.runAction("read_config");
+                
+                if (content.startsWith("Error")) {
+                    this.showToast("Failed to load config", "error");
+                    this.ui.editor.value = "# Error loading configuration\n" + content;
+                } else {
+                    this.ui.editor.value = content;
+                    this.showToast("Config loaded", "success");
+                }
+                this.ui.editor.dispatchEvent(new Event('input'));
+            }
+
+            async saveConfig() {
+                const content = this.ui.editor.value;
+                if (!content) return; 
+
+                this.showToast("Saving...", "loading");
+                
+                // Use Base64 to safely transfer content
+                const b64 = btoa(unescape(encodeURIComponent(content)));
+                
+                // Pipe to action script
+                const cmd = `echo "${b64}" | sh "${this.ksu.actionScript}" save_config`;
+                const resRaw = await this.ksu.exec(cmd);
+                
+                try {
+                    // Try to parse JSON response from action script
+                    const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
+                    const res = JSON.parse(jsonStr);
+                    
+                    if (res.status === 'success') {
+                        this.showToast("Saved! Resetting driver...", "success");
+                        // Auto-trigger soft reset after save
+                        await this.softReset(true); 
+                    } else {
+                        throw new Error(res.message);
+                    }
+                } catch (e) {
+                    this.showToast("Save failed: " + resRaw, "error");
+                }
+            }
+
+            // -- Advanced Features --
+
+            async checkKPatch() {
+                const resRaw = await this.ksu.runAction("check_kpatch");
+                try {
+                    const data = JSON.parse(resRaw);
+                    if (data.supported) {
+                        this.ui.kpatchCard.style.display = "block";
+                        if (data.kpm_found) {
+                            this.ui.kpatchStatus.textContent = "Supported & Module Found";
+                            this.ui.kpatchStatus.style.color = "var(--success)";
+                            this.ui.btnInject.disabled = false;
+                        } else {
+                            this.ui.kpatchStatus.textContent = "Supported (No .kpm)";
+                            this.ui.kpatchStatus.style.color = "var(--warning)";
+                        }
+                    }
+                } catch (e) {
+                    console.error("KPatch check parse error", e);
+                }
+            }
+
+            async injectPatch() {
+                this.showToast("Injecting patch...");
+                const resRaw = await this.ksu.runAction("inject_patch");
+                try {
+                    const data = JSON.parse(resRaw);
+                    if (data.status === 'success') {
+                        this.showToast("Patch Injected!", "success");
+                        this.ui.btnInject.textContent = "Active";
+                        this.ui.btnInject.classList.add("success");
+                    } else {
+                        this.showToast("Injection Failed", "error");
+                    }
+                } catch (e) {
+                    this.showToast("Error: " + resRaw, "error");
+                }
+            }
+
+            async softReset(isAuto = false) {
+                if (!isAuto) this.showToast("Resetting driver...");
+                
+                const resRaw = await this.ksu.runAction("soft_reset");
+                try {
+                    const data = JSON.parse(resRaw);
+                    if (data.status === 'success') {
+                        this.showToast("Driver Reset Successful", "success");
+                    } else {
+                        this.showToast("Reset Failed: " + data.message, "error");
+                    }
+                } catch (e) {
+                    // It might succeed but lose connection/output briefly
+                    console.log(resRaw);
+                    this.showToast("Command sent (Connection may drop)", "warning");
+                }
+            }
+
+            // -- UI Utils --
+            showToast(msg, type = "normal") {
+                const t = this.ui.toast;
+                const icon = document.getElementById('toast-icon');
+                
+                t.className = type === "loading" ? "" : type;
+                t.classList.add("show");
+                
+                if (type === "loading") {
+                    icon.className = "spinner";
+                    icon.innerHTML = "";
+                } else {
+                    icon.className = "";
+                    icon.innerHTML = type === "error" ? "✕" : type === "success" ? "✓" : "ℹ";
+                }
+                
+                document.getElementById('toast-msg').textContent = msg;
+
+                if (this.toastTimeout) clearTimeout(this.toastTimeout);
+                this.toastTimeout = setTimeout(() => {
+                    t.classList.remove("show");
+                }, 3000);
+            }
         }
-        window.switchView = switchView;
 
-        // Startup
-        document.addEventListener('DOMContentLoaded', async () => {
-            logToConsole("Waiting for KernelSU API...");
-            await waitForKSU();
-            logToConsole("Ready.");
-            
-            updateStatusUI(await runCommand(`sh ${scriptPath} status`));
-            fetchStats();
-            setInterval(fetchStats, 4000);
-            
-            // Auto check compat
-            checkCompatibility();
-        });
-
+        // Initialize
+        window.app = new App();
     </script>
 </body>
 </html>
