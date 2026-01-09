@@ -35,7 +35,7 @@
 
         /* Layout */
         header {
-            padding: 20px;
+            padding: 16px 20px;
             background: rgba(15, 23, 42, 0.95);
             border-bottom: 1px solid var(--border);
             display: flex;
@@ -45,16 +45,16 @@
             z-index: 10;
         }
 
-        h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+        h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px; }
         .badge { font-size: 0.7rem; background: var(--accent); color: #000; padding: 2px 8px; border-radius: 12px; font-weight: 700; margin-left: 8px; }
 
         main {
             flex: 1;
             overflow-y: auto;
-            padding: 20px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
 
         /* Cards */
@@ -62,49 +62,69 @@
             background: var(--bg-panel);
             border-radius: 16px;
             border: 1px solid var(--border);
-            padding: 20px;
+            padding: 16px;
         }
 
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
-        .card-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-title { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* Actions Grid */
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        
+        /* Dashboard Grid - Specific for Mode Buttons */
+        .mode-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 8px; 
+        }
+
+        /* Mobile Optimization */
+        @media (max-width: 380px) {
+            .mode-grid { grid-template-columns: 1fr; }
+            .grid { grid-template-columns: 1fr; }
+            h1 { font-size: 1rem; }
+        }
 
         button {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border);
             color: var(--text-primary);
-            padding: 14px;
+            padding: 12px;
             border-radius: 12px;
             font-family: inherit;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 6px;
+            min-height: 48px; /* Touch target size */
         }
 
-        button:active { transform: scale(0.98); }
+        button:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.1); }
         button.primary { background: var(--accent); color: #0f172a; border: none; }
         button.danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
         button.success { background: rgba(34, 197, 94, 0.15); color: var(--success); border-color: rgba(34, 197, 94, 0.3); }
+
+        /* Specific Mode Buttons */
+        .btn-perf { color: var(--success); border-color: rgba(34, 197, 94, 0.3); }
+        .btn-bal { color: var(--warning); border-color: rgba(245, 158, 11, 0.3); }
+        .btn-stock { color: var(--text-secondary); }
 
         /* Editor */
         .editor-container {
             flex: 1;
             display: flex;
             flex-direction: column;
-            min-height: 400px;
+            min-height: 350px;
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid var(--border);
@@ -115,11 +135,22 @@
             background: #1e293b;
             padding: 8px 12px;
             display: flex;
-            gap: 10px;
+            gap: 8px;
             border-bottom: 1px solid var(--border);
+            flex-wrap: wrap; /* Handle small screens */
+            justify-content: space-between;
         }
 
-        .editor-toolbar span { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-secondary); margin-right: auto; align-self: center; }
+        .editor-path {
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 0.7rem; 
+            color: var(--text-secondary); 
+            width: 100%; 
+            margin-bottom: 6px;
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis;
+        }
 
         .editor-area {
             flex: 1;
@@ -129,14 +160,14 @@
         }
 
         #line-numbers {
-            width: 40px;
+            width: 35px;
             background: #0f172a;
             color: #475569;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
+            font-size: 12px;
             line-height: 1.5;
             text-align: right;
-            padding: 10px 8px;
+            padding: 10px 6px;
             border-right: 1px solid var(--border);
             user-select: none;
         }
@@ -148,7 +179,7 @@
             border: none;
             padding: 10px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
+            font-size: 12px;
             line-height: 1.5;
             resize: none;
             white-space: pre;
@@ -158,14 +189,14 @@
         /* Toast */
         #toast {
             position: fixed;
-            bottom: 20px;
+            bottom: 24px;
             left: 50%;
             transform: translateX(-50%) translateY(100px);
             background: var(--bg-panel);
             border: 1px solid var(--border);
-            padding: 12px 24px;
+            padding: 10px 20px;
             border-radius: 50px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 500;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -173,13 +204,14 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            white-space: nowrap;
         }
         #toast.show { transform: translateX(-50%) translateY(0); }
         #toast.error { border-color: var(--danger); color: var(--danger); }
         #toast.success { border-color: var(--success); color: var(--success); }
 
         /* Loader */
-        .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.1); border-top-color: currentColor; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.1); border-top-color: currentColor; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
     </style>
@@ -194,6 +226,24 @@
     </header>
 
     <main>
+        <!-- Dashboard Section -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Quick Modes</span>
+            </div>
+            <div class="mode-grid">
+                <button class="btn-perf" onclick="app.applyMode('perf')">
+                    🚀 Perf
+                </button>
+                <button class="btn-bal" onclick="app.applyMode('balanced')">
+                    ⚖️ Bal
+                </button>
+                <button class="btn-stock" onclick="app.applyMode('stock')">
+                    ↺ Stock
+                </button>
+            </div>
+        </div>
+
         <!-- KPatch Section -->
         <div class="card" id="kpatch-card" style="display:none;">
             <div class="card-header">
@@ -210,13 +260,15 @@
         <!-- Editor Section -->
         <div class="card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; height: 500px;">
             <div class="editor-toolbar">
-                <span>/vendor/etc/wifi/WCNSS_qcom_cfg.ini</span>
-                <button style="padding: 6px 12px; font-size: 0.75rem;" onclick="app.loadConfig()">
-                    Reload
-                </button>
-                <button class="primary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="app.saveConfig()">
-                    Save & Apply
-                </button>
+                <div class="editor-path">/vendor/etc/wifi/WCNSS_qcom_cfg.ini</div>
+                <div style="display: flex; gap: 8px; width: 100%;">
+                    <button style="flex: 1; padding: 6px;" onclick="app.loadConfig()">
+                        Reload
+                    </button>
+                    <button class="primary" style="flex: 1; padding: 6px;" onclick="app.saveConfig()">
+                        Save & Apply
+                    </button>
+                </div>
             </div>
             <div class="editor-container" style="border: none; border-radius: 0;">
                 <div class="editor-area">
@@ -263,13 +315,12 @@
             async exec(command) {
                 if (!this.hasKsu) {
                     console.warn("Mocking KSU exec:", command);
-                    return "Error: KSU not detected. Are you in the Manager?";
+                    return "Error: KSU not detected.";
                 }
                 
                 try {
                     const result = await this.bridge.exec(command);
                     if (typeof result === 'object' && result.errno !== undefined) {
-                        // KSU Next V3 object return style
                         return result.errno === 0 ? result.stdout : `Error ${result.errno}: ${result.stderr}`;
                     }
                     return result || "";
@@ -279,14 +330,7 @@
             }
 
             async runAction(action, arg = "") {
-                // Ensure we find the script path dynamically if possible or assume standard path
-                // For robustness, we assume the module is mounted at standard location or we can find it
-                // We'll use a relative path trick if we were serving files, but here we are raw.
-                // Best bet: Use the 'action.sh' we just wrote.
-                
-                // Escape argument if it contains quotes
-                const safeArg = arg.replace(/"/g, '\"');
-                
+                const safeArg = arg.replace(/"/g, '"');
                 return await this.exec(`sh "${this.actionScript}" "${action}" "${safeArg}"`);
             }
         }
@@ -311,30 +355,43 @@
             }
 
             async init() {
-                // Check if KSU is ready
                 if (!this.ksu.hasKsu) {
                     this.showToast("KernelSU API missing!", "error");
-                    // return; // Don't return, let UI render for debugging
                 }
-
-                // Initial Load
                 await this.loadConfig();
                 await this.checkKPatch();
+            }
+
+            // -- Modes --
+            async applyMode(mode) {
+                this.showToast(`Applying ${mode}...`, "loading");
+                const resRaw = await this.ksu.runAction("apply_mode", mode);
+                
+                try {
+                    const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
+                    const res = JSON.parse(jsonStr);
+                    
+                    if (res.status === 'success') {
+                        this.showToast("Applied! Reloading config...", "success");
+                        await this.loadConfig(); // Refresh editor
+                        setTimeout(() => this.softReset(true), 1000); // Trigger driver reset
+                    } else {
+                        throw new Error(res.message);
+                    }
+                } catch (e) {
+                    this.showToast("Failed: " + resRaw, "error");
+                }
             }
 
             // -- Editor --
             setupEditor() {
                 const { editor, lines } = this.ui;
-                
                 const updateLines = () => {
                     const lineCount = editor.value.split('\n').length;
                     lines.innerHTML = Array(lineCount).fill(0).map((_, i) => i + 1).join('<br>');
                 };
-
                 editor.addEventListener('input', updateLines);
                 editor.addEventListener('scroll', () => { lines.scrollTop = editor.scrollTop; });
-                
-                // Tab handling
                 editor.addEventListener('keydown', (e) => {
                     if (e.key === 'Tab') {
                         e.preventDefault();
@@ -347,15 +404,13 @@
             }
 
             async loadConfig() {
-                this.showToast("Loading config...");
+                // this.showToast("Loading config..."); // Too noisy
                 const content = await this.ksu.runAction("read_config");
-                
                 if (content.startsWith("Error")) {
                     this.showToast("Failed to load config", "error");
                     this.ui.editor.value = "# Error loading configuration\n" + content;
                 } else {
                     this.ui.editor.value = content;
-                    this.showToast("Config loaded", "success");
                 }
                 this.ui.editor.dispatchEvent(new Event('input'));
             }
@@ -363,24 +418,15 @@
             async saveConfig() {
                 const content = this.ui.editor.value;
                 if (!content) return; 
-
                 this.showToast("Saving...", "loading");
-                
-                // Use Base64 to safely transfer content
                 const b64 = btoa(unescape(encodeURIComponent(content)));
-                
-                // Pipe to action script
                 const cmd = `echo "${b64}" | sh "${this.ksu.actionScript}" save_config`;
                 const resRaw = await this.ksu.exec(cmd);
-                
                 try {
-                    // Try to parse JSON response from action script
                     const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
                     const res = JSON.parse(jsonStr);
-                    
                     if (res.status === 'success') {
                         this.showToast("Saved! Resetting driver...", "success");
-                        // Auto-trigger soft reset after save
                         await this.softReset(true); 
                     } else {
                         throw new Error(res.message);
@@ -390,8 +436,7 @@
                 }
             }
 
-            // -- Advanced Features --
-
+            // -- Advanced --
             async checkKPatch() {
                 const resRaw = await this.ksu.runAction("check_kpatch");
                 try {
@@ -407,9 +452,7 @@
                             this.ui.kpatchStatus.style.color = "var(--warning)";
                         }
                     }
-                } catch (e) {
-                    console.error("KPatch check parse error", e);
-                }
+                } catch (e) { console.error("KPatch check parse error", e); }
             }
 
             async injectPatch() {
@@ -424,14 +467,11 @@
                     } else {
                         this.showToast("Injection Failed", "error");
                     }
-                } catch (e) {
-                    this.showToast("Error: " + resRaw, "error");
-                }
+                } catch (e) { this.showToast("Error: " + resRaw, "error"); }
             }
 
             async softReset(isAuto = false) {
                 if (!isAuto) this.showToast("Resetting driver...");
-                
                 const resRaw = await this.ksu.runAction("soft_reset");
                 try {
                     const data = JSON.parse(resRaw);
@@ -441,7 +481,6 @@
                         this.showToast("Reset Failed: " + data.message, "error");
                     }
                 } catch (e) {
-                    // It might succeed but lose connection/output briefly
                     console.log(resRaw);
                     this.showToast("Command sent (Connection may drop)", "warning");
                 }
@@ -451,10 +490,8 @@
             showToast(msg, type = "normal") {
                 const t = this.ui.toast;
                 const icon = document.getElementById('toast-icon');
-                
                 t.className = type === "loading" ? "" : type;
                 t.classList.add("show");
-                
                 if (type === "loading") {
                     icon.className = "spinner";
                     icon.innerHTML = "";
@@ -462,13 +499,9 @@
                     icon.className = "";
                     icon.innerHTML = type === "error" ? "✕" : type === "success" ? "✓" : "ℹ";
                 }
-                
                 document.getElementById('toast-msg').textContent = msg;
-
                 if (this.toastTimeout) clearTimeout(this.toastTimeout);
-                this.toastTimeout = setTimeout(() => {
-                    t.classList.remove("show");
-                }, 3000);
+                this.toastTimeout = setTimeout(() => { t.classList.remove("show"); }, 3000);
             }
         }
 

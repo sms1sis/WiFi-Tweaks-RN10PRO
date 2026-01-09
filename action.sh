@@ -36,9 +36,71 @@ find_driver_path() {
     return 1
 }
 
+apply_param() {
+    local file="$1"
+    local key="$2"
+    local value="$3"
+    # Use sed to replace existing key or append if missing
+    if grep -q "^[[:space:]]*${key}[[:space:]]*=" "$file"; then
+        sed -i "s/^[[:space:]]*${key}[[:space:]]*=.*/${key}=${value}/" "$file"
+    else
+        echo "${key}=${value}" >> "$file"
+    fi
+}
+
 # --- Action Switch ---
 
 case "$1" in
+    "apply_mode")
+        MODE="$2"
+        # 1. Discover config file
+        CONFIG_FILE=""
+        for path in \
+            "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" \
+            "/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini" \
+            "/data/vendor/wifi/WCNSS_qcom_cfg.ini" \
+            "/odm/etc/wifi/WCNSS_qcom_cfg.ini"; do
+            if [ -f "$path" ]; then
+                CONFIG_FILE="$path"
+                break
+            fi
+        done
+
+        if [ -z "$CONFIG_FILE" ]; then
+            log_json "error" "Config file path not found."
+            exit 1
+        fi
+        
+        # 2. Apply parameters based on mode
+        case "$MODE" in
+            "perf")
+                apply_param "$CONFIG_FILE" "gEnableBmps" "0"
+                apply_param "$CONFIG_FILE" "TxPower2g" "15"
+                apply_param "$CONFIG_FILE" "TxPower5g" "15"
+                apply_param "$CONFIG_FILE" "gChannelBondingMode24GHz" "1"
+                ;;
+            "balanced")
+                apply_param "$CONFIG_FILE" "gEnableBmps" "1"
+                apply_param "$CONFIG_FILE" "TxPower2g" "12"
+                apply_param "$CONFIG_FILE" "TxPower5g" "12"
+                apply_param "$CONFIG_FILE" "gChannelBondingMode24GHz" "1"
+                ;;
+            "stock")
+                # Safe defaults
+                apply_param "$CONFIG_FILE" "gEnableBmps" "1"
+                apply_param "$CONFIG_FILE" "TxPower2g" "10"
+                apply_param "$CONFIG_FILE" "TxPower5g" "10"
+                apply_param "$CONFIG_FILE" "gChannelBondingMode24GHz" "0"
+                ;;
+            *)
+                log_json "error" "Unknown mode: $MODE"
+                exit 1
+                ;;
+        esac
+        
+        log_json "success" "Applied $MODE configuration to $CONFIG_FILE"
+        ;;
+
     "read_config")
         # Securely read the config file
         # Search multiple paths
