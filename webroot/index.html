@@ -1,310 +1,450 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
+    <title>Wi-Fi Config Tuner</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WiFi Config Tuner V4</title>
-    <!-- Simple, robust font stack -->
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-body: #0f172a;
-            --bg-panel: #1e293b;
-            --text-primary: #e2e8f0;
-            --text-secondary: #94a3b8;
-            --accent: #38bdf8;
-            --accent-hover: #0ea5e9;
-            --success: #22c55e;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --code-bg: #020617;
-            --border: rgba(255, 255, 255, 0.1);
+            --bg-dark: #1a1b26;
+            --bg-card: rgba(36, 40, 59, 0.7);
+            --accent-primary: #7aa2f7;
+            --accent-secondary: #bb9af7;
+            --accent-success: #9ece6a;
+            --accent-warning: #e0af68;
+            --accent-danger: #f7768e;
+            --text-main: #a9b1d6;
+            --text-bright: #c0caf5;
+            --nav-bg: #16161e;
+            --editor-bg: #1a1b26;
+            --editor-gutter: #24283b;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
-        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
         body {
-            background: var(--bg-body);
-            color: var(--text-primary);
             font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        /* Layout */
-        header {
-            padding: 16px 20px;
-            background: rgba(15, 23, 42, 0.95);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            backdrop-filter: blur(10px);
-            z-index: 10;
+        /* Views */
+        .view {
+            flex: 1;
+            display: none;
+            overflow-y: auto;
+            padding: 10px;
+            padding-bottom: 100px; /* Space for nav + extra safety */
+            min-height: 0; /* Fix for flexbox scrolling */
         }
 
-        h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px; }
-        .badge { font-size: 0.7rem; background: var(--accent); color: #000; padding: 2px 8px; border-radius: 12px; font-weight: 700; margin-left: 8px; }
+        @media (min-width: 600px) {
+            .view { padding: 30px; }
+        }
 
-        main {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
+        .view.active {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            height: 100%;
         }
 
-        /* Cards */
+        #dashboard.active {
+            justify-content: flex-start;
+        }
+
+        /* Dashboard Styles */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            padding-top: 20px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-bright);
+            margin-bottom: 5px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--accent-primary);
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--accent-secondary);
+            margin: 20px 0 10px 0;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
         .card {
-            background: var(--bg-panel);
+            background: var(--bg-card);
+            padding: 15px;
             border-radius: 16px;
-            border: 1px solid var(--border);
-            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 15px;
         }
 
-        .card-header {
+        .status-badge {
+            background: var(--bg-card);
+            padding: 8px 16px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            margin: 0 auto 20px auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            justify-content: center;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 12px;
+            box-shadow: 0 0 8px currentColor;
+            background-color: var(--accent-warning); /* Default */
+            color: var(--accent-warning);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .stat-label { font-size: 0.65rem; text-transform: uppercase; color: var(--accent-primary); opacity: 0.8; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; display: block; margin-top: 4px; color: var(--text-bright); }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .mode-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            color: #1a1b26;
+            text-transform: uppercase;
+        }
+
+        .mode-btn:active { transform: scale(0.96); }
+        .mode-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+        .btn-perf { background-color: var(--accent-success); }
+        .btn-balanced { background-color: var(--accent-warning); }
+        .btn-stock { background-color: var(--text-main); }
+        .btn-custom { background-color: var(--accent-secondary); }
+
+        .mode-btn svg { width: 24px; height: 24px; }
+
+        /* KPatch & Tools Styles */
+        .tools-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-bright);
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+
+        .action-btn.primary { background: var(--accent-primary); color: #1a1b26; font-weight: bold; }
+        .action-btn.danger { border-color: var(--accent-danger); color: var(--accent-danger); }
+        .action-btn.success { border-color: var(--accent-success); color: var(--accent-success); }
+
+        #console-output {
+            background: #16161e;
+            border-radius: 12px;
+            padding: 15px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            min-height: 100px;
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+            white-space: pre-wrap;
+            margin-top: 20px;
+            margin-bottom: 20px; /* Ensure bottom isn't cut off */
+            color: #9ece6a;
+            flex-shrink: 0;
+        }
+
+        /* Editor Styles */
+        .editor-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 12px;
+            padding: 0 5px;
         }
 
-        .card-title { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
-
-        /* Actions Grid */
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-        
-        /* Dashboard Grid - Specific for Mode Buttons */
-        .mode-grid { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 8px; 
-        }
-
-        /* Mobile Optimization */
-        @media (max-width: 380px) {
-            .mode-grid { grid-template-columns: 1fr; }
-            .grid { grid-template-columns: 1fr; }
-            h1 { font-size: 1rem; }
-        }
-
-        button {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            padding: 12px;
-            border-radius: 12px;
-            font-family: inherit;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            min-height: 48px; /* Touch target size */
-        }
-
-        button:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.1); }
-        button.primary { background: var(--accent); color: #0f172a; border: none; }
-        button.danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
-        button.success { background: rgba(34, 197, 94, 0.15); color: var(--success); border-color: rgba(34, 197, 94, 0.3); }
-
-        /* Specific Mode Buttons */
-        .btn-perf { color: var(--success); border-color: rgba(34, 197, 94, 0.3); }
-        .btn-bal { color: var(--warning); border-color: rgba(245, 158, 11, 0.3); }
-        .btn-stock { color: var(--text-secondary); }
-
-        /* Editor */
-        .editor-container {
+        .editor-wrapper {
             flex: 1;
             display: flex;
-            flex-direction: column;
-            min-height: 350px;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            background: var(--code-bg);
-        }
-
-        .editor-toolbar {
-            background: #1e293b;
-            padding: 8px 12px;
-            display: flex;
-            gap: 8px;
-            border-bottom: 1px solid var(--border);
-            flex-wrap: wrap; /* Handle small screens */
-            justify-content: space-between;
-        }
-
-        .editor-path {
-            font-family: 'JetBrains Mono', monospace; 
-            font-size: 0.7rem; 
-            color: var(--text-secondary); 
-            width: 100%; 
-            margin-bottom: 6px;
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis;
-        }
-
-        .editor-area {
-            flex: 1;
             position: relative;
-            display: flex;
+            background: var(--editor-bg);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-height: 300px;
         }
 
         #line-numbers {
-            width: 35px;
-            background: #0f172a;
-            color: #475569;
+            min-width: 35px;
+            width: auto;
+            padding: 12px 10px;
+            background: var(--editor-gutter);
+            color: #565f89;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            line-height: 1.5;
+            font-size: 13px;
             text-align: right;
-            padding: 10px 6px;
-            border-right: 1px solid var(--border);
             user-select: none;
+            line-height: 20px;
+            border-right: 1px solid rgba(255,255,255,0.05);
         }
 
-        textarea {
+        #editor-textarea {
             flex: 1;
             background: transparent;
-            color: #e2e8f0;
+            color: #9ece6a;
             border: none;
-            padding: 10px;
+            padding: 12px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 12px;
-            line-height: 1.5;
+            font-size: 13px;
+            line-height: 20px;
             resize: none;
+            outline: none;
             white-space: pre;
-            overflow: auto;
+            overflow-x: auto;
         }
 
-        /* Toast */
-        #toast {
-            position: fixed;
-            bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
-            padding: 10px 20px;
-            border-radius: 50px;
+        .editor-toolbar {
+            display: flex;
+            gap: 12px;
+            margin-top: 15px;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+        }
+
+        .tool-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: var(--bg-card);
+            color: var(--text-bright);
+            border-radius: 10px;
             font-size: 0.85rem;
             font-weight: 500;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        #toast.show { transform: translateX(-50%) translateY(0); }
-        #toast.error { border-color: var(--danger); color: var(--danger); }
-        #toast.success { border-color: var(--success); color: var(--success); }
 
-        /* Loader */
-        .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.1); border-top-color: currentColor; border-radius: 50%; animation: spin 0.8s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .tool-btn:active { transform: translateY(2px); }
+        .tool-btn.primary { background: var(--accent-secondary); color: #1a1b26; font-weight: bold; border: none; }
 
+        /* Navigation */
+        nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: var(--nav-bg);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #565f89;
+            text-decoration: none;
+            font-size: 0.75rem;
+            gap: 4px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .nav-item.active { color: var(--accent-primary); }
+        .nav-item svg { width: 22px; height: 22px; }
+
+        /* KPatch Specifics */
+        .kpatch-status {
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .tag { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .tag.green { background: rgba(158, 206, 106, 0.2); color: #9ece6a; }
+        .tag.red { background: rgba(247, 118, 142, 0.2); color: #f7768e; }
+        .tag.gray { background: rgba(169, 177, 214, 0.2); color: #a9b1d6; }
+
+        /* Mobile specific fixes */
+        @media (max-width: 360px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 1.4rem; }
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <div>
-            <h1>WiFi Tuner <span class="badge">V4.0</span></h1>
-        </div>
-        <div style="font-size: 0.8rem; color: var(--text-secondary);">KSU-Next</div>
-    </header>
+    <!-- Dashboard View -->
+    <div id="dashboard" class="view active">
+        <div class="container">
+            <h1>Wi-Fi Tuner</h1>
+            <div class="subtitle">KernelSU Next V3 Ready</div>
 
-    <main>
-        <!-- Dashboard Section -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Quick Modes</span>
+            <div style="text-align: center;">
+                <div class="status-badge">
+                    <span id="status-dot" class="status-dot"></span>
+                    <span id="current-mode">Ready</span>
+                </div>
             </div>
-            <div class="mode-grid">
-                <button class="btn-perf" onclick="app.applyMode('perf')">
-                    🚀 Perf
-                </button>
-                <button class="btn-bal" onclick="app.applyMode('balanced')">
-                    ⚖️ Bal
-                </button>
-                <button class="btn-stock" onclick="app.applyMode('stock')">
-                    ↺ Stock
-                </button>
-            </div>
-        </div>
 
-        <!-- KPatch Section -->
-        <div class="card" id="kpatch-card" style="display:none;">
-            <div class="card-header">
-                <span class="card-title">Kernel Patching</span>
-                <span id="kpatch-status" style="font-size: 0.75rem; color: var(--warning);">Checking...</span>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-label">Signal</span>
+                    <span id="stat-rssi" class="stat-value">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Speed</span>
+                    <span id="stat-speed" class="stat-value">--</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Frequency</span>
+                    <span id="stat-freq" class="stat-value">--</span>
+                </div>
             </div>
-            <div class="grid">
-                <button id="btn-inject" disabled onclick="app.injectPatch()">
-                    Inject Patch
+
+            <div class="section-title">Performance Profiles</div>
+            <div class="button-grid">
+                <button class="mode-btn btn-perf" onclick="app.applyMode('perf')">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,10h7l-9,11v-7H4l9-11V10z"/></svg>
+                    Performance
+                </button>
+                <button class="mode-btn btn-balanced" onclick="app.applyMode('balanced')">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z"/></svg>
+                    Balanced
+                </button>
+                <button class="mode-btn btn-stock" onclick="app.applyMode('stock')">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,3H6V21H18V8L13,3M12,18H8V16H12V18M15,14H8V12H15V14M15,10H8V8H15V10M13,9V4.5L17.5,9H13Z"/></svg>
+                    Stock
+                </button>
+                <button class="mode-btn btn-custom" onclick="app.switchView('editor')">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M15,11V13H9V11H15M11,7H13V17H11V7Z"/></svg>
+                    Custom
                 </button>
             </div>
-        </div>
 
-        <!-- Editor Section -->
-        <div class="card" style="padding: 0; overflow: hidden; display: flex; flex-direction: column; height: 500px;">
-            <div class="editor-toolbar">
-                <div class="editor-path">/vendor/etc/wifi/WCNSS_qcom_cfg.ini</div>
-                <div style="display: flex; gap: 8px; width: 100%;">
-                    <button style="flex: 1; padding: 6px;" onclick="app.loadConfig()">
-                        Reload
+            <div class="section-title">Advanced Actions</div>
+            <div class="card">
+                <div class="kpatch-status">
+                    <span>Kernel Patch Support:</span>
+                    <span id="kpatch-tag" class="tag gray">Checking...</span>
+                </div>
+                <div class="tools-row">
+                    <button class="action-btn" onclick="app.checkKPatch()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"/></svg>
+                        Check Compat
                     </button>
-                    <button class="primary" style="flex: 1; padding: 6px;" onclick="app.saveConfig()">
-                        Save & Apply
+                    <button class="action-btn" id="btn-inject" onclick="app.injectPatch()" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2,12A10,10 0 0,1 12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12M13,7H11V11H7V13H11V17H13V13H17V11H13V7Z"/></svg>
+                        Inject Patch
+                    </button>
+                </div>
+                <div class="tools-row">
+                    <button class="action-btn danger" onclick="app.softReset()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,5V1L7,6L12,11V7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12H5A7,7 0 0,0 12,19A7,7 0 0,0 19,12A7,7 0 0,0 12,5Z"/></svg>
+                        Soft Driver Reset
                     </button>
                 </div>
             </div>
-            <div class="editor-container" style="border: none; border-radius: 0;">
-                <div class="editor-area">
-                    <div id="line-numbers">1</div>
-                    <textarea id="editor" spellcheck="false"></textarea>
-                </div>
-            </div>
-        </div>
 
-        <!-- Actions -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Driver Control</span>
-            </div>
-            <div class="grid">
-                <button class="danger" onclick="app.softReset()">
-                    Soft Reset Driver
-                </button>
-            </div>
-            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 12px; line-height: 1.4;">
-                Soft Reset performs a safe <code>unbind</code> / <code>bind</code> sequence on the active WLAN driver. 
-                This applies configuration changes without a full device reboot.
-            </p>
+            <div id="console-output">System Ready.</div>
         </div>
-    </main>
-
-    <div id="toast">
-        <span id="toast-icon"></span>
-        <span id="toast-msg">Notification</span>
     </div>
 
+    <!-- Editor View -->
+    <div id="editor" class="view">
+        <div class="editor-header">
+            <span style="font-family: monospace; font-size: 0.8rem; color: var(--accent-secondary);">micro: custom.ini</span>
+        </div>
+
+        <div class="editor-wrapper">
+            <div id="line-numbers">1</div>
+            <textarea id="editor-textarea" spellcheck="false" wrap="off"></textarea>
+        </div>
+
+        <div class="editor-toolbar">
+            <button class="tool-btn" onclick="app.loadConfig()">Reload</button>
+            <button class="tool-btn primary" onclick="app.saveConfig()">Save & Apply</button>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="nav-item active" id="nav-dashboard" onclick="app.switchView('dashboard')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg>
+            Dashboard
+        </div>
+        <div class="nav-item" id="nav-editor" onclick="app.switchView('editor')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.06,9L15,9.94L5.92,19H5V18.08L14.06,9M17.66,3C17.41,3 17.15,3.1 16.96,3.29L15.13,5.12L18.88,8.87L20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18.17,3.09 17.92,3 17.66,3M14.06,8.19L3,19.25V23H6.75L17.81,11.94L14.06,8.19Z"/></svg>
+            Config Editor
+        </div>
+    </nav>
+
     <script type="module">
-        /**
-         * Modern KSU-Next V3 Bridge Wrapper
-         * Handles the communication between WebUI and Root Shell
-         */
         class KsuBridge {
             constructor() {
                 this.bridge = window.ksu;
@@ -314,8 +454,8 @@
 
             async exec(command) {
                 if (!this.hasKsu) {
-                    console.warn("Mocking KSU exec:", command);
-                    return "Error: KSU not detected.";
+                    console.log("Mock Exec:", command);
+                    return "Error: KSU not detected (Browser Mode)";
                 }
                 
                 try {
@@ -335,18 +475,14 @@
             }
         }
 
-        /**
-         * Application Logic
-         */
         class App {
             constructor() {
                 this.ksu = new KsuBridge();
                 this.ui = {
-                    editor: document.getElementById('editor'),
+                    console: document.getElementById('console-output'),
+                    editor: document.getElementById('editor-textarea'),
                     lines: document.getElementById('line-numbers'),
-                    toast: document.getElementById('toast'),
-                    kpatchCard: document.getElementById('kpatch-card'),
-                    kpatchStatus: document.getElementById('kpatch-status'),
+                    kpatchTag: document.getElementById('kpatch-tag'),
                     btnInject: document.getElementById('btn-inject')
                 };
 
@@ -355,35 +491,114 @@
             }
 
             async init() {
-                if (!this.ksu.hasKsu) {
-                    this.showToast("KernelSU API missing!", "error");
-                }
-                await this.loadConfig();
+                this.log("Initializing...");
+                
+                // Polling for stats
+                setInterval(() => this.fetchStats(), 3000);
+                this.fetchStats();
+                
                 await this.checkKPatch();
+                await this.loadConfig(); // Preload editor
             }
 
-            // -- Modes --
-            async applyMode(mode) {
-                this.showToast(`Applying ${mode}...`, "loading");
-                const resRaw = await this.ksu.runAction("apply_mode", mode);
+            log(msg, append = true) {
+                if (append) this.ui.console.innerText += "\n" + msg;
+                else this.ui.console.innerText = msg;
+                this.ui.console.scrollTop = this.ui.console.scrollHeight;
+            }
+
+            switchView(viewId) {
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
                 
+                document.getElementById(viewId).classList.add('active');
+                document.getElementById('nav-' + viewId).classList.add('active');
+            }
+
+            // -- Logic --
+
+            async applyMode(mode) {
+                this.log(`Applying ${mode} mode...`);
+                
+                // Update Badge color immediately for feedback
+                const dot = document.getElementById('status-dot');
+                const label = document.getElementById('current-mode');
+                label.innerText = "Applying...";
+                
+                const resRaw = await this.ksu.runAction("apply_mode", mode);
                 try {
                     const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
                     const res = JSON.parse(jsonStr);
                     
                     if (res.status === 'success') {
-                        this.showToast("Applied! Reloading config...", "success");
-                        await this.loadConfig(); // Refresh editor
-                        setTimeout(() => this.softReset(true), 1000); // Trigger driver reset
+                        this.log(`Success: ${res.message}`);
+                        label.innerText = mode.toUpperCase();
+                        
+                        // Set Dot Color
+                        if(mode == 'perf') dot.style.color = 'var(--accent-success)';
+                        else if(mode == 'balanced') dot.style.color = 'var(--accent-warning)';
+                        else dot.style.color = 'var(--text-main)';
+                        
+                        // Auto reset
+                        setTimeout(() => this.softReset(true), 500);
                     } else {
-                        throw new Error(res.message);
+                        this.log(`Error: ${res.message}`);
                     }
                 } catch (e) {
-                    this.showToast("Failed: " + resRaw, "error");
+                    this.log("Failed to apply mode: " + resRaw);
                 }
             }
 
+            async fetchStats() {
+                const resRaw = await this.ksu.runAction("stats");
+                try {
+                    // Expecting JSON {"rssi": "...", "speed": "...", "freq": "..."}
+                    const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
+                    const data = JSON.parse(jsonStr);
+                    
+                    document.getElementById('stat-rssi').innerText = data.rssi || "--";
+                    document.getElementById('stat-speed').innerText = data.speed || "--";
+                    document.getElementById('stat-freq').innerText = data.freq || "--";
+                } catch (e) {
+                    // Silent fail for stats
+                    // console.log("Stats error", e);
+                }
+            }
+
+            async checkKPatch() {
+                const resRaw = await this.ksu.runAction("check_kpatch");
+                try {
+                    const data = JSON.parse(resRaw);
+                    if (data.supported) {
+                        this.ui.kpatchTag.innerText = "Supported";
+                        this.ui.kpatchTag.className = "tag green";
+                        if (data.kpm_found) {
+                            this.ui.btnInject.disabled = false;
+                            this.log("Kernel Patch module found.");
+                        } else {
+                            this.log("No .kpm file found.");
+                        }
+                    } else {
+                        this.ui.kpatchTag.innerText = "Unsupported";
+                        this.ui.kpatchTag.className = "tag red";
+                    }
+                } catch (e) {}
+            }
+
+            async injectPatch() {
+                this.log("Injecting Kernel Patch...");
+                const resRaw = await this.ksu.runAction("inject_patch");
+                this.log(resRaw);
+            }
+
+            async softReset(silent = false) {
+                if(!silent) this.log("Restarting Wi-Fi Driver...");
+                const resRaw = await this.ksu.runAction("soft_reset");
+                this.log("Driver Reset: " + resRaw);
+            }
+
             // -- Editor --
+
             setupEditor() {
                 const { editor, lines } = this.ui;
                 const updateLines = () => {
@@ -404,11 +619,9 @@
             }
 
             async loadConfig() {
-                // this.showToast("Loading config..."); // Too noisy
                 const content = await this.ksu.runAction("read_config");
                 if (content.startsWith("Error")) {
-                    this.showToast("Failed to load config", "error");
-                    this.ui.editor.value = "# Error loading configuration\n" + content;
+                    this.ui.editor.value = "# Could not load config";
                 } else {
                     this.ui.editor.value = content;
                 }
@@ -417,95 +630,18 @@
 
             async saveConfig() {
                 const content = this.ui.editor.value;
-                if (!content) return; 
-                this.showToast("Saving...", "loading");
+                if (!content) return;
+                
+                this.log("Saving config...");
                 const b64 = btoa(unescape(encodeURIComponent(content)));
                 const cmd = `echo "${b64}" | sh "${this.ksu.actionScript}" save_config`;
+                
                 const resRaw = await this.ksu.exec(cmd);
-                try {
-                    const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
-                    const res = JSON.parse(jsonStr);
-                    if (res.status === 'success') {
-                        this.showToast("Saved! Resetting driver...", "success");
-                        await this.softReset(true); 
-                    } else {
-                        throw new Error(res.message);
-                    }
-                } catch (e) {
-                    this.showToast("Save failed: " + resRaw, "error");
-                }
-            }
-
-            // -- Advanced --
-            async checkKPatch() {
-                const resRaw = await this.ksu.runAction("check_kpatch");
-                try {
-                    const data = JSON.parse(resRaw);
-                    if (data.supported) {
-                        this.ui.kpatchCard.style.display = "block";
-                        if (data.kpm_found) {
-                            this.ui.kpatchStatus.textContent = "Supported & Module Found";
-                            this.ui.kpatchStatus.style.color = "var(--success)";
-                            this.ui.btnInject.disabled = false;
-                        } else {
-                            this.ui.kpatchStatus.textContent = "Supported (No .kpm)";
-                            this.ui.kpatchStatus.style.color = "var(--warning)";
-                        }
-                    }
-                } catch (e) { console.error("KPatch check parse error", e); }
-            }
-
-            async injectPatch() {
-                this.showToast("Injecting patch...");
-                const resRaw = await this.ksu.runAction("inject_patch");
-                try {
-                    const data = JSON.parse(resRaw);
-                    if (data.status === 'success') {
-                        this.showToast("Patch Injected!", "success");
-                        this.ui.btnInject.textContent = "Active";
-                        this.ui.btnInject.classList.add("success");
-                    } else {
-                        this.showToast("Injection Failed", "error");
-                    }
-                } catch (e) { this.showToast("Error: " + resRaw, "error"); }
-            }
-
-            async softReset(isAuto = false) {
-                if (!isAuto) this.showToast("Resetting driver...");
-                const resRaw = await this.ksu.runAction("soft_reset");
-                try {
-                    const data = JSON.parse(resRaw);
-                    if (data.status === 'success') {
-                        this.showToast("Driver Reset Successful", "success");
-                    } else {
-                        this.showToast("Reset Failed: " + data.message, "error");
-                    }
-                } catch (e) {
-                    console.log(resRaw);
-                    this.showToast("Command sent (Connection may drop)", "warning");
-                }
-            }
-
-            // -- UI Utils --
-            showToast(msg, type = "normal") {
-                const t = this.ui.toast;
-                const icon = document.getElementById('toast-icon');
-                t.className = type === "loading" ? "" : type;
-                t.classList.add("show");
-                if (type === "loading") {
-                    icon.className = "spinner";
-                    icon.innerHTML = "";
-                } else {
-                    icon.className = "";
-                    icon.innerHTML = type === "error" ? "✕" : type === "success" ? "✓" : "ℹ";
-                }
-                document.getElementById('toast-msg').textContent = msg;
-                if (this.toastTimeout) clearTimeout(this.toastTimeout);
-                this.toastTimeout = setTimeout(() => { t.classList.remove("show"); }, 3000);
+                this.log("Save Result: " + resRaw);
+                this.softReset(true);
             }
         }
 
-        // Initialize
         window.app = new App();
     </script>
 </body>
