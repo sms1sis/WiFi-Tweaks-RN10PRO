@@ -54,24 +54,15 @@
         }
 
         #dashboard.active {
-            justify-content: center;
-        }
-
-        #dashboard .container {
-            /* transform: translateY(-12.5vh); Removed to center */
-        }
-
-        #editor.active {
-            max-width: 1000px;
-            margin: 0 auto;
-            width: 100%;
+            justify-content: flex-start; /* Changed from center to allow scrolling */
         }
 
         /* Dashboard Styles */
         .container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
             width: 100%;
+            padding-top: 20px;
         }
 
         h1 {
@@ -90,14 +81,32 @@
             letter-spacing: 1px;
         }
 
+        .section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--accent-secondary);
+            margin: 20px 0 10px 0;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .card {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 15px;
+        }
+
         .status-badge {
             background: var(--bg-card);
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 30px;
             display: inline-flex;
             align-items: center;
             margin: 0 auto 20px auto;
             border: 1px solid rgba(255,255,255,0.1);
+            justify-content: center;
         }
 
         .status-dot {
@@ -112,7 +121,7 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .stat-card {
@@ -130,7 +139,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .mode-btn {
@@ -159,17 +168,45 @@
 
         .mode-btn svg { width: 24px; height: 24px; }
 
+        /* KPatch & Tools Styles */
+        .tools-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-bright);
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+
+        .action-btn.primary { background: var(--accent-primary); color: #1a1b26; font-weight: bold; }
+        .action-btn.danger { border-color: var(--accent-danger); color: var(--accent-danger); }
+        .action-btn.success { border-color: var(--accent-success); color: var(--accent-success); }
+
         #console-output {
             background: #16161e;
             border-radius: 12px;
             padding: 15px;
             font-family: 'Fira Code', monospace;
-            font-size: 0.8rem;
-            min-height: 120px;
-            max-height: 200px;
+            font-size: 0.75rem;
+            min-height: 100px;
+            max-height: 180px;
             overflow-y: auto;
             border: 1px solid rgba(255,255,255,0.1);
             white-space: pre-wrap;
+            margin-top: 20px;
         }
 
         /* Editor Styles */
@@ -190,6 +227,7 @@
             border: 1px solid rgba(255,255,255,0.1);
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-height: 300px;
         }
 
         #line-numbers {
@@ -241,14 +279,7 @@
         }
 
         .tool-btn:active { transform: translateY(2px); }
-
-        .tool-btn.primary {
-            background: var(--accent-secondary);
-            color: #1a1b26;
-            font-weight: bold;
-            border: none;
-            box-shadow: 0 4px 15px rgba(187, 154, 247, 0.3);
-        }
+        .tool-btn.primary { background: var(--accent-secondary); color: #1a1b26; font-weight: bold; border: none; }
 
         /* Navigation */
         nav {
@@ -280,10 +311,18 @@
         .nav-item.active { color: var(--accent-primary); }
         .nav-item svg { width: 22px; height: 22px; }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        /* KPatch Specifics */
+        .kpatch-status {
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .tag { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .tag.green { background: rgba(158, 206, 106, 0.2); color: #9ece6a; }
+        .tag.red { background: rgba(247, 118, 142, 0.2); color: #f7768e; }
+        .tag.gray { background: rgba(169, 177, 214, 0.2); color: #a9b1d6; }
+
     </style>
 </head>
 <body>
@@ -292,7 +331,7 @@
     <div id="dashboard" class="view active">
         <div class="container">
             <h1>Wi-Fi Tuner</h1>
-            <div class="subtitle">Configuration Engine</div>
+            <div class="subtitle">KernelSU Next V3 Ready</div>
 
             <div style="text-align: center;">
                 <div class="status-badge">
@@ -316,6 +355,7 @@
                 </div>
             </div>
 
+            <div class="section-title">Performance Profiles</div>
             <div class="button-grid">
                 <button class="mode-btn btn-perf" onclick="runSwitch('perf')">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,10h7l-9,11v-7H4l9-11V10z"/></svg>
@@ -335,6 +375,30 @@
                 </button>
             </div>
 
+            <div class="section-title">Advanced Actions</div>
+            <div class="card">
+                <div class="kpatch-status">
+                    <span>Kernel Patch Support:</span>
+                    <span id="kpatch-tag" class="tag gray">Checking...</span>
+                </div>
+                <div class="tools-row">
+                    <button class="action-btn" onclick="checkCompatibility()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"/></svg>
+                        Check Compat
+                    </button>
+                    <button class="action-btn" id="btn-inject" onclick="injectPatch()" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2,12A10,10 0 0,1 12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12M13,7H11V11H7V13H11V17H13V13H17V11H13V7Z"/></svg>
+                        Inject Patch
+                    </button>
+                </div>
+                <div class="tools-row">
+                    <button class="action-btn danger" onclick="performSoftReset()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,5V1L7,6L12,11V7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12H5A7,7 0 0,0 12,19A7,7 0 0,0 19,12A7,7 0 0,0 12,5Z"/></svg>
+                        Soft Driver Reset
+                    </button>
+                </div>
+            </div>
+
             <div id="console-output">Initializing system hooks...</div>
         </div>
     </div>
@@ -352,7 +416,7 @@
         </div>
 
         <div class="editor-toolbar">
-            <button class="tool-btn" onclick="loadConfigIntoEditor('get_stock')">Load Stock</button>
+            <button class="tool-btn" onclick="loadStockFromSystem()">Load System Default</button>
             <button class="tool-btn primary" onclick="saveAndApply()">Save & Apply</button>
         </div>
     </div>
@@ -370,30 +434,24 @@
     </nav>
 
     <script>
-        // Dynamic Path Detection
+        // Paths
+        // We attempt to find the module root dynamically
         function getModuleRoot() {
-            // Default fallback
             let root = "/data/adb/modules/wifi_tweaks";
-            
-            // Try to derive from URL (works if loaded via file://)
             try {
                 const path = decodeURIComponent(window.location.pathname);
-                // Handle standard file path structure
                 if (path.includes("/webroot/index.html")) {
                     root = path.split("/webroot/index.html")[0];
                 }
-            } catch(e) {
-                console.warn("Could not detect module path from URL, using default.");
-            }
+            } catch(e) {}
             return root;
         }
 
         const moduleRoot = getModuleRoot();
         const scriptPath = "/data/local/tmp/switch_mode.sh";
+        const actionScript = `${moduleRoot}/common/action.sh`;
         const logFile = "/data/local/tmp/wifi_tweaks.log";
         const resultFile = "/data/local/tmp/wifi_tweaks_result";
-        
-        // Paths defined as per requirements
         const configPath = `${moduleRoot}/common/config.ini`;
 
         let pollInterval = null;
@@ -401,10 +459,7 @@
 
         // KSU Initialization
         function waitForKSU() {
-            if (window.ksu) {
-                return Promise.resolve();
-            }
-
+            if (window.ksu) return Promise.resolve();
             return new Promise(resolve => {
                 const timer = setInterval(() => {
                     if (window.ksu) {
@@ -415,38 +470,11 @@
             });
         }
 
-        async function ksuWriteFile(path, content) {
-            if (window.ksu.fs && window.ksu.fs.writeFile) {
-                try {
-                    await window.ksu.fs.writeFile(path, content);
-                    return;
-                } catch (e) { console.warn("ksu.fs.write failed, falling back", e); }
-            }
-            // Base64 encode to safely transfer content via shell
-            const b64 = btoa(unescape(encodeURIComponent(content)));
-            const res = await runCommand(`echo "${b64}" | base64 -d > "${path}"`);
-            if (res.startsWith("Error:")) throw new Error(res);
-        }
-
-        // UI Routing
-        function switchView(viewId, el) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
-            document.getElementById(viewId).classList.add('active');
-            el.classList.add('active');
-
-            if (viewId === 'editor') {
-                loadConfigIntoEditor('get_custom');
-            }
-        }
-
         async function runCommand(command) {
             if (!window.ksu) return "Error: KSU not ready";
             try {
                 const result = await window.ksu.exec(command);
                 let output = "";
-
                 if (!result) output = "";
                 else if (typeof result === 'string') output = result;
                 else if (typeof result.errno === 'number') {
@@ -454,19 +482,108 @@
                 } else {
                     output = String(result);
                 }
-
-                // Fix: Filter out shell/toybox "END marker" warnings that pollute stdout.
+                // Filter shell noise
                 if (output.includes("read anything past the") || output.includes("end marker")) {
                     output = output.split('\n')
                         .filter(line => !/read anything past the.*end marker/i.test(line))
                         .join('\n');
                 }
-
                 return output;
             } catch (e) { return `Error: ${e.message}` }
         }
 
-        // Stats & Status
+        function logToConsole(msg, append = false) {
+            const output = document.getElementById('console-output');
+            if (append) output.textContent += "\n" + msg;
+            else output.textContent = msg;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // --- Core Features ---
+
+        async function checkCompatibility() {
+            logToConsole("Checking Kernel Patch support...");
+            const res = await runCommand(`sh ${actionScript} check_kpatch`);
+            
+            try {
+                // Parse JSON output from action.sh
+                // The shell script might output extra noise, try to find the JSON line
+                const jsonMatch = res.match(/\{.*\}/);
+                if (jsonMatch) {
+                    const data = JSON.parse(jsonMatch[0]);
+                    const tag = document.getElementById('kpatch-tag');
+                    const btn = document.getElementById('btn-inject');
+                    
+                    if (data.supported) {
+                        tag.textContent = "Supported";
+                        tag.className = "tag green";
+                        
+                        if (data.has_kpm) {
+                            btn.disabled = false;
+                            logToConsole("Kernel supports patching. KPM file found.");
+                        } else {
+                            btn.disabled = true;
+                            logToConsole("Kernel supports patching, but no .kpm file found in module.");
+                        }
+                    } else {
+                        tag.textContent = "Unsupported";
+                        tag.className = "tag red";
+                        btn.disabled = true;
+                        logToConsole("Your kernel does not appear to support Live Patching.");
+                    }
+                } else {
+                    throw new Error("Invalid response format");
+                }
+            } catch (e) {
+                logToConsole(`Error parsing compatibility check: ${e.message}\nRaw: ${res}`);
+            }
+        }
+
+        async function injectPatch() {
+            logToConsole("Injecting kernel patch...");
+            const res = await runCommand(`sh ${actionScript} inject_patch`);
+            logToConsole(res, true);
+        }
+
+        async function performSoftReset() {
+            if (!confirm("This will restart the Wi-Fi driver. Your connection will drop momentarily. Continue?")) return; 
+            
+            logToConsole("[*] Initiating Soft Driver Reset...");
+            // Run in background so UI doesn't freeze, but we want to see output
+            // ksu.exec is usually blocking or async, we await it.
+            const res = await runCommand(`sh ${actionScript} soft_reset`);
+            logToConsole(res, true);
+        }
+
+        async function loadStockFromSystem() {
+            const textarea = document.getElementById('editor-textarea');
+            textarea.value = "Scanning for system config...";
+            
+            let content = await runCommand(`sh ${actionScript} read_stock`);
+            
+            if (content && !content.startsWith("Error")) {
+                textarea.value = content;
+            } else {
+                // If auto-detection fails, ask user for path
+                const userPath = prompt("Could not automatically find WCNSS_qcom_cfg.ini.\n\nPlease enter the full path to your Wi-Fi config file:", "/vendor/etc/wifi/WCNSS_qcom_cfg.ini");
+                if (userPath) {
+                    textarea.value = `Reading from ${userPath}...`;
+                    // We use cat directly via shell for custom path to be safe/flexible
+                    const customContent = await runCommand(`cat "${userPath}"`);
+                    if (customContent && !customContent.includes("No such file")) {
+                        textarea.value = customContent;
+                    } else {
+                        textarea.value = "Failed to read file at provided path.\n" + customContent;
+                    }
+                } else {
+                    textarea.value = "Failed to read system config.\n" + content;
+                }
+            }
+            textarea.dispatchEvent(new Event('input'));
+        }
+
+        // --- Standard Features ---
+
         function updateStatusUI(mode) {
             const dot = document.getElementById('status-dot');
             const label = document.getElementById('current-mode');
@@ -495,47 +612,15 @@
             }
         }
 
-        // Engine Logic
-        function updateDisplay(logs, resultStatus, newMode) {
-            const output = document.getElementById('console-output');
-            let finalStatus = resultStatus;
-            
-            // Fallback inference if result file is empty or missing
-            if (!finalStatus) {
-                if (logs.includes("Hot-reload skipped")) finalStatus = 'BUILTIN';
-                else if (logs.includes("Hot-reload failed")) finalStatus = 'FAILED';
-                else if (logs.includes("Driver hot-reload successful")) finalStatus = 'SUCCESS';
-            }
-
-            let driverType = "Unknown";
-            if (finalStatus === 'BUILTIN') driverType = "BUILTIN";
-            else if (finalStatus === 'SUCCESS' || finalStatus === 'FAILED') driverType = "MODULAR";
-            
-            let message = logs;
-            if (message) message += "\n\n";
-            message += `Operation complete. Current Mode: ${newMode.toUpperCase()}`;
-            
-            if (finalStatus === 'BUILTIN' || finalStatus === 'FAILED') {
-                message += `\n\n⚠️ REBOOT REQUIRED ⚠️\nDriver Type: ${driverType}\nDriver hot-reload could not be completed.\nPlease reboot your device to apply changes.`;
-            } else if (finalStatus === 'SUCCESS') {
-                message += `\n\n✅ Driver reloaded successfully.`;
-            }
-            
-            output.textContent = message;
-            updateStatusUI(newMode);
-        }
-
         async function runSwitch(mode) {
-            await waitForKSU();
-            const output = document.getElementById('console-output');
-            output.textContent = `[*] Initializing ${mode} switch...`;
-            
+            logToConsole(`[*] Switching to ${mode}...`);
             await runCommand(`rm "${logFile}" "${resultFile}"`);
+            
             const pidStr = await runCommand(`nohup sh ${scriptPath} ${mode} > /dev/null 2>&1 & echo $!`);
             const pid = parseInt(pidStr);
 
             if (isNaN(pid)) {
-                output.textContent = "[!] Failed to start background engine.";
+                logToConsole("[!] Failed to start background engine.", true);
                 return;
             }
 
@@ -547,7 +632,10 @@
                     const logs = await runCommand(`cat "${logFile}"`);
                     const resultStatus = (await runCommand(`cat "${resultFile}"`)).trim();
                     const newMode = (await runCommand(`sh ${scriptPath} status`)).trim();
-                    updateDisplay(logs, resultStatus, newMode);
+                    
+                    logToConsole(logs);
+                    logToConsole(`Done. Mode: ${newMode}`, true);
+                    updateStatusUI(newMode);
                 }
             }, 500);
         }
@@ -560,11 +648,7 @@
             const lines = textarea.value.split('\n').length;
             lineNums.innerHTML = Array.from({length: lines}, (_, i) => i + 1).join('<br>');
         });
-
-        textarea.addEventListener('scroll', () => {
-            lineNums.scrollTop = textarea.scrollTop;
-        });
-
+        textarea.addEventListener('scroll', () => { lineNums.scrollTop = textarea.scrollTop; });
         textarea.addEventListener('keydown', e => {
             if (e.key === 'Tab') {
                 e.preventDefault();
@@ -574,70 +658,58 @@
             }
         });
 
-        function updateCursorPos() {
-            const textBefore = textarea.value.substring(0, textarea.selectionStart);
-            const lines = textBefore.split('\n');
-            document.getElementById('cursor-pos').textContent = `Ln ${lines.length}, Col ${lines[lines.length-1].length + 1}`;
-        }
-        textarea.addEventListener('keyup', updateCursorPos);
-        textarea.addEventListener('click', updateCursorPos);
-
-        async function loadConfigIntoEditor(cmd) {
-            textarea.value = "Loading configuration...";
-            await waitForKSU();
-            
-            // FIX: Completely removed ksu.fs.readFile usage.
-            // Using await runCommand to prevent race condition.
-            let content = await runCommand(`sh ${scriptPath} ${cmd}`);
-
-            if (content && !content.startsWith("Error") && content.trim() !== "") {
-                textarea.value = content;
-            } else {
-                textarea.value = "Error: Configuration could not be fetched.\n\nPossible reasons:\n1. /data/local/tmp/switch_mode.sh is missing.\n2. Permissions are incorrect.\n\nTry running: su -c 'cp /data/adb/modules/wifi_tweaks/common/switch_mode.sh /data/local/tmp/switch_mode.sh && chmod 755 /data/local/tmp/switch_mode.sh' in a terminal.";
-            }
-            
-            textarea.dispatchEvent(new Event('input'));
-        }
-
         async function saveAndApply() {
             const content = textarea.value;
-            if (!content.trim()) return;
+            if (!content.trim()) return; 
             
             await waitForKSU();
             try {
-                await ksuWriteFile(configPath, content);
+                // Save directly to common/config.ini using ksu fs or shell
+                if (window.ksu.fs && window.ksu.fs.writeFile) {
+                    await window.ksu.fs.writeFile(configPath, content);
+                } else {
+                    const b64 = btoa(unescape(encodeURIComponent(content)));
+                    await runCommand(`echo "${b64}" | base64 -d > "${configPath}"`);
+                }
+                
                 switchView('dashboard', document.querySelector('.nav-item'));
                 runSwitch('custom');
             } catch (e) {
-                alert("Failed to save config: " + e.message);
+                alert("Failed to save: " + e.message);
             }
         }
 
-        async function checkModulePath() {
-            const res = await runCommand(`[ -f "${scriptPath}" ] && echo "FOUND" || echo "MISSING"`);
-            if (res.includes("MISSING")) {
-                const output = document.getElementById('console-output');
-                output.textContent = `⚠️ CRITICAL ERROR: Stealth script not found!\n\nThe path '${scriptPath}' is not accessible.\n\nPossible causes:\n1. The script was not copied to /data/local/tmp/.\n2. Permissions are incorrect.\n\nTry running the manual copy command provided in the Editor's error message.`;
-                document.querySelectorAll('.mode-btn').forEach(b => b.disabled = true);
-                return false;
-            }
-            return true;
-        }
+        // View Routing
+        function switchView(viewId, el) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            el.classList.add('active');
 
-        // Init
+            if (viewId === 'editor') {
+                // Load existing custom config by default
+                runCommand(`sh ${scriptPath} get_custom`).then(res => {
+                    if (res) textarea.value = res;
+                    textarea.dispatchEvent(new Event('input'));
+                });
+            }
+        }
+        window.switchView = switchView;
+
+        // Startup
         document.addEventListener('DOMContentLoaded', async () => {
-            const consoleOutput = document.getElementById('console-output');
-            consoleOutput.textContent = "Waiting for KernelSU API...";
-            
+            logToConsole("Waiting for KernelSU API...");
             await waitForKSU();
+            logToConsole("Ready.");
             
-            if (!await checkModulePath()) return;
-
-            consoleOutput.textContent = "KernelSU API ready. Initializing...";
             updateStatusUI(await runCommand(`sh ${scriptPath} status`));
             fetchStats();
-            statsInterval = setInterval(fetchStats, 4000);
+            setInterval(fetchStats, 4000);
+            
+            // Auto check compat
+            checkCompatibility();
         });
+
     </script>
 </body>
 </html>

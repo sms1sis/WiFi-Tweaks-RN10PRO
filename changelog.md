@@ -1,5 +1,18 @@
 # WiFi Config Switcher Changelog
 
+## v3.7.0
+- **KernelSU-Next V3 Ready:** Updated WebUI and internal scripts for full compatibility with the latest KernelSU-Next V3 API (bridge isolation bypass).
+- **New Feature (KPatch Integration):** Added a new "Advanced Actions" panel to the WebUI.
+    - **Status Check:** Automatically detects if the running kernel supports Live Patching and if a `.kpm` module is present.
+    - **Injection:** Provides a button to inject the kernel patch directly from the WebUI.
+- **New Feature (Soft Driver Reset):** Implemented a "Safe Soft-Reset" mechanism.
+    - Performs a controlled Unbind -> Bind cycle on the Wi-Fi driver to reload configurations without a full reboot.
+    - Auto-detects driver paths for `wlan`, `qca_cld3`, `icnss`, and PCI-based drivers.
+- **Improved (WebUI):**
+    - "Load System Default" now scans multiple standard paths (`/vendor`, `/system`, `/data`) to locate the WCNSS configuration file, fixing issues on non-standard ROMs.
+    - Added user fallback prompt to manually specify the config path if auto-detection fails.
+- **Refactor:** Created `common/action.sh` to centralize high-privilege operations (file reading, patching, driver control).
+
 ## v3.6.2
 - **Fix (WebUI):** Resolved "Unknown Mode" issue on the Dashboard by correcting the configuration file path lookup. The script now correctly prioritizes the persistent module directory even when running from the temporary WebUI location.
 

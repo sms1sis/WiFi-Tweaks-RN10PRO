@@ -1,7 +1,7 @@
 id=wifi_tweaks
 name=WiFi-Config-Switcher
-version=3.6.2
-versionCode=62
+version=3.7.0
+versionCode=70
 author=sms1sis
-description=Switch between performance, balanced, and default Wi-Fi configs.
+description=Switch between performance, balanced, and default Wi-Fi configs. Supports KernelSU-Next V3.
 updateJson=https://raw.githubusercontent.com/sms1sis/WiFi-Config-Switcher/main/update.json
