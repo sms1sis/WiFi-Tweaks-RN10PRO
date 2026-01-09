@@ -594,7 +594,21 @@
             async softReset(silent = false) {
                 if(!silent) this.log("Restarting Wi-Fi Driver...");
                 const resRaw = await this.ksu.runAction("soft_reset");
-                this.log("Driver Reset: " + resRaw);
+                
+                try {
+                    const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
+                    const res = JSON.parse(jsonStr);
+                    
+                    if (res.status === 'warning') {
+                        this.log(`Warning: ${res.message}`);
+                    } else if (res.status === 'success') {
+                         this.log(`Success: ${res.message}`);
+                    } else {
+                        this.log(`Error: ${res.message}`);
+                    }
+                } catch (e) {
+                    this.log("Driver Reset: " + resRaw);
+                }
             }
 
             // -- Editor --

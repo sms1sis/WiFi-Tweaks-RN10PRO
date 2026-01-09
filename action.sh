@@ -256,6 +256,21 @@ case "$1" in
         ;;
 
     "soft_reset")
+        # Check for Monolithic Driver (Built-in)
+        # If the driver is built-in, unbinding platform devices like icnss often causes
+        # the system to hang or the wifi to never come back up.
+        IS_MODULAR=false
+        if [ -f "/proc/modules" ]; then
+            if grep -qE "^(wlan|qca_cld3|qcacld|ath11k) " /proc/modules; then
+                IS_MODULAR=true
+            fi
+        fi
+
+        if [ "$IS_MODULAR" = false ]; then
+            log_json "warning" "Monolithic driver detected. Reboot needed for changes to take place."
+            exit 0
+        fi
+
         DRIVER_DIR=$(find_driver_path)
         
         if [ -z "$DRIVER_DIR" ]; then
