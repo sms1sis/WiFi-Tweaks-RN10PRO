@@ -4,7 +4,7 @@
 
 # Ensure we are in a clean environment
 export PATH=/data/adb/ap/bin:/data/adb/ksu/bin:/system/bin:/system/xbin:/vendor/bin
-MODDIR=${0%/*}/..
+MODDIR=${0%/*}
 
 # --- Helper Functions ---
 
@@ -15,16 +15,19 @@ log_json() {
 
 find_module_config() {
     # Find the config file INSIDE the module directory
-    # matches the logic in customize.sh
     
-    # Priority 1: Check standard vendor path in module
-    if [ -f "$MODDIR/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini" ]; then
-        echo "$MODDIR/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
-        return 0
-    fi
+    # Priority 1: Check standard paths
+    for path in "$MODDIR/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini" \
+                "$MODDIR/vendor/etc/wifi/WCNSS_qcom_cfg.ini" \
+                "$MODDIR/system/etc/wifi/WCNSS_qcom_cfg.ini"; do
+        if [ -f "$path" ]; then
+            echo "$path"
+            return 0
+        fi
+    done
     
-    # Priority 2: Recursively find it if moved
-    local found=$(find "$MODDIR/system" -name "WCNSS_qcom_cfg.ini" -print -quit)
+    # Priority 2: Recursively find it in module
+    local found=$(find "$MODDIR" -name "WCNSS_qcom_cfg.ini" -print -quit)
     if [ -n "$found" ]; then
         echo "$found"
         return 0
