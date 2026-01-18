@@ -1,5 +1,10 @@
 # WiFi Config Switcher Changelog
 
+## v4.1.1
+- **Fix:** Improved stats engine to use `iw` as primary source for RSSI, SPEED, and FREQ with `/proc/net/wireless` fallback for RSSI.
+- **Fix:** Improved `soft_reset` logic to correctly detect monolithic drivers and prompt for reboot.
+- **Refactor:** Simplified `customize.sh` for improved reliability on supported devices.
+
 ## v4.1.0
 - **UX Improvement:** Renamed backend script to `backend.sh`, preventing the KernelSU Manager from displaying a non-functional "Action" button.
 - **Cleanup:** Final removal of legacy code and optimizations for the v4 release.
