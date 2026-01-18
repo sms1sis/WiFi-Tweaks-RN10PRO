@@ -3,6 +3,6 @@ name=WiFi Config Switcher
 version=v4.0.0
 versionCode=80
 author=sms1sis
-description=Advanced Wi-Fi configuration tuner with Live Kernel Patching and WebUI. Compatible with KernelSU-Next V3.
+description=Advanced Wi-Fi configuration tuner with a streamlined WebUI. Compatible with KernelSU-Next V3.
 updateJson=https://raw.githubusercontent.com/sms1sis/WiFi-Config-Switcher/main/update.json
 web=http://localhost:5555/webroot/index.html
