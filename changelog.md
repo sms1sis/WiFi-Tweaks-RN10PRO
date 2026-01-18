@@ -1,5 +1,9 @@
 # WiFi Config Switcher Changelog
 
+## v4.1.0
+- **UX Improvement:** Renamed backend script to `backend.sh`, preventing the KernelSU Manager from displaying a non-functional "Action" button.
+- **Cleanup:** Final removal of legacy code and optimizations for the v4 release.
+
 ## v4.0.0
 - **Major Refactor:** Complete rewrite for KernelSU-Next V3 compliance.
 - **Architecture:** Streamlined to a single `backend.sh` script (renamed from `action.sh`), removing complex/redundant legacy files (`post-fs-data`, `common/`).
