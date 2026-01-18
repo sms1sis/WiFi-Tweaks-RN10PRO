@@ -10,39 +10,63 @@ MODDIR=${0%/*}
 
 log_json() {
     # Output JSON formatted log for WebUI parsing
-    echo "{\"status\": \"$1\", \"message\": \"$2\"}"
+    echo "{"status": "$1", "message": "$2"}"
 }
 
 find_module_config() {
-    # Find the config file INSIDE the module directory
-    
-    # Priority 1: Check standard paths
-    for path in "$MODDIR/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini" \
-                "$MODDIR/vendor/etc/wifi/WCNSS_qcom_cfg.ini" \
-                "$MODDIR/system/etc/wifi/WCNSS_qcom_cfg.ini"; do
+    # 1. Search for existing config in module (Recursive find)
+    local existing=$(find "$MODDIR" -name "WCNSS_qcom_cfg.ini" -print -quit)
+    if [ -n "$existing" ]; then
+        echo "$existing"
+        return 0
+    fi
+
+    # 2. Self-Healing: If not found in module, find in system and import
+    # This ensures we always have a base config to patch (Systemless-ly)
+    local system_path=""
+    for path in "/vendor/etc/wifi/WCNSS_qcom_cfg.ini" \
+                "/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini" \
+                "/data/vendor/wifi/WCNSS_qcom_cfg.ini" \
+                "/odm/etc/wifi/WCNSS_qcom_cfg.ini"; do
         if [ -f "$path" ]; then
-            echo "$path"
-            return 0
+            system_path="$path"
+            break
         fi
     done
-    
-    # Priority 2: Recursively find it in module
-    local found=$(find "$MODDIR" -name "WCNSS_qcom_cfg.ini" -print -quit)
-    if [ -n "$found" ]; then
-        echo "$found"
-        return 0
+
+    if [ -n "$system_path" ]; then
+        # Construct destination path to mirror system structure for Magisk/KSU overlay
+        local dest_file=""
+        
+        case "$system_path" in
+            /vendor/*)
+                # Map /vendor/... -> $MODDIR/system/vendor/...
+                dest_file="$MODDIR/system/vendor${system_path#/vendor}"
+                ;;
+            /system/*)
+                # Map /system/... -> $MODDIR/system/...
+                dest_file="$MODDIR/system${system_path#/system}"
+                ;;
+            /odm/*)
+                # Map /odm/... -> $MODDIR/system/odm/...
+                dest_file="$MODDIR/system/odm${system_path#/odm}"
+                ;;
+            *)
+                # Fallback for /data or others -> Force into system/vendor
+                dest_file="$MODDIR/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini"
+                ;;
+        esac
+
+        mkdir -p "$(dirname "$dest_file")"
+        cp "$system_path" "$dest_file"
+        
+        # Verify copy
+        if [ -f "$dest_file" ]; then
+            echo "$dest_file"
+            return 0
+        fi
     fi
-    
-    # Priority 3: Dev/Test Fallback
-    if [ -f "$MODDIR/WCNSS_qcom_cfg.ini" ]; then
-        echo "$MODDIR/WCNSS_qcom_cfg.ini"
-        return 0
-    fi
-    if [ -f "$MODDIR/webroot/config.ini" ]; then
-        echo "$MODDIR/webroot/config.ini"
-        return 0
-    fi
-    
+
     return 1
 }
 
@@ -78,7 +102,6 @@ apply_param() {
     if [ ! -f "$file" ]; then return 1; fi
 
     # Use sed to replace existing key or append if missing
-    # We use a temp file to avoid partial writes if sed fails
     if grep -q "^[[:space:]]*${key}[[:space:]]*=" "$file"; then
         sed -i "s/^[[:space:]]*${key}[[:space:]]*=.*/${key}=${value}/" "$file"
     else
@@ -94,30 +117,39 @@ case "$1" in
         CONFIG_FILE=$(find_module_config)
 
         if [ -z "$CONFIG_FILE" ]; then
-            log_json "error" "Config file not found in module. Please reinstall."
+            log_json "error" "Config file not found in system or module."
             exit 1
         fi
         
+        # Create a backup of the 'stock' imported config if not exists
+        if [ ! -f "${CONFIG_FILE}.bak" ]; then
+            cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
+        fi
+
         # 2. Apply parameters based on mode
         case "$MODE" in
             "perf")
                 apply_param "$CONFIG_FILE" "gEnableBmps" "0"
-                apply_param "$CONFIG_FILE" "TxPower2g" "15"
-                apply_param "$CONFIG_FILE" "TxPower5g" "15"
+                apply_param "$CONFIG_FILE" "TxPower2g" "17"
+                apply_param "$CONFIG_FILE" "TxPower5g" "17"
                 apply_param "$CONFIG_FILE" "gChannelBondingMode24GHz" "1"
                 ;;
             "balanced")
                 apply_param "$CONFIG_FILE" "gEnableBmps" "1"
-                apply_param "$CONFIG_FILE" "TxPower2g" "12"
-                apply_param "$CONFIG_FILE" "TxPower5g" "12"
+                apply_param "$CONFIG_FILE" "TxPower2g" "14"
+                apply_param "$CONFIG_FILE" "TxPower5g" "14"
                 apply_param "$CONFIG_FILE" "gChannelBondingMode24GHz" "1"
                 ;;
             "stock")
-                # Safe defaults - closely mimics standard QC configs
-                apply_param "$CONFIG_FILE" "gEnableBmps" "1"
-                apply_param "$CONFIG_FILE" "TxPower2g" "10"
-                apply_param "$CONFIG_FILE" "TxPower5g" "10"
-                apply_param "$CONFIG_FILE" "gChannelBondingMode24GHz" "0"
+                # Restore from backup if available, else apply safe defaults
+                if [ -f "${CONFIG_FILE}.bak" ]; then
+                    cp "${CONFIG_FILE}.bak" "$CONFIG_FILE"
+                else
+                    apply_param "$CONFIG_FILE" "gEnableBmps" "1"
+                    apply_param "$CONFIG_FILE" "TxPower2g" "12"
+                    apply_param "$CONFIG_FILE" "TxPower5g" "12"
+                    apply_param "$CONFIG_FILE" "gChannelBondingMode24GHz" "0"
+                fi
                 ;;
             *)
                 log_json "error" "Unknown mode: $MODE"
@@ -134,44 +166,9 @@ case "$1" in
     "get_mode")
         if [ -f "$MODDIR/mode_status.txt" ]; then
             CURRENT_MODE=$(cat "$MODDIR/mode_status.txt")
-            echo "{\"mode\": \"$CURRENT_MODE\"}"
+            echo "{"mode": "$CURRENT_MODE"}"
         else
-            echo "{\"mode\": \"unknown\"}"
-        fi
-        ;;
-
-    "read_config")
-        CONFIG_FILE=$(find_module_config)
-        
-        if [ -n "$CONFIG_FILE" ]; then
-            cat "$CONFIG_FILE"
-        else
-            echo "Error: Config file not found in module directory."
-            echo "Path searched: $MODDIR/system/..."
-        fi
-        ;;
-
-    "save_config")
-        CONFIG_FILE=$(find_module_config)
-
-        if [ -z "$CONFIG_FILE" ]; then
-            log_json "error" "Config file path not found in module."
-            exit 1
-        fi
-
-        # 2. Read stdin, decode, and write
-        read -r B64_DATA
-        if [ -n "$B64_DATA" ]; then
-            # Write to module file
-            echo "$B64_DATA" | base64 -d > "$CONFIG_FILE"
-            if [ $? -eq 0 ]; then
-                sync
-                log_json "success" "Config saved."
-            else
-                log_json "error" "Failed to write to $CONFIG_FILE"
-            fi
-        else
-            log_json "error" "No data received."
+            echo "{"mode": "unknown"}"
         fi
         ;;
 
@@ -193,7 +190,7 @@ case "$1" in
             KPM_PATH="$KPM_FILE"
         fi
 
-        echo "{\"supported\": $SUPPORTED, \"kpm_found\": $KPM_FOUND, \"path\": \"$KPM_PATH\"}"
+        echo "{"supported": $SUPPORTED, "kpm_found": $KPM_FOUND, "path": "$KPM_PATH"}"
         ;;
 
     "inject_patch")
@@ -236,8 +233,7 @@ case "$1" in
         SPEED="--"
         FREQ="--"
 
-        # Try using dumpsys wifi (works on most non-rooted shell if priv available, definitely works as root)
-        # parsing depends on android version, but usually stable
+        # Try using dumpsys wifi
         DUMP=$(cmd wifi status 2>/dev/null) 
         if [ -z "$DUMP" ]; then
              DUMP=$(dumpsys wifi | grep -A 10 "Current WifiInfo")
@@ -255,30 +251,24 @@ case "$1" in
         F_VAL=$(echo "$DUMP" | grep -o "Frequency: [0-9]*" | head -n1 | cut -d' ' -f2)
         if [ -n "$F_VAL" ]; then FREQ="${F_VAL} MHz"; fi
         
-        # Fallback to iw if dumpsys failed (common in some custom ROMs)
+        # Fallback to iw
         if [ "$RSSI" = "--" ] && command -v iw >/dev/null; then
             IW_LINK=$(iw dev wlan0 link)
-            
-            # rssi from "signal: -46 dBm"
             R_VAL=$(echo "$IW_LINK" | grep "signal:" | awk '{print $2}')
             if [ -n "$R_VAL" ]; then RSSI="${R_VAL} dBm"; fi
             
-            # speed from "tx bitrate: 866.7 MBit/s"
             S_VAL=$(echo "$IW_LINK" | grep "tx bitrate:" | awk '{print $3}')
             if [ -n "$S_VAL" ]; then SPEED="${S_VAL} Mbps"; fi
             
-            # freq from "freq: 5180"
             F_VAL=$(echo "$IW_LINK" | grep "freq:" | awk '{print $2}')
             if [ -n "$F_VAL" ]; then FREQ="${F_VAL} MHz"; fi
         fi
 
-        echo "{\"rssi\": \"$RSSI\", \"speed\": \"$SPEED\", \"freq\": \"$FREQ\"}"
+        echo "{"rssi": "$RSSI", "speed": "$SPEED", "freq": "$FREQ"}"
         ;;
 
     "soft_reset")
         # Check for Monolithic Driver (Built-in)
-        # If the driver is built-in, unbinding platform devices like icnss often causes
-        # the system to hang or the wifi to never come back up.
         IS_MODULAR=false
         if [ -f "/proc/modules" ]; then
             if grep -qE "^(wlan|qca_cld3|qcacld|ath11k) " /proc/modules; then
@@ -287,7 +277,7 @@ case "$1" in
         fi
 
         if [ "$IS_MODULAR" = false ]; then
-            log_json "warning" "Monolithic driver detected. Reboot needed for changes to take place."
+            log_json "warning" "Monolithic/Built-in driver detected. Please reboot your device to apply changes."
             exit 0
         fi
 
@@ -302,7 +292,6 @@ case "$1" in
         DEVICES=$(ls -l "$DRIVER_DIR" | grep ^l | awk '{print $9}' | grep -E '^[0-9a-f.:]+$')
 
         if [ -z "$DEVICES" ]; then
-            # Try finding devices directly if ls -l parsing failed (sometimes symlinks are different)
             DEVICES=$(find "$DRIVER_DIR" -maxdepth 1 -type l -exec basename {} \;)
         fi
         
