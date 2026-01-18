@@ -10,7 +10,6 @@ find_module_config() {
     [ -n "$existing" ] && echo "$existing" || return 1
 }
 
-# IMPROVED: Handles comments and prevents duplicates
 apply_param() {
     local file="$1" key="$2" value="$3"
     [ ! -f "$file" ] && return 1
@@ -26,7 +25,6 @@ case "$1" in
         MODE="$2"
         CONFIG_FILE=$(find_module_config)
         [ -z "$CONFIG_FILE" ] && { log_json "error" "Config missing"; exit 1; }
-        
         [ ! -f "${CONFIG_FILE}.bak" ] && cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
 
         case "$MODE" in
@@ -58,43 +56,43 @@ case "$1" in
     "stats")
         RSSI="--" SPEED="--" FREQ="--"
         if command -v iw >/dev/null; then
-            LINK=$(iw dev wlan0 link 2>/dev/null)
-            RSSI=$(echo "$LINK" | grep "signal:" | awk '{print $2}')
-            [ -n "$RSSI" ] && RSSI="${RSSI} dBm" || RSSI="--"
-            SPEED=$(echo "$LINK" | grep "tx bitrate:" | awk '{print $3}')
-            [ -n "$SPEED" ] && SPEED="${SPEED} Mbps" || SPEED="--"
-            FREQ=$(echo "$LINK" | grep "freq:" | awk '{print $2}')
-            [ -n "$FREQ" ] && FREQ="${FREQ} MHz" || FREQ="--"
+            LINK=$(iw dev wlan0 link)
+            RSSI=$(echo "$LINK" | grep -o "signal: -[0-9]*" | awk '{print $2}')" dBm"
+            SPEED=$(echo "$LINK" | grep -o "tx bitrate: [0-9.]*" | awk '{print $3}')" Mbps"
+            FREQ=$(echo "$LINK" | grep -o "freq: [0-9]*" | awk '{print $2}')" MHz"
         fi
-
         if [ "$RSSI" = "--" ] && [ -r "/proc/net/wireless" ]; then
             RSSI=$(grep "wlan0" /proc/net/wireless | awk '{print $4}' | cut -d. -f1)" dBm"
         fi
         echo "{\"rssi\": \"$RSSI\", \"speed\": \"$SPEED\", \"freq\": \"$FREQ\"}"
         ;;
-    
-    "get_mode")
-        [ -f "$MODDIR/mode_status.txt" ] && echo "{\"mode\": \"$(cat $MODDIR/mode_status.txt)\"}" || echo "{\"mode\": \"unknown\"}"
-        ;;
 
     "soft_reset")
+        # --- MONOLITHIC GUARD ---
+        # If the 'module' file is missing (as you confirmed), it's built-in.
+        if [ ! -e "/sys/class/net/wlan0/device/driver/module" ]; then
+            log_json "warning" "Built-in driver detected. Please reboot manually to apply changes."
+            exit 0
+        fi
+
+        # Logic for Loadable Modules ONLY (Safe)
         DEVICE_PATH="/sys/class/net/wlan0/device"
         if [ -L "$DEVICE_PATH" ]; then
             DRIVER_PATH=$(readlink "$DEVICE_PATH/driver" 2>/dev/null)
-            if [ -n "$DRIVER_PATH" ]; then
-                DEVICE=$(basename $(readlink "$DEVICE_PATH"))
-                DRIVER=$(basename "$DRIVER_PATH")
-                BUS=$(basename $(readlink "$DEVICE_PATH/subsystem"))
-                
-                echo "$DEVICE" > "/sys/bus/$BUS/drivers/$DRIVER/unbind" 2>/dev/null
-                sleep 1
-                echo "$DEVICE" > "/sys/bus/$BUS/drivers/$DRIVER/bind" 2>/dev/null
-                log_json "success" "Reset $DRIVER ($DEVICE)"
-            else
-                log_json "warning" "Monolithic driver - Reboot required for changes to take effect"
-            fi
-        else
-            log_json "warning" "Monolithic driver - Reboot required for changes to take effect"
+            DEVICE=$(basename $(readlink "$DEVICE_PATH"))
+            DRIVER=$(basename "$DRIVER_PATH")
+            BUS=$(basename $(readlink "$DEVICE_PATH/subsystem"))
+            
+            svc wifi disable >/dev/null 2>&1
+            echo "$DEVICE" > "/sys/bus/$BUS/drivers/$DRIVER/unbind" 2>/dev/null
+            sleep 1
+            echo "$DEVICE" > "/sys/bus/$BUS/drivers/$DRIVER/bind" 2>/dev/null
+            svc wifi enable >/dev/null 2>&1
+            log_json "success" "Driver Reset Complete."
         fi
+        ;;
+
+    "get_mode")
+        [ -f "$MODDIR/mode_status.txt" ] && echo "{\"mode\": \"$(cat $MODDIR/mode_status.txt)\"}" || echo "{\"mode\": \"unknown\"}"
         ;;
 esac

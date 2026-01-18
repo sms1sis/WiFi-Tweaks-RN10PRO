@@ -149,6 +149,12 @@
         .mode-btn:active { transform: scale(0.96); }
         .mode-btn:disabled { opacity: 0.4; pointer-events: none; }
 
+        .mode-btn.active {
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+            transform: scale(0.98);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
         .btn-perf { background-color: var(--accent-success); }
         .btn-balanced { background-color: var(--accent-warning); }
         .btn-stock { 
@@ -159,6 +165,25 @@
         }
 
         .mode-btn svg { width: 24px; height: 24px; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .mode-btn.processing, .action-btn.processing {
+            position: relative;
+            color: transparent !important;
+            pointer-events: none;
+        }
+        .mode-btn.processing svg, .action-btn.processing svg { visibility: hidden; }
+        .mode-btn.processing::after, .action-btn.processing::after {
+            content: "";
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 20px; height: 20px;
+            margin-top: -10px; margin-left: -10px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
 
         /* KPatch & Tools Styles */
         .tools-row {
@@ -325,22 +350,31 @@
                 try {
                     const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
                     const res = JSON.parse(jsonStr);
-                    const mode = res.mode || "Ready";
-                    
-                    const dot = document.getElementById('status-dot');
-                    const label = document.getElementById('current-mode');
-                    
-                    if (mode !== "unknown") {
-                        label.innerText = mode.toUpperCase();
-                        if(mode == 'perf') dot.style.color = 'var(--accent-success)';
-                        else if(mode == 'balanced') dot.style.color = 'var(--accent-warning)';
-                        else dot.style.color = 'var(--text-main)';
-                    } else {
-                        label.innerText = "Stock / Ready";
-                        dot.style.color = 'var(--text-main)';
-                    }
+                    this.updateUIState(res.mode || "stock");
                 } catch (e) {
-                   // console.log("Mode check error", e);
+                   this.updateUIState("stock");
+                }
+            }
+
+            updateUIState(mode) {
+                const dot = document.getElementById('status-dot');
+                const label = document.getElementById('current-mode');
+                
+                // Clear all active states
+                document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+
+                if (mode === 'perf') {
+                    label.innerText = "PERFORMANCE";
+                    dot.style.color = 'var(--accent-success)';
+                    document.querySelector('.btn-perf').classList.add('active');
+                } else if (mode === 'balanced') {
+                    label.innerText = "BALANCED";
+                    dot.style.color = 'var(--accent-warning)';
+                    document.querySelector('.btn-balanced').classList.add('active');
+                } else {
+                    label.innerText = "STOCK / READY";
+                    dot.style.color = 'var(--text-main)';
+                    document.querySelector('.btn-stock').classList.add('active');
                 }
             }
 
@@ -353,34 +387,43 @@
             // -- Logic --
 
             async applyMode(mode) {
+                if (this.processing) return;
+                this.processing = true;
+
+                // 1. Immediate UI Feedback
+                const btnMap = { 'perf': '.btn-perf', 'balanced': '.btn-balanced', 'stock': '.btn-stock' };
+                const activeBtn = document.querySelector(btnMap[mode]);
+                
+                document.querySelectorAll('.mode-btn').forEach(btn => btn.disabled = true);
+                if (activeBtn) activeBtn.classList.add('processing');
+
                 this.log(`Applying ${mode} mode...`);
+                document.getElementById('current-mode').innerText = "APPLYING...";
                 
-                // Update Badge color immediately for feedback
-                const dot = document.getElementById('status-dot');
-                const label = document.getElementById('current-mode');
-                label.innerText = "Applying...";
-                
-                const resRaw = await this.ksu.runAction("apply_mode", mode);
                 try {
+                    const resRaw = await this.ksu.runAction("apply_mode", mode);
                     const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
                     const res = JSON.parse(jsonStr);
                     
                     if (res.status === 'success') {
                         this.log(`Success: ${res.message}`);
-                        label.innerText = mode.toUpperCase();
-                        
-                        // Set Dot Color
-                        if(mode == 'perf') dot.style.color = 'var(--accent-success)';
-                        else if(mode == 'balanced') dot.style.color = 'var(--accent-warning)';
-                        else dot.style.color = 'var(--text-main)';
+                        this.updateUIState(mode);
                         
                         // Auto reset
                         setTimeout(() => this.softReset(true), 500);
                     } else {
                         this.log(`Error: ${res.message}`);
+                        await this.checkMode(); 
                     }
                 } catch (e) {
-                    this.log("Failed to apply mode: " + resRaw);
+                    this.log("Failed to apply mode: " + (e.message || "Unknown error"));
+                    await this.checkMode();
+                } finally {
+                    this.processing = false;
+                    document.querySelectorAll('.mode-btn').forEach(btn => {
+                        btn.disabled = false;
+                        btn.classList.remove('processing');
+                    });
                 }
             }
 
@@ -401,10 +444,14 @@
             }
 
             async softReset(silent = false) {
-                if(!silent) this.log("Restarting Wi-Fi Driver...");
-                const resRaw = await this.ksu.runAction("soft_reset");
+                const btn = document.querySelector('.action-btn.danger');
+                if (!silent) {
+                    this.log("Restarting Wi-Fi Driver...");
+                    if (btn) btn.classList.add('processing');
+                }
                 
                 try {
+                    const resRaw = await this.ksu.runAction("soft_reset");
                     const jsonStr = resRaw.substring(resRaw.indexOf('{'), resRaw.lastIndexOf('}') + 1);
                     const res = JSON.parse(jsonStr);
                     
@@ -416,7 +463,9 @@
                         this.log(`Error: ${res.message}`);
                     }
                 } catch (e) {
-                    this.log("Driver Reset: " + resRaw);
+                    this.log("Driver Reset: " + (e.message || "Failed"));
+                } finally {
+                    if (btn) btn.classList.remove('processing');
                 }
             }
         }
