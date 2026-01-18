@@ -2,6 +2,7 @@
 
 ## v4.0.0
 - **Major Refactor:** Complete rewrite for KernelSU-Next V3 compliance.
+- **Architecture:** Streamlined to a single `backend.sh` script (renamed from `action.sh`), removing complex/redundant legacy files (`post-fs-data`, `common/`).
 - **Streamlined Dashboard:** simplified WebUI focused purely on performance profiles and status monitoring.
 - **Systemless & Self-Healing:** Automatically detects system configuration (`/vendor`, `/system`, etc.) and creates a safe overlay.
 - **Smart Driver Management:** Auto-detects modular vs. monolithic drivers, preventing unsafe reset attempts.

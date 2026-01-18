@@ -2,4 +2,4 @@
 # service.sh - Minimal Permissions Handler
 
 MODDIR=${0%/*}
-chmod +x "$MODDIR/action.sh"
+chmod +x "$MODDIR/backend.sh"

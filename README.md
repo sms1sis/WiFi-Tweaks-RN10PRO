@@ -40,14 +40,14 @@ A next-generation Wi-Fi tuner module for Android, fully optimized for **KernelSU
 
 ### 2. Command Line (Advanced)
 
-The module uses a single `action.sh` script for operations.
+The module uses a single `backend.sh` script for operations.
 
 ```bash
 # Enter module directory
 cd /data/adb/modules/wifi_config_switcher
 
 # Soft Reset Driver (Manually trigger driver reload)
-sh action.sh soft_reset
+sh backend.sh soft_reset
 ```
 
 ---

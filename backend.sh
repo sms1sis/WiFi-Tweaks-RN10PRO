@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# action.sh - Advanced Action Handler for WiFi-Config-Switcher
+# backend.sh - Advanced Action Handler for WiFi-Config-Switcher
 # Handles privileged operations: File I/O, KPatch, and Safe Driver Reset.
 
 # Ensure we are in a clean environment
