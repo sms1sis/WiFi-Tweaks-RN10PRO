@@ -172,59 +172,6 @@ case "$1" in
         fi
         ;;
 
-    "check_kpatch")
-        # Check kernel support and module presence
-        SUPPORTED=false
-        KPM_FOUND=false
-        KPM_PATH=""
-
-        # Check Kernel Support
-        if [ -f "/sys/kernel/livepatch/enabled" ] || [ -d "/sys/kernel/security/kpatch" ]; then
-            SUPPORTED=true
-        fi
-
-        # Check for KPM file in module dir
-        KPM_FILE=$(find "$MODDIR" -name "*.kpm" -print -quit)
-        if [ -n "$KPM_FILE" ]; then
-            KPM_FOUND=true
-            KPM_PATH="$KPM_FILE"
-        fi
-
-        echo "{"supported": $SUPPORTED, "kpm_found": $KPM_FOUND, "path": "$KPM_PATH"}"
-        ;;
-
-    "inject_patch")
-        KPM_PATH="$2"
-        if [ -z "$KPM_PATH" ]; then
-             KPM_PATH=$(find "$MODDIR" -name "*.kpm" -print -quit)
-        fi
-
-        if [ -f "$KPM_PATH" ]; then
-            # Attempt injection
-            # 1. Try insmod (standard KSU/Linux way for .kpm/.ko)
-            insmod "$KPM_PATH" > /dev/null 2>&1
-            RES=$?
-            
-            if [ $RES -eq 0 ]; then
-                log_json "success" "Patch injected via insmod."
-            else
-                # 2. Try kpatch tool if available
-                if command -v kpatch >/dev/null; then
-                    kpatch load "$KPM_PATH" > /dev/null 2>&1
-                    if [ $? -eq 0 ]; then
-                        log_json "success" "Patch injected via kpatch tool."
-                    else
-                        log_json "error" "Injection failed (insmod & kpatch)."
-                    fi
-                else
-                    log_json "error" "Injection failed (insmod failed, kpatch tool missing)."
-                fi
-            fi
-        else
-            log_json "error" "KPM file not found."
-        fi
-        ;;
-
     "stats")
         # specific wifi stats fetcher
         # Returns JSON: {"rssi": "...", "speed": "...", "freq": "..."}

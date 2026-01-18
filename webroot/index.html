@@ -204,18 +204,6 @@
             flex-shrink: 0;
         }
 
-        /* KPatch Specifics */
-        .kpatch-status {
-            font-size: 0.8rem;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .tag { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
-        .tag.green { background: rgba(158, 206, 106, 0.2); color: #9ece6a; }
-        .tag.red { background: rgba(247, 118, 142, 0.2); color: #f7768e; }
-        .tag.gray { background: rgba(169, 177, 214, 0.2); color: #a9b1d6; }
-
         @media (max-width: 360px) {
             .stats-grid { grid-template-columns: 1fr; }
             h1 { font-size: 1.4rem; }
@@ -267,23 +255,9 @@
                 </button>
             </div>
 
-            <div class="section-title">Advanced Actions</div>
+            <div class="section-title">Utilities</div>
             <div class="card">
-                <div class="kpatch-status">
-                    <span>Kernel Patch Support:</span>
-                    <span id="kpatch-tag" class="tag gray">Checking...</span>
-                </div>
-                <div class="tools-row">
-                    <button class="action-btn" onclick="app.checkKPatch()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9,20.42L2.79,14.21L5.62,11.38L9,14.77L18.88,4.88L21.71,7.71L9,20.42Z"/></svg>
-                        Check Compat
-                    </button>
-                    <button class="action-btn" id="btn-inject" onclick="app.injectPatch()" disabled>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2,12A10,10 0 0,1 12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12M13,7H11V11H7V13H11V17H13V13H17V11H13V7Z"/></svg>
-                        Inject Patch
-                    </button>
-                </div>
-                <div class="tools-row">
+                <div class="tools-row" style="margin-top: 0;">
                     <button class="action-btn danger" onclick="app.softReset()">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,5V1L7,6L12,11V7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12H5A7,7 0 0,0 12,19A7,7 0 0,0 19,12A7,7 0 0,0 12,5Z"/></svg>
                         Soft Driver Reset
@@ -330,9 +304,7 @@
             constructor() {
                 this.ksu = new KsuBridge();
                 this.ui = {
-                    console: document.getElementById('console-output'),
-                    kpatchTag: document.getElementById('kpatch-tag'),
-                    btnInject: document.getElementById('btn-inject')
+                    console: document.getElementById('console-output')
                 };
 
                 this.init();
@@ -345,7 +317,6 @@
                 setInterval(() => this.fetchStats(), 3000);
                 this.fetchStats();
                 
-                await this.checkKPatch();
                 await this.checkMode();
             }
             
@@ -427,32 +398,6 @@
                     // Silent fail for stats
                     // console.log("Stats error", e);
                 }
-            }
-
-            async checkKPatch() {
-                const resRaw = await this.ksu.runAction("check_kpatch");
-                try {
-                    const data = JSON.parse(resRaw);
-                    if (data.supported) {
-                        this.ui.kpatchTag.innerText = "Supported";
-                        this.ui.kpatchTag.className = "tag green";
-                        if (data.kpm_found) {
-                            this.ui.btnInject.disabled = false;
-                            this.log("Kernel Patch module found.");
-                        } else {
-                            this.log("No .kpm file found.");
-                        }
-                    } else {
-                        this.ui.kpatchTag.innerText = "Unsupported";
-                        this.ui.kpatchTag.className = "tag red";
-                    }
-                } catch (e) {}
-            }
-
-            async injectPatch() {
-                this.log("Injecting Kernel Patch...");
-                const resRaw = await this.ksu.runAction("inject_patch");
-                this.log(resRaw);
             }
 
             async softReset(silent = false) {
