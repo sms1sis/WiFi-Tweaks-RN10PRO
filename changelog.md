@@ -1,5 +1,8 @@
 # WiFi Config Switcher Changelog
 
+## v4.1.2
+- **Fix:** Corrected WebUI configuration for KernelSU (removed incorrect `web` property in `module.prop`) to fix connection issues.
+
 ## v4.1.1
 - **Fix:** Improved stats engine to use `iw` as primary source for RSSI, SPEED, and FREQ with `/proc/net/wireless` fallback for RSSI.
 - **Fix:** Improved `soft_reset` logic to correctly detect monolithic drivers and prompt for reboot.
