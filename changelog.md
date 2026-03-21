@@ -1,3 +1,15 @@
+## v5.1.0
+- **UI:** Complete sci-fi visual overhaul — Orbitron + Share Tech Mono fonts, deep navy background, cyan/green/amber accent system, corner-accented panels, animated status dot with glow, circuit board background art embedded as base64 SVG (no external files).
+- **UI:** Profile buttons redesigned as compact single-line row (Perf / Balanced / Stock) with param count hints and per-mode color glow on active state.
+- **UI:** Module banner image added (`banner.png`, 1280×320) — displayed on the module card in KernelSU/Magisk Manager before opening the WebUI.
+- **UI:** Version badge — dynamically reads version from `module.prop` at runtime via new `get_version` backend action and displays it top-right of the header.
+- **UI:** Log box is now dynamically sized — starts collapsed, expands naturally as log entries appear, caps at 60vh, scrolls internally beyond cap. Smart auto-scroll: only follows new entries when already near the bottom.
+- **UI:** Full-viewport layout — all panels fill the display height correctly across screen sizes.
+- **module.prop:** Description shortened to fit the module card cleanly.
+
+## v5.0.7
+- **Fix (critical):** Patching still had no effect despite the overlay being correctly mounted. Root cause: KSU bind-mounts the overlay source (`$MODDIR/system/vendor/etc/wifi/WCNSS_qcom_cfg.ini`) directly onto the live path (`/vendor/etc/wifi/WCNSS_qcom_cfg.ini`) as a block device mount (`/dev/block/mmcblk0p87 on /vendor/etc/wifi/WCNSS_qcom_cfg.ini`). `find_wifi_config` was resolving the live path first — which on this mount type points back to the original read-only partition, not the overlay file. `backend.sh` was patching the wrong file. Fixed: `find_wifi_config` now always returns the overlay source at `$MODDIR/system/<rel>` first, skipping the live path entirely. The overlay source is both the file the driver reads (via bind mount) and the correct patch target.
+
 ## v5.0.6
 - **Fix (critical):** New config keys (e.g. `gChannelBondingMode24GHz`) were appended after the `END` marker in `WCNSS_qcom_cfg.ini`. The Wi-Fi driver ignores everything past `END` — so these params had no effect. `apply_patch` now inserts missing keys **before** the `END` line using `sed` instead of appending to the end of the file.
 
