@@ -1,3 +1,23 @@
+## v5.0.3
+- **Fix (critical):** Further hardened driver detection against false-modular classification on icnss-based kernels where `/proc/modules` is empty and `lsmod` returns only a header.
+- **New check: `/proc/config.gz` (kernel config — ground truth).** `CONFIG_WLAN=y` or `CONFIG_ICNSS=y` definitively confirms built-in. `=m` confirms loadable module. This fires before any sysfs heuristic.
+- **New check: `/sys/module/<driver>/sections/` directory.** Loadable modules always have a `sections/` subdirectory inside `/sys/module/`. Built-in drivers that appear in `/sys/module/` do not. This cleanly resolves the ambiguity where `icnss` appeared to be modular via `/sys/module/` lookup.
+- **Reordered detection chain:** Blocklist → kernel config → sections dir → /module symlink → /proc/modules → subsystem bus → path heuristic.
+- **New backend action: `get_driver_info`** — dumps all detection evidence as JSON: driver name, detected type, `kconf_wlan`, `kconf_driver`, `sys_module_sections`, `proc_modules_entry`, `module_symlink`, `subsystem`, `lsmod_empty`. Useful for diagnosing detection on new devices.
+- **WebUI:** Added "Driver Info" button in the Utilities card — calls `get_driver_info` and prints all evidence lines to the log box.
+
+## v5.0.2
+- **Fix (critical):** Device reboot after applying config on Snapdragon 665 and other icnss-based platforms. Root cause: `icnss` (Qualcomm WCNSS platform glue) appears in `/sys/module/` and was incorrectly classified as a modular Wi-Fi driver, causing `soft_reset` to unbind it from the platform bus — kernel panic, instant reboot. Detection now uses seven layered checks with multiple safety gates:
+  1. **Blocklist** — `icnss`, `icnss2`, `cnss`, `cnss2`, `wlan_platform` always return `builtin` immediately, before any other check
+  2. **`/module` symlink** — present only on real loadable `.ko` drivers
+  3. **`/proc/config.gz`** — definitive kernel config: `CONFIG_X=y` → builtin, `CONFIG_X=m` → modular
+  4. **`/sys/module/<n>/sections/`** — kernel only creates this subdir for externally loaded modules; absent for `=y` compiled-in drivers. `/sys/module/<n>` alone is not sufficient (exists for both) — this was the specific check that misfired on `icnss`
+  5. **`/proc/modules`** — only lists dynamically loaded modules
+  6. **Known module name scan** in `/proc/modules`
+  7. **Subsystem bus type** — `platform`/`soc` → builtin, `pci`/`usb`/`sdio`/`mmc` → modular
+  8. **`lsmod` empty output** — zero loaded modules means everything is built-in
+- **Fix:** Stats cards (Signal, Speed, Frequency, SSID) always showing `--`. `iw` is not available on stock Android. Stats now use four methods in priority order: `wpa_cli status` + `wpa_cli signal_poll` (primary — always present on Android), `/proc/net/wireless` sysfs fallback, `dumpsys wifi` framework fallback, `iw` last (custom ROMs only).
+
 # WiFi Config Switcher — Changelog
 
 ## v5.0.1
@@ -14,6 +34,12 @@
 - **Alias: `willow` → `ginkgo`** — Redmi Note 8T (willow) shares the same hardware
   and config as ginkgo. Added to the alias map in `customize.sh`.
 - **Updated:** `patches/README.md` and root `README.md` profile tables.
+
+## v5.0.2
+- **Fix (critical):** Devices using `icnss`/`icnss2` as the wlan0 driver (Snapdragon 600/700 series on SNOC/AHB bus, including SD665) were being classified as modular and had their driver unbound, causing an immediate kernel panic / reboot. Added a blocklist check at the top of `detect_driver_type()` — `icnss`, `icnss2`, `cnss`, `cnss2`, `wlan_platform` are now immediately classified as `builtin` before any other check runs.
+- **Fix:** Stats cards showing empty on Qualcomm devices. `wpa_cli` was called without a socket path but Qualcomm vendor `wpa_supplicant` uses a non-default socket under `/data/vendor/wifi/wpa/`. Stats method 1 now probes all known Qualcomm socket paths (`/data/vendor/wifi/wpa/wlan0`, `/data/vendor/wifi/wpa_supplicant/wlan0`, `/data/misc/wifi/sockets/wlan0`) before falling back to the default.
+- **New backend action:** `get_debug_info` — dumps driver sysfs paths, detection result, wpa_supplicant socket search results, and output from all stats methods. Useful for diagnosing issues on unseen devices.
+- **WebUI:** Added Debug button in Utilities that runs `get_debug_info` and prints results to the log box with colour coding.
 
 ## v5.0.1
 - **New patch:** `soc/sm6125/` — Snapdragon 665 (WCN3980 chipset). Tuned against a real Redmi Note 8 config. Key differences from sm7150 family: uses `gTxPowerCap` instead of `TxPower2g`/`TxPower5g`; `gRoamScanOffloadEnabled` not present on this driver; `gEnableModulatedDTIM` must not be set to 0 (firmware assert risk on WCN3980); WMM is off in stock and is enabled in both profiles for proper QoS.
