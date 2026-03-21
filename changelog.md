@@ -1,3 +1,6 @@
+## v5.1.2
+- **UI:** Improved dashboard visibility.
+
 ## v5.1.1
 - **UI:** Increased vertical padding across all panels, buttons, stat cells, and rows — elements were too short/cramped on device screens.
 - **UI:** Reduced top-sided layout feel — increased header, container, and dashboard padding evenly so content is balanced vertically.
