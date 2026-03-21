@@ -7,12 +7,12 @@
     <style>
         :root {
             --bg:          #020b18;
-            --bg-panel:    rgba(0, 20, 40, 0.85);
-            --bg-card:     rgba(0, 30, 60, 0.6);
-            --border:      rgba(0, 180, 255, 0.15);
-            --border-bright: rgba(0, 180, 255, 0.5);
+            --bg-panel:    rgba(0, 18, 36, 0.97);
+            --bg-card:     rgba(0, 25, 50, 0.95);
+            --border:      rgba(0, 180, 255, 0.45);
+            --border-bright: rgba(0, 180, 255, 0.85);
             --cyan:        #00b4ff;
-            --cyan-dim:    rgba(0, 180, 255, 0.5);
+            --cyan-dim:    rgba(0, 200, 255, 0.85);
             --cyan-glow:   rgba(0, 180, 255, 0.12);
             --green:       #00ff9d;
             --green-dim:   rgba(0, 255, 157, 0.5);
@@ -23,9 +23,9 @@
             --red:         #ff3860;
             --red-glow:    rgba(255, 56, 96, 0.12);
             --purple:      #c084fc;
-            --text:        rgba(180, 220, 255, 0.85);
+            --text:        rgba(200, 230, 255, 0.95);
             --text-bright: #e0f4ff;
-            --text-dim:    rgba(100, 160, 210, 0.5);
+            --text-dim:    rgba(140, 195, 235, 0.85);
             --mono:        'Share Tech Mono', monospace;
             --head:        'Orbitron', sans-serif;
         }
@@ -51,7 +51,7 @@
             background-size: cover;
             background-position: center top;
             background-repeat: no-repeat;
-            opacity: 0.55;
+            opacity: 0.18;
             pointer-events: none;
             z-index: 0;
         }
@@ -104,10 +104,10 @@
             right: 0;
             font-family: var(--mono);
             font-size: 0.6rem;
-            color: var(--cyan-dim);
+            color: var(--cyan);
             letter-spacing: 1.5px;
             background: var(--bg-card);
-            border: 1px solid var(--border);
+            border: 1px solid rgba(0, 200, 255, 0.6);
             border-radius: 3px;
             padding: 3px 8px;
             line-height: 1;
@@ -115,7 +115,7 @@
 
         .version-badge::before {
             content: 'v';
-            opacity: 0.5;
+            opacity: 0.75;
         }
 
         .header-title {
@@ -130,7 +130,7 @@
 
         .header-sub {
             font-size: 0.65rem;
-            color: var(--text-dim);
+            color: var(--text);
             letter-spacing: 4px;
             text-transform: uppercase;
             margin-top: 3px;
@@ -162,7 +162,7 @@
             font-size: 0.55rem;
             letter-spacing: 3px;
             text-transform: uppercase;
-            color: var(--cyan-dim);
+            color: var(--cyan);
             padding: 10px 14px 0;
         }
 
@@ -187,6 +187,7 @@
             font-family: var(--head);
             font-size: 0.7rem;
             letter-spacing: 2px;
+            border: 1px solid rgba(0, 180, 255, 0.6);
         }
 
         .status-dot {
@@ -209,7 +210,7 @@
             gap: 6px;
             font-size: 0.62rem;
             letter-spacing: 1px;
-            color: var(--text-dim);
+            color: var(--text-bright);
             border: 1px solid var(--border);
             background: var(--bg-card);
             border-radius: 3px;
@@ -247,7 +248,7 @@
             font-size: 0.55rem;
             letter-spacing: 2px;
             text-transform: uppercase;
-            color: var(--cyan-dim);
+            color: var(--cyan);
             display: block;
         }
 
@@ -288,7 +289,7 @@
 
         .patch-meta {
             font-size: 0.62rem;
-            color: var(--text-dim);
+            color: var(--text);
             margin-top: 2px;
             white-space: nowrap;
             overflow: hidden;
@@ -327,7 +328,7 @@
         .prof-btn .phint {
             font-family: var(--mono);
             font-size: 0.55rem;
-            opacity: 0.6;
+            opacity: 0.9;
             letter-spacing: 0;
             text-transform: none;
             margin-left: 2px;
@@ -350,11 +351,11 @@
             box-shadow: 0 0 12px var(--amber-glow), inset 0 0 8px var(--amber-glow);
         }
 
-        .prof-btn.stock { border-color: var(--border); color: var(--text-dim); }
+        .prof-btn.stock { border-color: var(--border); color: var(--text); }
         .prof-btn.stock.active {
-            background: rgba(180,220,255,0.05);
-            border-color: var(--text-dim);
-            color: var(--text);
+            background: rgba(180,220,255,0.1);
+            border-color: var(--text);
+            color: var(--text-bright);
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -489,13 +490,13 @@
         #console-output::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
 
         .log-line    { display: block; }
-        .log-ts      { color: var(--text-dim); margin-right: 6px; }
+        .log-ts      { color: rgba(100, 170, 220, 0.9); margin-right: 6px; }
         .log-info    { color: var(--cyan); }
         .log-success { color: var(--green); }
         .log-warning { color: var(--amber); }
         .log-error   { color: var(--red); }
         .log-builtin { color: var(--purple); }
-        .log-system  { color: var(--text-dim); }
+        .log-system  { color: rgba(120, 180, 220, 0.85); }
 
         /* Scanning line animation on log panel */
         .panel.log-panel {
