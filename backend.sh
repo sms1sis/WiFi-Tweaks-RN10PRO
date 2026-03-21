@@ -18,45 +18,92 @@ log_json() {
 detect_driver_type() {
     DEVICE_PATH="${WLAN_SYS}/device"
 
-    # Check 1: /module symlink -> definitely loadable
-    [ -L "${DEVICE_PATH}/driver/module" ] && echo "modular" && return
-
-    # Check 2: driver name in /sys/module
+    # Resolve driver name first — needed by multiple checks below
     local driver_name=""
     [ -L "${DEVICE_PATH}/driver" ] && \
         driver_name=$(basename "$(readlink "${DEVICE_PATH}/driver" 2>/dev/null)" 2>/dev/null)
 
-    if [ -n "$driver_name" ] && [ "$driver_name" != "." ]; then
-        [ -d "/sys/module/${driver_name}" ] && echo "modular" && return
+    # ---- BLOCKLIST: platform glue / connectivity subsystem drivers ----
+    # These appear in /sys/module but are NOT the real Wi-Fi driver.
+    # They are platform bus glue — unbinding them causes a kernel panic.
+    #   icnss / icnss2  : Qualcomm SNOC/AHB integrated connectivity subsystem
+    #   cnss  / cnss2   : Qualcomm PCIe connectivity subsystem
+    #   wlan_platform   : Generic Qualcomm platform glue
+    case "$driver_name" in
+        icnss|icnss2|cnss|cnss2|wlan_platform)
+            echo "builtin"
+            return
+            ;;
+    esac
+
+    # Check 1: /module symlink -> definitely a loadable .ko
+    [ -L "${DEVICE_PATH}/driver/module" ] && echo "modular" && return
+
+    # Check 2: /proc/config.gz — definitive source of truth
+    # CONFIG_X=y -> compiled into kernel (builtin)
+    # CONFIG_X=m -> loadable module (modular)
+    if [ -n "$driver_name" ] && [ -r "/proc/config.gz" ]; then
+        local cfg_key=""
+        case "$driver_name" in
+            wlan|qca_cld3_wlan|qca_cld_wlan) cfg_key="CONFIG_WLAN" ;;
+            ath10k*)                          cfg_key="CONFIG_ATH10K" ;;
+            ath11k*)                          cfg_key="CONFIG_ATH11K" ;;
+            brcmfmac)                         cfg_key="CONFIG_BRCMFMAC" ;;
+            bcmdhd)                           cfg_key="CONFIG_BCMDHD" ;;
+            iwlwifi)                          cfg_key="CONFIG_IWLWIFI" ;;
+        esac
+        if [ -n "$cfg_key" ]; then
+            local cfg_val
+            cfg_val=$(zcat /proc/config.gz 2>/dev/null | grep "^${cfg_key}=" | cut -d= -f2)
+            case "$cfg_val" in
+                y) echo "builtin";  return ;;
+                m) echo "modular";  return ;;
+            esac
+        fi
     fi
 
-    # Check 3: driver name in /proc/modules
+    # Check 3: /sys/module/<name>/sections directory
+    # The kernel only creates sections/ for externally loaded .ko modules.
+    # It is absent for drivers compiled in with CONFIG=y.
+    # /sys/module/<name> itself exists for BOTH cases, so its mere presence
+    # is not sufficient — this was the bug that caused the reboot on icnss.
+    if [ -n "$driver_name" ] && [ "$driver_name" != "." ]; then
+        if [ -d "/sys/module/${driver_name}" ]; then
+            if [ -d "/sys/module/${driver_name}/sections" ]; then
+                echo "modular" && return   # sections/ present -> real .ko
+            else
+                echo "builtin" && return   # no sections/ -> compiled in
+            fi
+        fi
+    fi
+
+    # Check 4: /proc/modules — only lists dynamically loaded modules.
+    # If driver_name appears here it is definitely a loaded .ko.
     if [ -n "$driver_name" ] && [ -f "/proc/modules" ]; then
         grep -q "^${driver_name} " /proc/modules 2>/dev/null && echo "modular" && return
     fi
 
-    # Check 4: common Wi-Fi module names in /proc/modules
-    for kmod in qca_cld3_wlan wlan qca6390 wl bcmdhd ath10k_pci ath11k brcmfmac mt7921e iwlwifi; do
+    # Check 5: scan known real Wi-Fi loadable module names in /proc/modules
+    for kmod in qca_cld3_wlan qca_cld_wlan qca6390 wl bcmdhd ath10k_pci ath11k brcmfmac mt7921e iwlwifi; do
         grep -q "^${kmod} " /proc/modules 2>/dev/null && echo "modular" && return
     done
 
-    # Check 5: driver path contains built-in hint
-    if [ -L "${DEVICE_PATH}/driver" ]; then
-        local drv_link
-        drv_link=$(readlink -f "${DEVICE_PATH}/driver" 2>/dev/null)
-        case "$drv_link" in
-            *built-in*|*platform*) echo "builtin"; return ;;
-        esac
-    fi
-
     # Check 6: subsystem bus type
+    # Qualcomm icnss/cnss devices always sit on platform/soc bus
     if [ -L "${DEVICE_PATH}/subsystem" ]; then
         local subsys
         subsys=$(basename "$(readlink "${DEVICE_PATH}/subsystem" 2>/dev/null)" 2>/dev/null)
         case "$subsys" in
-            platform|soc)        echo "builtin";  return ;;
-            pci|usb|sdio|mmc)   echo "modular"; return ;;
+            platform|soc)     echo "builtin";  return ;;
+            pci|usb|sdio|mmc) echo "modular";  return ;;
         esac
+    fi
+
+    # Check 7: lsmod — empty output (header only) means no loadable modules
+    if command -v lsmod >/dev/null 2>&1; then
+        local mod_count
+        mod_count=$(lsmod 2>/dev/null | tail -n +2 | wc -l)
+        [ "$mod_count" -eq 0 ] && echo "builtin" && return
     fi
 
     echo "unknown"
@@ -275,7 +322,78 @@ case "$1" in
     "stats")
         RSSI="--" SPEED="--" FREQ="--" SSID="--"
 
-        if command -v iw >/dev/null 2>&1; then
+        # --- Method 1: wpa_cli ---
+        # Qualcomm vendor wpa_supplicant uses a non-default socket path.
+        # Try all known socket locations before giving up.
+        if command -v wpa_cli >/dev/null 2>&1; then
+            WPA_STATUS="" WPA_SIGNAL=""
+            for WPA_SOCK in \
+                "/data/vendor/wifi/wpa/wlan0" \
+                "/data/vendor/wifi/wpa_supplicant/wlan0" \
+                "/data/misc/wifi/sockets/wlan0" \
+                "/var/run/wpa_supplicant/wlan0"; do
+                if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
+                    WPA_DIR=$(dirname "$WPA_SOCK")
+                    WPA_STATUS=$(wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" status 2>/dev/null)
+                    WPA_SIGNAL=$(wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>/dev/null)
+                    break
+                fi
+            done
+            # Fallback: try without explicit socket path (works on some ROMs)
+            if [ -z "$WPA_STATUS" ]; then
+                WPA_STATUS=$(wpa_cli -i "$WLAN_DEV" status 2>/dev/null)
+                WPA_SIGNAL=$(wpa_cli -i "$WLAN_DEV" signal_poll 2>/dev/null)
+            fi
+            if [ -n "$WPA_STATUS" ]; then
+                SSID_RAW=$(printf '%s' "$WPA_STATUS" | grep "^ssid=" | cut -d= -f2-)
+                FREQ_RAW=$(printf '%s' "$WPA_STATUS" | grep "^freq=" | cut -d= -f2)
+                [ -n "$SSID_RAW" ] && SSID="$SSID_RAW"
+                [ -n "$FREQ_RAW" ] && FREQ="${FREQ_RAW} MHz"
+            fi
+            if [ -n "$WPA_SIGNAL" ]; then
+                RSSI_RAW=$(printf '%s' "$WPA_SIGNAL" | grep "^RSSI=" | cut -d= -f2)
+                SPEED_RAW=$(printf '%s' "$WPA_SIGNAL" | grep "^LINKSPEED=" | cut -d= -f2)
+                [ -n "$RSSI_RAW" ]  && RSSI="${RSSI_RAW} dBm"
+                [ -n "$SPEED_RAW" ] && SPEED="${SPEED_RAW} Mbps"
+            fi
+        fi
+
+        # --- Method 2: sysfs (always available, no tools needed) ---
+        # RSSI via sysfs if wpa_cli did not get it
+        if [ "$RSSI" = "--" ]; then
+            local sysfs_rssi="/sys/class/net/${WLAN_DEV}/statistics"
+            # Try Android thermal/wifi sysfs path used on many Qualcomm ROMs
+            for rssi_path in                 "/sys/class/net/${WLAN_DEV}/link_quality"                 "/proc/net/wireless"; do
+                if [ -r "$rssi_path" ]; then
+                    RSSI_RAW=$(grep "${WLAN_DEV}" "$rssi_path" 2>/dev/null | awk '{print $4}' | cut -d. -f1)
+                    [ -n "$RSSI_RAW" ] && RSSI="${RSSI_RAW} dBm" && break
+                fi
+            done
+        fi
+
+        # --- Method 3: dumpsys wifi (Android framework fallback) ---
+        if [ "$RSSI" = "--" ] || [ "$SSID" = "--" ]; then
+            if command -v dumpsys >/dev/null 2>&1; then
+                DUMP=$(dumpsys wifi 2>/dev/null | grep -A5 "mWifiInfo" | head -10)
+                if [ -n "$DUMP" ]; then
+                    [ "$RSSI" = "--" ] && {
+                        RSSI_RAW=$(printf '%s' "$DUMP" | grep -o "rssi: -[0-9]*" | head -1 | cut -d' ' -f2)
+                        [ -n "$RSSI_RAW" ] && RSSI="${RSSI_RAW} dBm"
+                    }
+                    [ "$SSID" = "--" ] && {
+                        SSID_RAW=$(printf '%s' "$DUMP" | grep -o 'SSID: [^,]*' | head -1 | cut -d' ' -f2-)
+                        [ -n "$SSID_RAW" ] && SSID="$SSID_RAW"
+                    }
+                    [ "$SPEED" = "--" ] && {
+                        SPEED_RAW=$(printf '%s' "$DUMP" | grep -o "linkSpeed [0-9]*" | head -1 | awk '{print $2}')
+                        [ -n "$SPEED_RAW" ] && SPEED="${SPEED_RAW} Mbps"
+                    }
+                fi
+            fi
+        fi
+
+        # --- Method 4: iw (available on some custom ROMs / rooted devices) ---
+        if [ "$RSSI" = "--" ] && command -v iw >/dev/null 2>&1; then
             LINK=$(iw dev "$WLAN_DEV" link 2>/dev/null)
             if [ -n "$LINK" ]; then
                 RSSI_RAW=$(printf '%s' "$LINK" | grep -o "signal: -[0-9]*" | awk '{print $2}')
@@ -287,11 +405,6 @@ case "$1" in
                 [ -n "$FREQ_RAW" ]  && FREQ="${FREQ_RAW} MHz"
                 [ -n "$SSID_RAW" ]  && SSID="$SSID_RAW"
             fi
-        fi
-
-        if [ "$RSSI" = "--" ] && [ -r "/proc/net/wireless" ]; then
-            RSSI_RAW=$(grep "${WLAN_DEV}" /proc/net/wireless | awk '{print $4}' | cut -d. -f1)
-            [ -n "$RSSI_RAW" ] && RSSI="${RSSI_RAW} dBm"
         fi
 
         printf '{"rssi":"%s","speed":"%s","freq":"%s","ssid":"%s"}\n' \
@@ -342,12 +455,96 @@ case "$1" in
         ;;
 
     # -----------------------------------------------------------------------
+    "get_driver_info")
+        # Detailed driver evidence dump — for debugging detection on new devices
+        DEVICE_PATH="${WLAN_SYS}/device"
+        DNAME=$(get_driver_name)
+        DTYPE=$(detect_driver_type)
+
+        # /proc/config.gz
+        KCONF_WLAN="unavailable"
+        KCONF_DRIVER="unavailable"
+        if [ -f "/proc/config.gz" ]; then
+            KCONF_WLAN=$(zcat /proc/config.gz 2>/dev/null | grep "^CONFIG_WLAN=" | head -1 || echo "not_found")
+            CFG_KEY=$(printf '%s' "$DNAME" | tr '[:lower:]' '[:upper:]')
+            KCONF_DRIVER=$(zcat /proc/config.gz 2>/dev/null | grep "^CONFIG_${CFG_KEY}=" | head -1 || echo "not_found")
+        fi
+
+        # /sys/module sections
+        SECTIONS="no_module_dir"
+        [ -d "/sys/module/${DNAME}" ] && {
+            [ -d "/sys/module/${DNAME}/sections" ] && SECTIONS="present" || SECTIONS="absent"
+        }
+
+        # /proc/modules
+        PROC_MOD="not_found"
+        [ -f "/proc/modules" ] && grep -q "^${DNAME} " /proc/modules 2>/dev/null && PROC_MOD="found"
+
+        # /module symlink
+        MOD_SYMLINK="absent"
+        [ -L "${DEVICE_PATH}/driver/module" ] && MOD_SYMLINK="present"
+
+        # subsystem
+        SUBSYS="unknown"
+        [ -L "${DEVICE_PATH}/subsystem" ] &&             SUBSYS=$(basename "$(readlink "${DEVICE_PATH}/subsystem" 2>/dev/null)" 2>/dev/null)
+
+        # lsmod empty?
+        LSMOD_EMPTY="unknown"
+        [ -f "/proc/modules" ] && {
+            [ -s "/proc/modules" ] && LSMOD_EMPTY="no" || LSMOD_EMPTY="yes"
+        }
+
+        printf '{"status":"success","driver_name":"%s","driver_type":"%s","kconf_wlan":"%s","kconf_driver":"%s","sys_module_sections":"%s","proc_modules_entry":"%s","module_symlink":"%s","subsystem":"%s","lsmod_empty":"%s"}
+'             "$DNAME" "$DTYPE" "$KCONF_WLAN" "$KCONF_DRIVER" "$SECTIONS"             "$PROC_MOD" "$MOD_SYMLINK" "$SUBSYS" "$LSMOD_EMPTY"
+        ;;
+
+    # -----------------------------------------------------------------------
     "get_mode")
         if [ -f "$MODDIR/mode_status.txt" ]; then
             printf '{"mode":"%s"}\n' "$(cat "$MODDIR/mode_status.txt")"
         else
             printf '{"mode":"stock"}\n'
         fi
+        ;;
+
+    # -----------------------------------------------------------------------
+    "get_debug_info")
+        # Dumps sysfs driver info and tests every stats method.
+        # Run this when stats are empty or driver detection seems wrong.
+        printf '=== Driver sysfs ===\n'
+        printf 'driver symlink : %s\n' "$(readlink "${WLAN_SYS}/device/driver" 2>/dev/null || echo 'not found')"
+        printf 'module symlink : %s\n' "$(readlink "${WLAN_SYS}/device/driver/module" 2>/dev/null || echo 'not found')"
+        printf 'subsystem      : %s\n' "$(basename "$(readlink "${WLAN_SYS}/device/subsystem" 2>/dev/null)" 2>/dev/null || echo 'not found')"
+        printf 'detect_result  : %s\n' "$(detect_driver_type)"
+        printf '\n=== wpa_supplicant socket search ===\n'
+        for WPA_SOCK in \
+            "/data/vendor/wifi/wpa/wlan0" \
+            "/data/vendor/wifi/wpa_supplicant/wlan0" \
+            "/data/misc/wifi/sockets/wlan0" \
+            "/var/run/wpa_supplicant/wlan0"; do
+            if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
+                printf 'FOUND  : %s\n' "$WPA_SOCK"
+            else
+                printf 'absent : %s\n' "$WPA_SOCK"
+            fi
+        done
+        printf '\n=== wpa_cli signal_poll (vendor socket) ===\n'
+        for WPA_SOCK in \
+            "/data/vendor/wifi/wpa/wlan0" \
+            "/data/vendor/wifi/wpa_supplicant/wlan0" \
+            "/data/misc/wifi/sockets/wlan0"; do
+            if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
+                WPA_DIR=$(dirname "$WPA_SOCK")
+                wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>&1 | head -6
+                break
+            fi
+        done
+        printf '\n=== /proc/net/wireless ===\n'
+        cat /proc/net/wireless 2>/dev/null || printf 'not available\n'
+        printf '\n=== iw dev wlan0 link ===\n'
+        iw dev "$WLAN_DEV" link 2>/dev/null || printf 'iw not available or not connected\n'
+        printf '\n=== dumpsys wifi (mWifiInfo) ===\n'
+        dumpsys wifi 2>/dev/null | grep -A5 "mWifiInfo" | head -8 || printf 'dumpsys not available\n'
         ;;
 
     # -----------------------------------------------------------------------
