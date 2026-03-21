@@ -1,0 +1,45 @@
+# Snapdragon 665 (sm6125) — Balanced Profile
+# Chipset: WCN3980 (2x2 802.11ac, 2.4GHz + 5GHz)
+# Verified against: Redmi Note 8 (ginkgo) WCNSS_qcom_cfg.ini
+
+# Moderate power-saving
+gEnableBmps=1
+gEnableImps=1
+gDataInactivityTimeout=200
+gOptimizedPowerManagement=1
+
+# DTIM: 2 is a good middle ground (sleep 2 beacon intervals)
+# Stock is 3 which is quite aggressive
+gEnableModulatedDTIM=2
+gMaxLIModulatedDTIM=2
+
+# Slight TX power boost over stock (stock is commented out / driver default ~18)
+gTxPowerCap=18
+
+# 2.4GHz channel bonding — not in stock, add it
+gChannelBondingMode24GHz=1
+gChannelBondingMode5GHz=1
+
+# Roaming — keep enabled with slightly relaxed thresholds
+FastRoamEnabled=1
+gNeighborScanTimerPeriod=300
+gNeighborLookupThreshold=80
+gRoamBmissFirstBcnt=10
+gRoamBmissFinalBcnt=20
+gper_roam_enabled=3
+
+# WMM on for QoS
+WmmIsEnabled=1
+
+# Keep multicast/broadcast filtering on (saves battery on idle)
+McastBcastFilter=3
+
+# Scan timing — stock values are fine for balanced
+gActiveMaxChannelTime=40
+gActiveMinChannelTime=20
+active_max_channel_time_2g=40
+adaptive_dwell_mode_enabled=1
+hostscan_adaptive_dwell_mode=1
+
+# SIFS burst on
+gEnableSifsBurst=3

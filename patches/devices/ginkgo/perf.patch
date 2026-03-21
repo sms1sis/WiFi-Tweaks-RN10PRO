@@ -1,0 +1,47 @@
+# Redmi Note 8 (ginkgo) — Performance Profile
+# SoC: Snapdragon 665 (sm6125) / Chipset: WCN3980
+# Config verified from: /vendor/etc/wifi/WCNSS_qcom_cfg.ini
+#
+# This patch is identical to soc/sm6125/perf.patch but kept here
+# as a device-level override slot for ginkgo-specific future tuning.
+# Inherits all sm6125 reasoning — see soc/sm6125/perf.patch comments.
+
+# Disable power-saving
+gEnableBmps=0
+gEnableImps=0
+gDataInactivityTimeout=0
+gOptimizedPowerManagement=0
+
+# DTIM — do NOT set to 0 on WCN3980 (firmware assert risk)
+gEnableModulatedDTIM=1
+gMaxLIModulatedDTIM=1
+
+# TX power — WCN3980 safe max
+gTxPowerCap=20
+
+# Channel bonding
+gChannelBondingMode24GHz=1
+gChannelBondingMode5GHz=1
+
+# Roaming off — reduces scan interruptions during gaming/streaming
+FastRoamEnabled=0
+gNeighborScanTimerPeriod=500
+gNeighborLookupThreshold=75
+gRoamBmissFirstBcnt=15
+gRoamBmissFinalBcnt=25
+gper_roam_enabled=0
+
+# WMM on — stock is off, enabling improves latency for video/gaming traffic
+WmmIsEnabled=1
+
+# No mcast/bcast filtering in perf mode
+McastBcastFilter=0
+
+# Faster scan
+gActiveMaxChannelTime=20
+gActiveMinChannelTime=10
+active_max_channel_time_2g=20
+adaptive_dwell_mode_enabled=0
+hostscan_adaptive_dwell_mode=0
+
+gEnableSifsBurst=3

@@ -1,0 +1,55 @@
+# Snapdragon 665 (sm6125) — Performance Profile
+# Chipset: WCN3980 (2x2 802.11ac, 2.4GHz + 5GHz)
+# Verified against: Redmi Note 8 (ginkgo) WCNSS_qcom_cfg.ini
+#
+# Key differences from sm7150 family:
+#   - Uses gTxPowerCap instead of TxPower2g/TxPower5g
+#   - gRoamScanOffloadEnabled not present on this driver
+#   - WMM is off in stock — enabling it improves QoS for video/gaming
+#   - gEnableModulatedDTIM must be set to 1 (not 0) — 0 can cause firmware assert on WCN3980
+
+# Disable power-saving modes
+gEnableBmps=0
+gEnableImps=0
+gDataInactivityTimeout=0
+gOptimizedPowerManagement=0
+
+# DTIM: set to 1 (wake every beacon) — do NOT set to 0 on WCN3980
+gEnableModulatedDTIM=1
+gMaxLIModulatedDTIM=1
+
+# TX power cap — WCN3980 max safe value is 20 dBm
+# Stock has this commented out (driver default ~18). 20 gives headroom without
+# violating regulatory limits on most regions.
+gTxPowerCap=20
+
+# Enable 2.4GHz channel bonding (40MHz) — not in stock, add it
+gChannelBondingMode24GHz=1
+# 5GHz bonding already on in stock
+gChannelBondingMode5GHz=1
+
+# Roaming — disable background scan to reduce interruptions
+# (gRoamScanOffloadEnabled not supported on this driver)
+FastRoamEnabled=0
+gNeighborScanTimerPeriod=500
+gNeighborLookupThreshold=75
+gRoamBmissFirstBcnt=15
+gRoamBmissFinalBcnt=25
+gper_roam_enabled=0
+
+# Enable WMM for QoS (off in stock — helps gaming and video streaming)
+WmmIsEnabled=1
+
+# Multicast/broadcast filter off in perf mode (stock=3, filters everything)
+# 0 = no filtering — ensures no packets are dropped
+McastBcastFilter=0
+
+# Scan — reduce active scan time to minimise interruption during use
+gActiveMaxChannelTime=20
+gActiveMinChannelTime=10
+active_max_channel_time_2g=20
+adaptive_dwell_mode_enabled=0
+hostscan_adaptive_dwell_mode=0
+
+# SIFS burst — already 3 in stock, keep it
+gEnableSifsBurst=3

@@ -1,0 +1,42 @@
+# Redmi Note 8 (ginkgo) — Balanced Profile
+# SoC: Snapdragon 665 (sm6125) / Chipset: WCN3980
+
+# Moderate power-saving
+gEnableBmps=1
+gEnableImps=1
+gDataInactivityTimeout=200
+gOptimizedPowerManagement=1
+
+# DTIM 2 — less aggressive than stock (3), better latency with decent battery
+gEnableModulatedDTIM=2
+gMaxLIModulatedDTIM=2
+
+# Slight boost over stock default
+gTxPowerCap=18
+
+# Channel bonding
+gChannelBondingMode24GHz=1
+gChannelBondingMode5GHz=1
+
+# Roaming on with sensible thresholds
+FastRoamEnabled=1
+gNeighborScanTimerPeriod=300
+gNeighborLookupThreshold=80
+gRoamBmissFirstBcnt=10
+gRoamBmissFinalBcnt=20
+gper_roam_enabled=3
+
+# WMM on
+WmmIsEnabled=1
+
+# Keep mcast/bcast filtering (battery saving on idle)
+McastBcastFilter=3
+
+# Stock scan timing
+gActiveMaxChannelTime=40
+gActiveMinChannelTime=20
+active_max_channel_time_2g=40
+adaptive_dwell_mode_enabled=1
+hostscan_adaptive_dwell_mode=1
+
+gEnableSifsBurst=3
