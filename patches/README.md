@@ -57,9 +57,11 @@ TxPower2g=17
 | Path                         | Covers                                      |
 |------------------------------|---------------------------------------------|
 | `devices/sweet/`             | Redmi Note 10 Pro (sweet)                   |
-| `devices/mojito/`            | Redmi Note 10 (mojito / sunny)              |
-| `soc/sm7150/`                | Snapdragon 730/730G/732G                    |
-| `soc/sm6150/`                | Snapdragon 675/710/712                      |
-| `soc/sm8150/`                | Snapdragon 855/855+                         |
-| `soc/sm8250/`                | Snapdragon 865/865+                         |
+| `devices/mojito/`            | Redmi Note 10 / sunny (alias supported)     |
+| `devices/ginkgo/`            | Redmi Note 8 / willow (alias supported)     |
+| `soc/sm7150/`                | Snapdragon 730 / 730G / 732G                |
+| `soc/sm6150/`                | Snapdragon 675 / 710 / 712                  |
+| `soc/sm6125/`                | Snapdragon 665 (WCN3980 chipset)            |
+| `soc/sm8150/`                | Snapdragon 855 / 855+                       |
+| `soc/sm8250/`                | Snapdragon 865 / 865+                       |
 | `generic_qcom/`              | Any Qualcomm device (safe conservative vals)|

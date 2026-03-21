@@ -1,5 +1,26 @@
 # WiFi Config Switcher — Changelog
 
+## v5.0.1
+- **New patch: `devices/ginkgo/`** — Redmi Note 8 (Snapdragon 665 / sm6125 / WCN3980).
+  Device-specific patch derived from analysing the stock `WCNSS_qcom_cfg.ini`.
+  Both files (`/vendor/etc/wifi/` and `/vendor/firmware/wlan/qca_cld/`) confirmed identical.
+- **New patch: `soc/sm6125/`** — SoC-level patch covering all Snapdragon 665 devices
+  (Redmi Note 8T, Samsung Galaxy A21s, Motorola One Fusion, and others).
+- **Important: WCN3980 chipset differences** — `TxPower2g`, `TxPower5g`, and
+  `gChannelBondingMode24GHz` are **not valid params** on WCN3980. These keys are
+  absent from the stock config and must not be added. Patches for this chipset use
+  `gEnableModulatedDTIM`, `gOptimizedPowerManagement`, `gEnableMemDeepSleep`,
+  `gRoamBmissFirstBcnt/FinalBcnt`, and bus bandwidth thresholds instead.
+- **Alias: `willow` → `ginkgo`** — Redmi Note 8T (willow) shares the same hardware
+  and config as ginkgo. Added to the alias map in `customize.sh`.
+- **Updated:** `patches/README.md` and root `README.md` profile tables.
+
+## v5.0.1
+- **New patch:** `soc/sm6125/` — Snapdragon 665 (WCN3980 chipset). Tuned against a real Redmi Note 8 config. Key differences from sm7150 family: uses `gTxPowerCap` instead of `TxPower2g`/`TxPower5g`; `gRoamScanOffloadEnabled` not present on this driver; `gEnableModulatedDTIM` must not be set to 0 (firmware assert risk on WCN3980); WMM is off in stock and is enabled in both profiles for proper QoS.
+- **New patch:** `devices/ginkgo/` — Redmi Note 8 (device-level, verified config). Willow alias supported (`willow` → `ginkgo`).
+- **Fix:** Added `willow` → `ginkgo` device alias in `customize.sh` and `backend.sh` runtime fallback.
+- **Docs:** Updated profile tables in `README.md` and `patches/README.md` with sm6125 and ginkgo entries.
+
 ## v5.0.0
 > Generic Qualcomm Edition — patch-based architecture
 

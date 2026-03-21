@@ -81,8 +81,10 @@ The resolved path is written to `patch_dir.txt` at install time so the backend n
 |---|---|
 | `patches/devices/sweet/` | Redmi Note 10 Pro (sweet) |
 | `patches/devices/mojito/` | Redmi Note 10 / sunny (alias supported) |
+| `patches/devices/ginkgo/` | Redmi Note 8 / willow (alias supported) |
 | `patches/soc/sm7150/` | Snapdragon 730 / 730G / 732G |
 | `patches/soc/sm6150/` | Snapdragon 675 / 710 / 712 |
+| `patches/soc/sm6125/` | Snapdragon 665 — WCN3980 chipset |
 | `patches/soc/sm8150/` | Snapdragon 855 / 855+ |
 | `patches/soc/sm8250/` | Snapdragon 865 / 865+ |
 | `patches/generic_qcom/` | Any Qualcomm device — conservative safe values |
@@ -182,12 +184,16 @@ WiFi-Config-Switcher/
     │   ├── sweet/          ← Redmi Note 10 Pro
     │   │   ├── perf.patch
     │   │   └── balanced.patch
-    │   └── mojito/         ← Redmi Note 10 / sunny
+    │   ├── mojito/         ← Redmi Note 10 / sunny
+    │   │   ├── perf.patch
+    │   │   └── balanced.patch
+    │   └── ginkgo/         ← Redmi Note 8 / willow
     │       ├── perf.patch
     │       └── balanced.patch
     ├── soc/
     │   ├── sm7150/         ← Snapdragon 730G / 732G
     │   ├── sm6150/         ← Snapdragon 675 / 710 / 712
+    │   ├── sm6125/         ← Snapdragon 665 (WCN3980 — no TxPower params)
     │   ├── sm8150/         ← Snapdragon 855 / 855+
     │   └── sm8250/         ← Snapdragon 865 / 865+
     └── generic_qcom/       ← Safe fallback for any Qualcomm device
