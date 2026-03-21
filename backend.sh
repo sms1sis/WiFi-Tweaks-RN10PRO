@@ -122,28 +122,29 @@ get_driver_name() {
 # During runtime the module overlay is already mounted by Magisk/KSU,
 # so we just need to find the live (possibly overlaid) config.
 find_wifi_config() {
-    # If customize.sh recorded the relative path, use that first.
-    # The live overlaid path (e.g. /vendor/etc/wifi/WCNSS_qcom_cfg.ini)
-    # is what the system reads — KSU/Magisk mounts $MODDIR/system/<rel>
-    # over /<rel> at boot, so editing the live path edits the overlay file.
+    # IMPORTANT: Always patch the overlay source file inside the module tree,
+    # NOT the live mounted path at /<rel>.
+    #
+    # KSU/Magisk bind-mounts $MODDIR/system/<rel> over /<rel> at boot.
+    # On some devices (e.g. f2fs block device mounts) the live path
+    # /<rel> resolves to the original read-only partition block device,
+    # not the overlay file — so patching /<rel> modifies the wrong file.
+    # The overlay source at $MODDIR/system/<rel> is always the correct target.
+
     if [ -f "$MODDIR/config_rel_path.txt" ]; then
         local rel
         rel=$(cat "$MODDIR/config_rel_path.txt")
 
-        # 1. Live overlaid path — preferred, this IS the overlay file when mounted
-        local live="/${rel}"
-        [ -f "$live" ] && echo "$live" && return
-
-        # 2. Overlay source inside module (system/ prefix — correct KSU layout)
+        # 1. Overlay source (system/ prefix) — always patch this one
         local overlay_system="$MODDIR/system/${rel}"
         [ -f "$overlay_system" ] && echo "$overlay_system" && return
 
-        # 3. Legacy incorrect path (vendor/ without system/ prefix) — migration
+        # 2. Legacy incorrect path (pre-v5.0.4 installs without system/ prefix)
         local overlay_legacy="$MODDIR/${rel}"
         [ -f "$overlay_legacy" ] && echo "$overlay_legacy" && return
     fi
 
-    # Fallback search across all known vendor paths
+    # Fallback: search live paths (covers devices without config_rel_path.txt)
     for p in \
         /vendor/etc/wifi/WCNSS_qcom_cfg.ini \
         /system/vendor/etc/wifi/WCNSS_qcom_cfg.ini \
@@ -467,6 +468,12 @@ case "$1" in
         ;;
 
     # -----------------------------------------------------------------------
+    "get_version")
+        VERSION=$(grep "^version=" "$MODDIR/module.prop" 2>/dev/null | cut -d= -f2)
+        [ -z "$VERSION" ] && VERSION="unknown"
+        printf '{"status":"success","version":"%s"}\n' "$VERSION"
+        ;;
+
     "get_mode")
         if [ -f "$MODDIR/mode_status.txt" ]; then
             printf '{"mode":"%s"}\n' "$(cat "$MODDIR/mode_status.txt")"
