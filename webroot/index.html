@@ -3,362 +3,517 @@
 <head>
     <title>Wi-Fi Config Tuner</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark:      #1a1b26;
-            --bg-card:      rgba(36, 40, 59, 0.7);
-            --accent-primary:   #7aa2f7;
-            --accent-secondary: #bb9af7;
-            --accent-success:   #9ece6a;
-            --accent-warning:   #e0af68;
-            --accent-danger:    #f7768e;
-            --accent-info:      #2ac3de;
-            --text-main:    #a9b1d6;
-            --text-bright:  #c0caf5;
-            --log-info:     #7aa2f7;
-            --log-success:  #9ece6a;
-            --log-warning:  #e0af68;
-            --log-error:    #f7768e;
-            --log-builtin:  #bb9af7;
-            --log-system:   #565f89;
+            --bg:          #020b18;
+            --bg-panel:    rgba(0, 20, 40, 0.85);
+            --bg-card:     rgba(0, 30, 60, 0.6);
+            --border:      rgba(0, 180, 255, 0.15);
+            --border-bright: rgba(0, 180, 255, 0.5);
+            --cyan:        #00b4ff;
+            --cyan-dim:    rgba(0, 180, 255, 0.5);
+            --cyan-glow:   rgba(0, 180, 255, 0.12);
+            --green:       #00ff9d;
+            --green-dim:   rgba(0, 255, 157, 0.5);
+            --green-glow:  rgba(0, 255, 157, 0.1);
+            --amber:       #ffb300;
+            --amber-dim:   rgba(255, 179, 0, 0.5);
+            --amber-glow:  rgba(255, 179, 0, 0.1);
+            --red:         #ff3860;
+            --red-glow:    rgba(255, 56, 96, 0.12);
+            --purple:      #c084fc;
+            --text:        rgba(180, 220, 255, 0.85);
+            --text-bright: #e0f4ff;
+            --text-dim:    rgba(100, 160, 210, 0.5);
+            --mono:        'Share Tech Mono', monospace;
+            --head:        'Orbitron', sans-serif;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            margin: 0; padding: 0;
+            font-family: var(--mono);
+            background: var(--bg);
+            color: var(--text);
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        #dashboard { flex: 1; overflow-y: auto; padding: 10px; }
-        @media (min-width: 600px) { #dashboard { padding: 30px; } }
+        /* Background art + grid overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4MDAgNjAwIiB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCI+CiAgPGRlZnM+CiAgICA8cmFkaWFsR3JhZGllbnQgaWQ9InJnMSIgY3g9IjUwJSIgY3k9IjQ1JSIgcj0iNTUlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgICBzdG9wLWNvbG9yPSIjMDAzYTVjIiBzdG9wLW9wYWNpdHk9IjAuOSIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMDBkMWEiIHN0b3Atb3BhY2l0eT0iMSIvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICAgIDxyYWRpYWxHcmFkaWVudCBpZD0icmcyIiBjeD0iNTAlIiBjeT0iNDUlIiByPSI0MCUiPgogICAgICA8c3RvcCBvZmZzZXQ9IjAlIiAgIHN0b3AtY29sb3I9IiMwMGI0ZmYiIHN0b3Atb3BhY2l0eT0iMC4wNyIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMGI0ZmYiIHN0b3Atb3BhY2l0eT0iMCIvPgogICAgPC9yYWRpYWxHcmFkaWVudD4KICA8L2RlZnM+CgogIDwhLS0gQmFzZSBmaWxsIC0tPgogIDxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iNjAwIiBmaWxsPSJ1cmwoI3JnMSkiLz4KICA8cmVjdCB3aWR0aD0iODAwIiBoZWlnaHQ9IjYwMCIgZmlsbD0idXJsKCNyZzIpIi8+CgogIDwhLS0gR3JpZCBsaW5lcyAtIGhvcml6b250YWwgLS0+CiAgPGcgc3Ryb2tlPSIjMDBiNGZmIiBzdHJva2Utb3BhY2l0eT0iMC4wNiIgc3Ryb2tlLXdpZHRoPSIwLjUiPgogICAgPGxpbmUgeDE9IjAiIHkxPSI2MCIgIHgyPSI4MDAiIHkyPSI2MCIvPgogICAgPGxpbmUgeDE9IjAiIHkxPSIxMjAiIHgyPSI4MDAiIHkyPSIxMjAiLz4KICAgIDxsaW5lIHgxPSIwIiB5MT0iMTgwIiB4Mj0iODAwIiB5Mj0iMTgwIi8+CiAgICA8bGluZSB4MT0iMCIgeTE9IjI0MCIgeDI9IjgwMCIgeTI9IjI0MCIvPgogICAgPGxpbmUgeDE9IjAiIHkxPSIzMDAiIHgyPSI4MDAiIHkyPSIzMDAiLz4KICAgIDxsaW5lIHgxPSIwIiB5MT0iMzYwIiB4Mj0iODAwIiB5Mj0iMzYwIi8+CiAgICA8bGluZSB4MT0iMCIgeTE9IjQyMCIgeDI9IjgwMCIgeTI9IjQyMCIvPgogICAgPGxpbmUgeDE9IjAiIHkxPSI0ODAiIHgyPSI4MDAiIHkyPSI0ODAiLz4KICAgIDxsaW5lIHgxPSIwIiB5MT0iNTQwIiB4Mj0iODAwIiB5Mj0iNTQwIi8+CiAgPC9nPgogIDwhLS0gR3JpZCBsaW5lcyAtIHZlcnRpY2FsIC0tPgogIDxnIHN0cm9rZT0iIzAwYjRmZiIgc3Ryb2tlLW9wYWNpdHk9IjAuMDYiIHN0cm9rZS13aWR0aD0iMC41Ij4KICAgIDxsaW5lIHgxPSI4MCIgIHkxPSIwIiB4Mj0iODAiICB5Mj0iNjAwIi8+CiAgICA8bGluZSB4MT0iMTYwIiB5MT0iMCIgeDI9IjE2MCIgeTI9IjYwMCIvPgogICAgPGxpbmUgeDE9IjI0MCIgeTE9IjAiIHgyPSIyNDAiIHkyPSI2MDAiLz4KICAgIDxsaW5lIHgxPSIzMjAiIHkxPSIwIiB4Mj0iMzIwIiB5Mj0iNjAwIi8+CiAgICA8bGluZSB4MT0iNDAwIiB5MT0iMCIgeDI9IjQwMCIgeTI9IjYwMCIvPgogICAgPGxpbmUgeDE9IjQ4MCIgeTE9IjAiIHgyPSI0ODAiIHkyPSI2MDAiLz4KICAgIDxsaW5lIHgxPSI1NjAiIHkxPSIwIiB4Mj0iNTYwIiB5Mj0iNjAwIi8+CiAgICA8bGluZSB4MT0iNjQwIiB5MT0iMCIgeDI9IjY0MCIgeTI9IjYwMCIvPgogICAgPGxpbmUgeDE9IjcyMCIgeTE9IjAiIHgyPSI3MjAiIHkyPSI2MDAiLz4KICA8L2c+CgogIDwhLS0gQ2lyY3VpdCB0cmFjZXMgLSBsZWZ0IHNpZGUgLS0+CiAgPGcgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDBiNGZmIiBzdHJva2Utb3BhY2l0eT0iMC4xOCIgc3Ryb2tlLXdpZHRoPSIxIj4KICAgIDxwYXRoIGQ9Ik0gMCAyMDAgTCA4MCAyMDAgTCA4MCAyNDAgTCAxNjAgMjQwIi8+CiAgICA8cGF0aCBkPSJNIDAgMzIwIEwgMTIwIDMyMCBMIDEyMCAzNjAgTCAyMDAgMzYwIEwgMjAwIDMwMCBMIDI0MCAzMDAiLz4KICAgIDxwYXRoIGQ9Ik0gODAgNDIwIEwgODAgNDgwIEwgMTYwIDQ4MCBMIDE2MCA0NDAgTCAyMDAgNDQwIi8+CiAgICA8cGF0aCBkPSJNIDAgMTQwIEwgNDAgMTQwIEwgNDAgMTgwIEwgMTAwIDE4MCIvPgogICAgPHBhdGggZD0iTSAxNjAgMTIwIEwgMTYwIDYwIEwgMjQwIDYwIi8+CiAgPC9nPgogIDwhLS0gQ2lyY3VpdCB0cmFjZXMgLSByaWdodCBzaWRlIC0tPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwYjRmZiIgc3Ryb2tlLW9wYWNpdHk9IjAuMTgiIHN0cm9rZS13aWR0aD0iMSI+CiAgICA8cGF0aCBkPSJNIDgwMCAxODAgTCA3MjAgMTgwIEwgNzIwIDI0MCBMIDY0MCAyNDAiLz4KICAgIDxwYXRoIGQ9Ik0gODAwIDM4MCBMIDY4MCAzODAgTCA2ODAgMzQwIEwgNjAwIDM0MCBMIDYwMCAzMDAgTCA1NjAgMzAwIi8+CiAgICA8cGF0aCBkPSJNIDcyMCA0ODAgTCA3MjAgNDQwIEwgNjQwIDQ0MCBMIDY0MCA0MDAgTCA2MDAgNDAwIi8+CiAgICA8cGF0aCBkPSJNIDgwMCAyODAgTCA3NjAgMjgwIEwgNzYwIDIyMCBMIDcwMCAyMjAiLz4KICAgIDxwYXRoIGQ9Ik0gNjQwIDU0MCBMIDY0MCA1MDAgTCA1NjAgNTAwIi8+CiAgPC9nPgoKICA8IS0tIENpcmN1aXQgbm9kZXMgLyBzb2xkZXIgZG90cyAtLT4KICA8ZyBmaWxsPSIjMDBiNGZmIiBmaWxsLW9wYWNpdHk9IjAuMzUiPgogICAgPGNpcmNsZSBjeD0iODAiICBjeT0iMjAwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSI4MCIgIGN5PSIyNDAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9IjE2MCIgY3k9IjI0MCIgcj0iMyIvPgogICAgPGNpcmNsZSBjeD0iMTIwIiBjeT0iMzIwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSIxMjAiIGN5PSIzNjAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9IjIwMCIgY3k9IjM2MCIgcj0iMyIvPgogICAgPGNpcmNsZSBjeD0iMjAwIiBjeT0iMzAwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSI4MCIgIGN5PSI0MjAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9IjgwIiAgY3k9IjQ4MCIgcj0iMyIvPgogICAgPGNpcmNsZSBjeD0iMTYwIiBjeT0iNDgwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSIxNjAiIGN5PSI0NDAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9IjQwIiAgY3k9IjE0MCIgcj0iMyIvPgogICAgPGNpcmNsZSBjeD0iNDAiICBjeT0iMTgwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSIxNjAiIGN5PSIxMjAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9IjE2MCIgY3k9IjYwIiAgcj0iMyIvPgogICAgPGNpcmNsZSBjeD0iNzIwIiBjeT0iMTgwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSI3MjAiIGN5PSIyNDAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9IjY0MCIgY3k9IjI0MCIgcj0iMyIvPgogICAgPGNpcmNsZSBjeD0iNjgwIiBjeT0iMzgwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSI2ODAiIGN5PSIzNDAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9IjYwMCIgY3k9IjM0MCIgcj0iMyIvPgogICAgPGNpcmNsZSBjeD0iNjAwIiBjeT0iMzAwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSI3MjAiIGN5PSI0ODAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9IjcyMCIgY3k9IjQ0MCIgcj0iMyIvPgogICAgPGNpcmNsZSBjeD0iNjQwIiBjeT0iNDQwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSI2NDAiIGN5PSI0MDAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9Ijc2MCIgY3k9IjI4MCIgcj0iMyIvPgogICAgPGNpcmNsZSBjeD0iNzYwIiBjeT0iMjIwIiByPSIzIi8+CiAgICA8Y2lyY2xlIGN4PSI2NDAiIGN5PSI1NDAiIHI9IjMiLz4KICAgIDxjaXJjbGUgY3g9IjY0MCIgY3k9IjUwMCIgcj0iMyIvPgogIDwvZz4KCiAgPCEtLSBDZW50cmFsIGNoaXAgcGFja2FnZSAtLT4KICA8cmVjdCB4PSIzMzAiIHk9IjIzMCIgd2lkdGg9IjE0MCIgaGVpZ2h0PSIxNDAiIHJ4PSI2IgogICAgICAgIGZpbGw9IiMwMDE4MjgiIGZpbGwtb3BhY2l0eT0iMC45IgogICAgICAgIHN0cm9rZT0iIzAwYjRmZiIgc3Ryb2tlLXdpZHRoPSIxIiBzdHJva2Utb3BhY2l0eT0iMC42Ii8+CiAgPCEtLSBDaGlwIGlubmVyIGRpZSAtLT4KICA8cmVjdCB4PSIzNTAiIHk9IjI1MCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIHJ4PSIyIgogICAgICAgIGZpbGw9IiMwMDJhNDAiIGZpbGwtb3BhY2l0eT0iMC44IgogICAgICAgIHN0cm9rZT0iIzAwYjRmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiIHN0cm9rZS1vcGFjaXR5PSIwLjQiLz4KICA8IS0tIERpZSBncmlkIGNlbGxzIC0tPgogIDxnIHN0cm9rZT0iIzAwYjRmZiIgc3Ryb2tlLW9wYWNpdHk9IjAuMTIiIHN0cm9rZS13aWR0aD0iMC41IiBmaWxsPSJub25lIj4KICAgIDxsaW5lIHgxPSIzNjciIHkxPSIyNTAiIHgyPSIzNjciIHkyPSIzNTAiLz4KICAgIDxsaW5lIHgxPSIzODQiIHkxPSIyNTAiIHgyPSIzODQiIHkyPSIzNTAiLz4KICAgIDxsaW5lIHgxPSI0MDAiIHkxPSIyNTAiIHgyPSI0MDAiIHkyPSIzNTAiLz4KICAgIDxsaW5lIHgxPSI0MTYiIHkxPSIyNTAiIHgyPSI0MTYiIHkyPSIzNTAiLz4KICAgIDxsaW5lIHgxPSI0MzMiIHkxPSIyNTAiIHgyPSI0MzMiIHkyPSIzNTAiLz4KICAgIDxsaW5lIHgxPSIzNTAiIHkxPSIyNjciIHgyPSI0NTAiIHkyPSIyNjciLz4KICAgIDxsaW5lIHgxPSIzNTAiIHkxPSIyODMiIHgyPSI0NTAiIHkyPSIyODMiLz4KICAgIDxsaW5lIHgxPSIzNTAiIHkxPSIzMDAiIHgyPSI0NTAiIHkyPSIzMDAiLz4KICAgIDxsaW5lIHgxPSIzNTAiIHkxPSIzMTciIHgyPSI0NTAiIHkyPSIzMTciLz4KICAgIDxsaW5lIHgxPSIzNTAiIHkxPSIzMzMiIHgyPSI0NTAiIHkyPSIzMzMiLz4KICA8L2c+CiAgPCEtLSBDaGlwIGxhYmVsIC0tPgogIDx0ZXh0IHg9IjQwMCIgeT0iMzA4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIgogICAgICAgIGZvbnQtZmFtaWx5PSJtb25vc3BhY2UiIGZvbnQtc2l6ZT0iOSIgZmlsbD0iIzAwYjRmZiIgZmlsbC1vcGFjaXR5PSIwLjciCiAgICAgICAgbGV0dGVyLXNwYWNpbmc9IjIiPldMQU48L3RleHQ+CiAgPHRleHQgeD0iNDAwIiB5PSIzMjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiCiAgICAgICAgZm9udC1mYW1pbHk9Im1vbm9zcGFjZSIgZm9udC1zaXplPSI3IiBmaWxsPSIjMDBiNGZmIiBmaWxsLW9wYWNpdHk9IjAuNDUiCiAgICAgICAgbGV0dGVyLXNwYWNpbmc9IjEiPlFDQTwvdGV4dD4KCiAgPCEtLSBDaGlwIHBpbnMgLSB0b3AgLS0+CiAgPGcgZmlsbD0iIzAwYjRmZiIgZmlsbC1vcGFjaXR5PSIwLjUiPgogICAgPHJlY3QgeD0iMzQ4IiB5PSIyMjIiIHdpZHRoPSI0IiBoZWlnaHQ9IjgiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSIzNjAiIHk9IjIyMiIgd2lkdGg9IjQiIGhlaWdodD0iOCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjM3MiIgeT0iMjIyIiB3aWR0aD0iNCIgaGVpZ2h0PSI4IiByeD0iMSIvPgogICAgPHJlY3QgeD0iMzg0IiB5PSIyMjIiIHdpZHRoPSI0IiBoZWlnaHQ9IjgiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSIzOTYiIHk9IjIyMiIgd2lkdGg9IjQiIGhlaWdodD0iOCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjQwOCIgeT0iMjIyIiB3aWR0aD0iNCIgaGVpZ2h0PSI4IiByeD0iMSIvPgogICAgPHJlY3QgeD0iNDIwIiB5PSIyMjIiIHdpZHRoPSI0IiBoZWlnaHQ9IjgiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSI0MzIiIHk9IjIyMiIgd2lkdGg9IjQiIGhlaWdodD0iOCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjQ0NCIgeT0iMjIyIiB3aWR0aD0iNCIgaGVpZ2h0PSI4IiByeD0iMSIvPgogIDwvZz4KICA8IS0tIENoaXAgcGlucyAtIGJvdHRvbSAtLT4KICA8ZyBmaWxsPSIjMDBiNGZmIiBmaWxsLW9wYWNpdHk9IjAuNSI+CiAgICA8cmVjdCB4PSIzNDgiIHk9IjM3MCIgd2lkdGg9IjQiIGhlaWdodD0iOCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjM2MCIgeT0iMzcwIiB3aWR0aD0iNCIgaGVpZ2h0PSI4IiByeD0iMSIvPgogICAgPHJlY3QgeD0iMzcyIiB5PSIzNzAiIHdpZHRoPSI0IiBoZWlnaHQ9IjgiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSIzODQiIHk9IjM3MCIgd2lkdGg9IjQiIGhlaWdodD0iOCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjM5NiIgeT0iMzcwIiB3aWR0aD0iNCIgaGVpZ2h0PSI4IiByeD0iMSIvPgogICAgPHJlY3QgeD0iNDA4IiB5PSIzNzAiIHdpZHRoPSI0IiBoZWlnaHQ9IjgiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSI0MjAiIHk9IjM3MCIgd2lkdGg9IjQiIGhlaWdodD0iOCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjQzMiIgeT0iMzcwIiB3aWR0aD0iNCIgaGVpZ2h0PSI4IiByeD0iMSIvPgogICAgPHJlY3QgeD0iNDQ0IiB5PSIzNzAiIHdpZHRoPSI0IiBoZWlnaHQ9IjgiIHJ4PSIxIi8+CiAgPC9nPgogIDwhLS0gQ2hpcCBwaW5zIC0gbGVmdCAtLT4KICA8ZyBmaWxsPSIjMDBiNGZmIiBmaWxsLW9wYWNpdHk9IjAuNSI+CiAgICA8cmVjdCB4PSIzMjIiIHk9IjI0OCIgd2lkdGg9IjgiIGhlaWdodD0iNCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjMyMiIgeT0iMjYwIiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiByeD0iMSIvPgogICAgPHJlY3QgeD0iMzIyIiB5PSIyNzIiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSIzMjIiIHk9IjI4NCIgd2lkdGg9IjgiIGhlaWdodD0iNCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjMyMiIgeT0iMjk2IiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiByeD0iMSIvPgogICAgPHJlY3QgeD0iMzIyIiB5PSIzMDgiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSIzMjIiIHk9IjMyMCIgd2lkdGg9IjgiIGhlaWdodD0iNCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjMyMiIgeT0iMzMyIiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiByeD0iMSIvPgogICAgPHJlY3QgeD0iMzIyIiB5PSIzNDQiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSIzMjIiIHk9IjM1NiIgd2lkdGg9IjgiIGhlaWdodD0iNCIgcng9IjEiLz4KICA8L2c+CiAgPCEtLSBDaGlwIHBpbnMgLSByaWdodCAtLT4KICA8ZyBmaWxsPSIjMDBiNGZmIiBmaWxsLW9wYWNpdHk9IjAuNSI+CiAgICA8cmVjdCB4PSI0NzAiIHk9IjI0OCIgd2lkdGg9IjgiIGhlaWdodD0iNCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjQ3MCIgeT0iMjYwIiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiByeD0iMSIvPgogICAgPHJlY3QgeD0iNDcwIiB5PSIyNzIiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSI0NzAiIHk9IjI4NCIgd2lkdGg9IjgiIGhlaWdodD0iNCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjQ3MCIgeT0iMjk2IiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiByeD0iMSIvPgogICAgPHJlY3QgeD0iNDcwIiB5PSIzMDgiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSI0NzAiIHk9IjMyMCIgd2lkdGg9IjgiIGhlaWdodD0iNCIgcng9IjEiLz4KICAgIDxyZWN0IHg9IjQ3MCIgeT0iMzMyIiB3aWR0aD0iOCIgaGVpZ2h0PSI0IiByeD0iMSIvPgogICAgPHJlY3QgeD0iNDcwIiB5PSIzNDQiIHdpZHRoPSI4IiBoZWlnaHQ9IjQiIHJ4PSIxIi8+CiAgICA8cmVjdCB4PSI0NzAiIHk9IjM1NiIgd2lkdGg9IjgiIGhlaWdodD0iNCIgcng9IjEiLz4KICA8L2c+CgogIDwhLS0gVHJhY2VzIGZyb20gY2hpcCB0byBlZGdlcyAtLT4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiMwMGI0ZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjIiIHN0cm9rZS13aWR0aD0iMSI+CiAgICA8IS0tIHRvcCB0cmFjZXMgLS0+CiAgICA8cGF0aCBkPSJNIDM1MCAyMjIgTCAzNTAgMTgwIEwgMjQwIDE4MCIvPgogICAgPHBhdGggZD0iTSA0MDAgMjIyIEwgNDAwIDEyMCBMIDQ4MCAxMjAiLz4KICAgIDxwYXRoIGQ9Ik0gNDQ0IDIyMiBMIDQ0NCAxODAgTCA1NjAgMTgwIi8+CiAgICA8IS0tIGJvdHRvbSB0cmFjZXMgLS0+CiAgICA8cGF0aCBkPSJNIDM2MCAzNzggTCAzNjAgNDIwIEwgMjQwIDQyMCIvPgogICAgPHBhdGggZD0iTSA0MDAgMzc4IEwgNDAwIDQ4MCBMIDMyMCA0ODAiLz4KICAgIDxwYXRoIGQ9Ik0gNDQwIDM3OCBMIDQ0MCA0MjAgTCA1NjAgNDIwIi8+CiAgICA8IS0tIGxlZnQgdHJhY2VzIC0tPgogICAgPHBhdGggZD0iTSAzMjIgMjYwIEwgMjQwIDI2MCBMIDI0MCAxODAiLz4KICAgIDxwYXRoIGQ9Ik0gMzIyIDMwMCBMIDE2MCAzMDAiLz4KICAgIDxwYXRoIGQ9Ik0gMzIyIDM0MCBMIDI0MCAzNDAgTCAyNDAgNDIwIi8+CiAgICA8IS0tIHJpZ2h0IHRyYWNlcyAtLT4KICAgIDxwYXRoIGQ9Ik0gNDc4IDI2MCBMIDU2MCAyNjAgTCA1NjAgMTgwIi8+CiAgICA8cGF0aCBkPSJNIDQ3OCAzMDAgTCA2NDAgMzAwIi8+CiAgICA8cGF0aCBkPSJNIDQ3OCAzNDAgTCA1NjAgMzQwIEwgNTYwIDQyMCIvPgogIDwvZz4KCiAgPCEtLSBXaS1GaSBhcmNzIC0gY2VudGVyZWQgYWJvdmUgY2hpcCAtLT4KICA8ZyBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiPgogICAgPCEtLSBvdXRlcm1vc3QgYXJjIC0tPgogICAgPHBhdGggZD0iTSAzMTAgMjU4IFEgNDAwIDE0MCA0OTAgMjU4IgogICAgICAgICAgc3Ryb2tlPSIjMDBiNGZmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1vcGFjaXR5PSIwLjI1Ii8+CiAgICA8IS0tIG1pZGRsZSBhcmMgLS0+CiAgICA8cGF0aCBkPSJNIDMzOCAyNjQgUSA0MDAgMTc2IDQ2MiAyNjQiCiAgICAgICAgICBzdHJva2U9IiMwMGI0ZmYiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2Utb3BhY2l0eT0iMC40Ii8+CiAgICA8IS0tIGlubmVyIGFyYyAtLT4KICAgIDxwYXRoIGQ9Ik0gMzY2IDI3MCBRIDQwMCAyMTAgNDM0IDI3MCIKICAgICAgICAgIHN0cm9rZT0iIzAwYjRmZiIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2Utb3BhY2l0eT0iMC42Ii8+CiAgICA8IS0tIGRvdCAtLT4KICAgIDxjaXJjbGUgY3g9IjQwMCIgY3k9IjI3NCIgcj0iNCIgZmlsbD0iIzAwYjRmZiIgZmlsbC1vcGFjaXR5PSIwLjgiLz4KICA8L2c+CgogIDwhLS0gQ29ybmVyIGhleCBkZWNvcmF0aW9ucyAtLT4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiMwMGI0ZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjEyIiBzdHJva2Utd2lkdGg9IjAuOCI+CiAgICA8cG9seWdvbiBwb2ludHM9IjMwLDMwIDUwLDIwIDcwLDMwIDcwLDUwIDUwLDYwIDMwLDUwIi8+CiAgICA8cG9seWdvbiBwb2ludHM9IjczMCwzMCA3NTAsMjAgNzcwLDMwIDc3MCw1MCA3NTAsNjAgNzMwLDUwIi8+CiAgICA8cG9seWdvbiBwb2ludHM9IjMwLDU1MCA1MCw1NDAgNzAsNTUwIDcwLDU3MCA1MCw1ODAgMzAsNTcwIi8+CiAgICA8cG9seWdvbiBwb2ludHM9IjczMCw1NTAgNzUwLDU0MCA3NzAsNTUwIDc3MCw1NzAgNzUwLDU4MCA3MzAsNTcwIi8+CiAgPC9nPgoKICA8IS0tIFNjYW5saW5lIHZpZ25ldHRlIG92ZXJsYXkgLS0+CiAgPHJlY3Qgd2lkdGg9IjgwMCIgaGVpZ2h0PSI2MDAiIGZpbGw9Im5vbmUiCiAgICAgICAgc3Ryb2tlPSIjMDAwIiBzdHJva2Utb3BhY2l0eT0iMCIvPgo8L3N2Zz4=');
+            background-size: cover;
+            background-position: center top;
+            background-repeat: no-repeat;
+            opacity: 0.55;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(0,180,255,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,180,255,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+
+
+        #dashboard {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (min-width: 600px) { #dashboard { padding: 24px; } }
 
         .container {
-            max-width: 600px;
+            max-width: 560px;
             margin: 0 auto;
             width: 100%;
-            padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-top: 8px;
+            padding-bottom: 12px;
         }
 
-        h1 { font-size: 1.8rem; color: var(--text-bright); margin-bottom: 5px; text-align: center; }
-
-        .subtitle {
+        /* ---- Header ---- */
+        .header {
             text-align: center;
-            font-size: 0.9rem;
-            color: var(--accent-primary);
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            padding: 10px 0 4px;
+            position: relative;
         }
 
-        .section-title {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            color: var(--accent-secondary);
-            margin: 20px 0 10px 0;
-            letter-spacing: 1px;
-            font-weight: bold;
-        }
-
-        .card {
+        .version-badge {
+            position: absolute;
+            top: 10px;
+            right: 0;
+            font-family: var(--mono);
+            font-size: 0.6rem;
+            color: var(--cyan-dim);
+            letter-spacing: 1.5px;
             background: var(--bg-card);
-            padding: 15px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.05);
-            margin-bottom: 15px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 3px 8px;
+            line-height: 1;
         }
+
+        .version-badge::before {
+            content: 'v';
+            opacity: 0.5;
+        }
+
+        .header-title {
+            font-family: var(--head);
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: var(--cyan);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px var(--cyan-dim), 0 0 40px rgba(0,180,255,0.2);
+        }
+
+        .header-sub {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-top: 3px;
+        }
+
+        /* ---- Panel (generic bordered card) ---- */
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Corner accents */
+        .panel::before, .panel::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-color: var(--cyan);
+            border-style: solid;
+        }
+        .panel::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+        .panel::after  { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+        .panel-label {
+            font-family: var(--head);
+            font-size: 0.55rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--cyan-dim);
+            padding: 8px 12px 0;
+        }
+
+        .panel-body { padding: 8px 12px 10px; }
 
         /* ---- Status Row ---- */
         .status-row {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
-            margin-bottom: 15px;
         }
 
         .status-badge {
-            background: var(--bg-card);
-            padding: 8px 16px;
-            border-radius: 30px;
             display: inline-flex;
             align-items: center;
-            border: 1px solid rgba(255,255,255,0.1);
+            gap: 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 5px 12px;
+            font-family: var(--head);
+            font-size: 0.7rem;
+            letter-spacing: 2px;
         }
 
         .status-dot {
-            width: 10px; height: 10px;
+            width: 7px; height: 7px;
             border-radius: 50%;
-            margin-right: 10px;
-            box-shadow: 0 0 8px currentColor;
             flex-shrink: 0;
-            background-color: var(--accent-warning);
-            color: var(--accent-warning);
+            background: var(--amber);
+            box-shadow: 0 0 6px var(--amber), 0 0 12px var(--amber-dim);
+            animation: pulse 2s ease-in-out infinite;
         }
 
-        .driver-pill {
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.5; }
+        }
+
+        .driver-tag {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 6px 12px;
-            border-radius: 30px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 0.62rem;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            border: 1px solid var(--border);
             background: var(--bg-card);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: var(--text-main);
+            border-radius: 3px;
+            padding: 5px 10px;
         }
-        .driver-pill.modular { border-color: var(--accent-success); color: var(--accent-success); }
-        .driver-pill.builtin { border-color: var(--accent-warning); color: var(--accent-warning); }
-        .driver-pill svg { width: 12px; height: 12px; }
-
-        /* ---- Patch Info Card ---- */
-        .patch-card {
-            background: var(--bg-card);
-            border-radius: 14px;
-            border: 1px solid rgba(255,255,255,0.05);
-            padding: 12px 15px;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .patch-icon {
-            width: 36px; height: 36px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 1.1rem;
-        }
-        .patch-icon.device  { background: rgba(122,162,247,0.15); }
-        .patch-icon.soc     { background: rgba(158,206,106,0.15); }
-        .patch-icon.generic { background: rgba(224,175,104,0.15); }
-        .patch-icon.none    { background: rgba(247,118,142,0.15); }
-
-        .patch-info { flex: 1; min-width: 0; }
-        .patch-label {
-            font-size: 0.68rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--text-main);
-            opacity: 0.6;
-            margin-bottom: 2px;
-        }
-        .patch-name {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: var(--text-bright);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .patch-meta {
-            font-size: 0.7rem;
-            color: var(--text-main);
-            margin-top: 2px;
-            opacity: 0.7;
-        }
+        .driver-tag.modular { border-color: var(--green-dim); color: var(--green); }
+        .driver-tag.builtin { border-color: var(--amber-dim); color: var(--amber); }
+        .driver-tag svg { width: 11px; height: 11px; }
 
         /* ---- Stats Grid ---- */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 6px;
         }
 
-        .stat-card {
+        .stat-cell {
             background: var(--bg-card);
-            padding: 12px 8px;
-            border-radius: 12px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 8px 6px;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.05);
+            position: relative;
         }
 
-        .stat-label { font-size: 0.6rem; text-transform: uppercase; color: var(--accent-primary); opacity: 0.8; }
-        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 700; display: block; margin-top: 4px; color: var(--text-bright); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* ---- Mode Buttons ---- */
-        .button-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 10px;
+        .stat-cell::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--cyan-dim), transparent);
         }
 
-        .mode-btn {
-            padding: 15px;
-            border: none;
-            border-radius: 14px;
-            font-weight: 700;
-            font-size: 0.85rem;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.2s;
-            color: #1a1b26;
+        .stat-lbl {
+            font-size: 0.55rem;
+            letter-spacing: 2px;
             text-transform: uppercase;
+            color: var(--cyan-dim);
+            display: block;
         }
 
-        .mode-btn .param-hint {
-            font-size: 0.6rem;
-            opacity: 0.7;
-            font-weight: 400;
+        .stat-val {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-bright);
+            display: block;
+            margin-top: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ---- Patch Info ---- */
+        .patch-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .patch-glyph {
+            font-size: 1.2rem;
+            width: 32px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .patch-text { flex: 1; min-width: 0; }
+
+        .patch-name {
+            font-size: 0.8rem;
+            color: var(--text-bright);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .patch-meta {
+            font-size: 0.62rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ---- Profile Buttons — single line, compact ---- */
+        .profile-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .prof-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 9px 8px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: var(--bg-card);
+            color: var(--text-dim);
+            font-family: var(--head);
+            font-size: 0.62rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .prof-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+        .prof-btn .phint {
+            font-family: var(--mono);
+            font-size: 0.55rem;
+            opacity: 0.6;
+            letter-spacing: 0;
             text-transform: none;
-            font-family: 'JetBrains Mono', monospace;
+            margin-left: 2px;
         }
 
-        .mode-btn:active  { transform: scale(0.96); }
-        .mode-btn:disabled { opacity: 0.4; pointer-events: none; }
-        .mode-btn.active {
-            box-shadow: 0 0 0 3px rgba(255,255,255,0.4);
-            transform: scale(0.98);
-            border: 1px solid rgba(255,255,255,0.2);
+        .prof-btn:active { transform: scale(0.97); }
+        .prof-btn:disabled { opacity: 0.3; pointer-events: none; }
+
+        .prof-btn.perf  { border-color: var(--green-dim);  color: var(--green); }
+        .prof-btn.perf.active  {
+            background: var(--green-glow);
+            border-color: var(--green);
+            box-shadow: 0 0 12px var(--green-glow), inset 0 0 8px var(--green-glow);
         }
 
-        .btn-perf     { background-color: var(--accent-success); }
-        .btn-balanced { background-color: var(--accent-warning); }
-        .btn-stock    {
-            background-color: var(--text-main);
-            grid-column: 1 / span 2;
-            justify-self: center;
-            width: calc(50% - 8px);
+        .prof-btn.bal   { border-color: var(--amber-dim);  color: var(--amber); }
+        .prof-btn.bal.active {
+            background: var(--amber-glow);
+            border-color: var(--amber);
+            box-shadow: 0 0 12px var(--amber-glow), inset 0 0 8px var(--amber-glow);
         }
 
-        .mode-btn svg { width: 24px; height: 24px; }
+        .prof-btn.stock { border-color: var(--border); color: var(--text-dim); }
+        .prof-btn.stock.active {
+            background: rgba(180,220,255,0.05);
+            border-color: var(--text-dim);
+            color: var(--text);
+        }
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        .mode-btn.processing,
-        .action-btn.processing {
-            position: relative; color: transparent !important; pointer-events: none;
+        .prof-btn.processing,
+        .util-btn.processing {
+            color: transparent !important;
+            pointer-events: none;
         }
-        .mode-btn.processing svg,
-        .action-btn.processing svg { visibility: hidden; }
-        .mode-btn.processing::after,
-        .action-btn.processing::after {
-            content: ""; position: absolute;
+        .prof-btn.processing svg,
+        .util-btn.processing svg { visibility: hidden; }
+        .prof-btn.processing::after,
+        .util-btn.processing::after {
+            content: '';
+            position: absolute;
             top: 50%; left: 50%;
-            width: 20px; height: 20px;
-            margin-top: -10px; margin-left: -10px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-top-color: #fff;
+            width: 14px; height: 14px;
+            margin: -7px 0 0 -7px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-top-color: var(--cyan);
             border-radius: 50%;
             animation: spin 0.6s linear infinite;
         }
 
-        /* ---- Action Buttons ---- */
-        .tools-row { display: flex; gap: 10px; margin-top: 0; }
+        /* ---- Utility Buttons ---- */
+        .util-row { display: flex; gap: 6px; }
 
-        .action-btn {
-            flex: 1; padding: 12px;
-            border-radius: 10px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.05);
-            color: var(--text-bright);
-            font-weight: 500;
+        .util-btn {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 6px;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            background: var(--bg-card);
+            color: var(--text-dim);
+            font-family: var(--head);
+            font-size: 0.58rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
             cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            gap: 8px;
-            font-size: 0.8rem;
             transition: all 0.15s;
+            position: relative;
         }
-        .action-btn:active { transform: scale(0.97); }
-        .action-btn.danger  { border-color: var(--accent-danger);  color: var(--accent-danger); }
-        .action-btn.warning { border-color: var(--accent-warning); color: var(--accent-warning); }
+
+        .util-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+        .util-btn:active { transform: scale(0.97); }
+
+        .util-btn.danger  { border-color: rgba(255,56,96,0.4);  color: var(--red); }
+        .util-btn.danger:hover  { background: var(--red-glow); }
+        .util-btn.warn    { border-color: var(--amber-dim); color: var(--amber); }
+        .util-btn:not(.danger):not(.warn):hover { border-color: var(--cyan-dim); color: var(--cyan); }
 
         /* ---- Reboot Banner ---- */
         #reboot-banner {
             display: none;
-            margin-bottom: 15px;
-            background: rgba(224,175,104,0.12);
-            border: 1px solid var(--accent-warning);
-            border-radius: 14px;
-            padding: 14px 16px;
+            background: var(--amber-glow);
+            border: 1px solid var(--amber-dim);
+            border-radius: 4px;
+            padding: 10px 12px;
+            gap: 10px;
+            align-items: flex-start;
             animation: fadeIn 0.3s ease;
         }
-        #reboot-banner.visible { display: flex; align-items: flex-start; gap: 12px; }
+        #reboot-banner.visible { display: flex; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
-        .banner-icon  { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
-        .banner-body  { flex: 1; }
-        .banner-title { font-weight: 700; color: var(--accent-warning); font-size: 0.9rem; margin-bottom: 4px; }
-        .banner-desc  { font-size: 0.8rem; color: var(--text-main); line-height: 1.5; }
+        .banner-icon { font-size: 1.1rem; flex-shrink: 0; }
+        .banner-body { flex: 1; }
+        .banner-title { font-family: var(--head); font-size: 0.7rem; letter-spacing: 2px; color: var(--amber); margin-bottom: 4px; }
+        .banner-desc  { font-size: 0.68rem; color: var(--text); line-height: 1.5; }
 
         .banner-btn {
-            margin-top: 10px;
-            padding: 8px 14px;
-            border-radius: 8px;
-            background: var(--accent-warning);
-            color: #1a1b26;
-            font-weight: 700;
-            font-size: 0.78rem;
-            border: none; cursor: pointer;
-            display: inline-flex; align-items: center; gap: 6px;
+            margin-top: 8px;
+            padding: 6px 12px;
+            border: 1px solid var(--amber);
+            border-radius: 3px;
+            background: transparent;
+            color: var(--amber);
+            font-family: var(--head);
+            font-size: 0.6rem;
+            letter-spacing: 2px;
             text-transform: uppercase;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
 
-        /* ---- Log Box ---- */
+        /* ---- Log ---- */
         .log-header {
-            display: flex; align-items: center;
+            display: flex;
+            align-items: center;
             justify-content: space-between;
-            margin-bottom: 4px;
+            padding: 8px 12px 0;
         }
 
-        .log-clear-btn {
-            font-size: 0.68rem;
+        .log-clear {
+            font-family: var(--head);
+            font-size: 0.5rem;
+            letter-spacing: 2px;
             background: none;
-            border: 1px solid rgba(255,255,255,0.1);
-            color: var(--log-system);
-            border-radius: 6px;
-            padding: 2px 8px;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: 3px;
+            padding: 2px 7px;
             cursor: pointer;
         }
-        .log-clear-btn:hover { color: var(--text-main); border-color: rgba(255,255,255,0.25); }
+        .log-clear:hover { border-color: var(--red); color: var(--red); }
 
         #console-output {
-            background: #16161e;
-            border-radius: 12px;
-            padding: 12px 14px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.73rem;
-            min-height: 110px;
-            max-height: 210px;
+            padding: 8px 12px 10px;
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            line-height: 1.7;
             overflow-y: auto;
-            border: 1px solid rgba(255,255,255,0.08);
-            margin-bottom: 20px;
-            line-height: 1.65;
+            max-height: 60vh;
+            transition: max-height 0.3s ease;
         }
 
-        .log-line    { display: block; }
-        .log-ts      { color: var(--log-system); margin-right: 6px; user-select: none; }
-        .log-info    { color: var(--log-info); }
-        .log-success { color: var(--log-success); }
-        .log-warning { color: var(--log-warning); }
-        .log-error   { color: var(--log-error); }
-        .log-builtin { color: var(--log-builtin); }
-        .log-system  { color: var(--log-system); }
+        #console-output.collapsed {
+            max-height: 0;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
 
-        @media (max-width: 400px) {
+        #console-output::-webkit-scrollbar { width: 3px; }
+        #console-output::-webkit-scrollbar-track { background: transparent; }
+        #console-output::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
+
+        .log-line    { display: block; }
+        .log-ts      { color: var(--text-dim); margin-right: 6px; }
+        .log-info    { color: var(--cyan); }
+        .log-success { color: var(--green); }
+        .log-warning { color: var(--amber); }
+        .log-error   { color: var(--red); }
+        .log-builtin { color: var(--purple); }
+        .log-system  { color: var(--text-dim); }
+
+        /* Scanning line animation on log panel */
+        .panel.log-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel.log-panel::before {
+            animation: scanline 4s linear infinite;
+        }
+        @keyframes scanline {
+            0%   { top: -1px; }
+            100% { top: calc(100% + 1px); }
+        }
+
+        @media (max-width: 380px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            h1 { font-size: 1.4rem; }
+            .header-title { font-size: 1rem; letter-spacing: 2px; }
         }
     </style>
 </head>
@@ -366,431 +521,387 @@
 <div id="dashboard">
   <div class="container">
 
-    <h1>Wi-Fi Tuner</h1>
-    <div class="subtitle">Generic Qualcomm Edition</div>
-
-    <!-- Status: mode badge + driver pill -->
-    <div class="status-row">
-      <div class="status-badge">
-        <span id="status-dot" class="status-dot"></span>
-        <span id="current-mode">Ready</span>
-      </div>
-      <div id="driver-pill" class="driver-pill unknown">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 15H6l7-14v8h5l-7 14v-8z"/></svg>
-        <span id="driver-label">Detecting…</span>
-      </div>
+    <!-- Header -->
+    <div class="header">
+      <div class="header-title">WI-FI TUNER</div>
+      <div class="header-sub">Qualcomm Config Switcher // KernelSU</div>
+      <span class="version-badge" id="version-badge">—</span>
     </div>
 
-    <!-- Patch Info Card -->
-    <div class="patch-card" id="patch-card">
-      <div class="patch-icon none" id="patch-icon">🔍</div>
-      <div class="patch-info">
-        <div class="patch-label">Active Patch Profile</div>
-        <div class="patch-name" id="patch-name">Detecting…</div>
-        <div class="patch-meta" id="patch-meta">—</div>
+    <!-- Status -->
+    <div class="panel">
+      <div class="panel-label">System Status</div>
+      <div class="panel-body">
+        <div class="status-row">
+          <div class="status-badge">
+            <span id="status-dot" class="status-dot"></span>
+            <span id="current-mode">READY</span>
+          </div>
+          <div id="driver-pill" class="driver-tag unknown">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11 15H6l7-14v8h5l-7 14v-8z"/></svg>
+            <span id="driver-label">SCANNING…</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Stats -->
-    <div class="stats-grid">
-      <div class="stat-card"><span class="stat-label">Signal</span><span id="stat-rssi" class="stat-value">--</span></div>
-      <div class="stat-card"><span class="stat-label">Speed</span><span id="stat-speed" class="stat-value">--</span></div>
-      <div class="stat-card"><span class="stat-label">Frequency</span><span id="stat-freq" class="stat-value">--</span></div>
-      <div class="stat-card"><span class="stat-label">SSID</span><span id="stat-ssid" class="stat-value">--</span></div>
+    <div class="panel">
+      <div class="panel-label">Link Telemetry</div>
+      <div class="panel-body">
+        <div class="stats-grid">
+          <div class="stat-cell"><span class="stat-lbl">Signal</span><span id="stat-rssi"  class="stat-val">--</span></div>
+          <div class="stat-cell"><span class="stat-lbl">Speed</span> <span id="stat-speed" class="stat-val">--</span></div>
+          <div class="stat-cell"><span class="stat-lbl">Freq</span>  <span id="stat-freq"  class="stat-val">--</span></div>
+          <div class="stat-cell"><span class="stat-lbl">SSID</span>  <span id="stat-ssid"  class="stat-val">--</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Patch Profile -->
+    <div class="panel">
+      <div class="panel-label">Patch Profile</div>
+      <div class="panel-body">
+        <div class="patch-row">
+          <div class="patch-glyph" id="patch-icon">⬡</div>
+          <div class="patch-text">
+            <div class="patch-name" id="patch-name">DETECTING…</div>
+            <div class="patch-meta" id="patch-meta">—</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Reboot Banner -->
     <div id="reboot-banner">
-      <div class="banner-icon">⚠️</div>
+      <div class="banner-icon">⚠</div>
       <div class="banner-body">
         <div class="banner-title">Reboot Required</div>
-        <div class="banner-desc" id="reboot-banner-desc">
-          Your Wi-Fi driver is built into the kernel and cannot be reloaded at runtime.
-          The new config has been written — a reboot is required for it to take effect.
-        </div>
+        <div class="banner-desc" id="reboot-banner-desc">Built-in driver detected. Config written — reboot to apply.</div>
         <button class="banner-btn" onclick="app.requestReboot()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4C7.58 4 4 7.58 4 12s3.58 8 8 8 8-3.58 8-8h-2c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L11 13h7V6l-2.35.35z"/></svg>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4C7.58 4 4 7.58 4 12s3.58 8 8 8 8-3.58 8-8h-2c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L11 13h7V6l-2.35.35z"/></svg>
           Reboot Now
         </button>
       </div>
     </div>
 
-    <!-- Mode Buttons -->
-    <div class="section-title">Performance Profiles</div>
-    <div class="button-grid">
-      <button class="mode-btn btn-perf" onclick="app.applyMode('perf')">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,10h7l-9,11v-7H4l9-11V10z"/></svg>
-        Performance
-        <span class="param-hint" id="hint-perf">— params</span>
-      </button>
-      <button class="mode-btn btn-balanced" onclick="app.applyMode('balanced')">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z"/></svg>
-        Balanced
-        <span class="param-hint" id="hint-balanced">— params</span>
-      </button>
-      <button class="mode-btn btn-stock" onclick="app.applyMode('stock')">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,3H6V21H18V8L13,3M12,18H8V16H12V18M15,14H8V12H15V14M15,10H8V8H15V10M13,9V4.5L17.5,9H13Z"/></svg>
-        Stock
-      </button>
+    <!-- Profile Buttons -->
+    <div class="panel">
+      <div class="panel-label">Performance Profile</div>
+      <div class="panel-body">
+        <div class="profile-row">
+          <button class="prof-btn perf" id="btn-perf" onclick="app.applyMode('perf')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,10h7l-9,11v-7H4l9-11V10z"/></svg>
+            Perf
+            <span class="phint" id="hint-perf"></span>
+          </button>
+          <button class="prof-btn bal" id="btn-bal" onclick="app.applyMode('balanced')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,2L4.5,20.29L5.21,21L12,18L18.79,21L19.5,20.29L12,2Z"/></svg>
+            Balanced
+            <span class="phint" id="hint-balanced"></span>
+          </button>
+          <button class="prof-btn stock" id="btn-stock" onclick="app.applyMode('stock')">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,3H6V21H18V8L13,3M13,9V4.5L17.5,9H13Z"/></svg>
+            Stock
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Utilities -->
-    <div class="section-title">Utilities</div>
-    <div class="card">
-      <div class="tools-row">
-        <button id="reset-btn" class="action-btn danger" onclick="app.softReset()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12,5V1L7,6L12,11V7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12H5A7,7 0 0,0 12,19A7,7 0 0,0 19,12A7,7 0 0,0 12,5Z"/></svg>
-          Reload Driver
-        </button>
-        <button class="action-btn" onclick="app.showDriverInfo()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"/></svg>
-          Driver Info
-        </button>
-        <button class="action-btn" onclick="app.runDebug()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5s-.96.06-1.41.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/></svg>
-          Debug
-        </button>
+    <div class="panel">
+      <div class="panel-label">Utilities</div>
+      <div class="panel-body">
+        <div class="util-row">
+          <button id="reset-btn" class="util-btn danger" onclick="app.softReset()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12,5V1L7,6L12,11V7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12H5A7,7 0 0,0 12,19A7,7 0 0,0 19,12A7,7 0 0,0 12,5Z"/></svg>
+            Reload
+          </button>
+          <button class="util-btn" onclick="app.showDriverInfo()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z"/></svg>
+            Driver
+          </button>
+          <button class="util-btn" onclick="app.runDebug()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5s-.96.06-1.41.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/></svg>
+            Debug
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Log -->
-    <div class="log-header">
-      <span class="section-title" style="margin:0">Log</span>
-      <button class="log-clear-btn" onclick="app.clearLog()">Clear</button>
+    <div class="panel log-panel">
+      <div class="log-header">
+        <div class="panel-label" style="padding:0">System Log</div>
+        <button class="log-clear" onclick="app.clearLog()">CLR</button>
+      </div>
+      <div id="console-output"></div>
     </div>
-    <div id="console-output"></div>
 
   </div>
 </div>
 
 <script type="module">
 
-// ---------------------------------------------------------------------------
-// KSU Bridge
-// ---------------------------------------------------------------------------
 class KsuBridge {
     constructor() {
         this.hasKsu = !!(window.ksu && window.ksu.exec);
         this.actionScript = '/data/adb/modules/wifi_config_switcher/backend.sh';
     }
-
     async exec(cmd) {
-        if (!this.hasKsu) {
-            console.log('Mock exec:', cmd);
-            return '{"status":"error","message":"KSU not detected (Browser Mode)"}';
-        }
+        if (!this.hasKsu) { console.log('Mock:', cmd); return '{"status":"error","message":"KSU not detected"}'; }
         try {
             const r = await window.ksu.exec(cmd);
             if (typeof r === 'object' && r.errno !== undefined)
                 return r.errno === 0 ? r.stdout : `{"status":"error","message":"errno ${r.errno}: ${r.stderr}"}`;
             return r || '';
-        } catch (e) {
-            return `{"status":"error","message":"Exception: ${e.message}"}`;
-        }
+        } catch(e) { return `{"status":"error","message":"${e.message}"}`; }
     }
-
     async runAction(action, arg) {
-        const safeArg = arg !== undefined ? String(arg).replace(/'/g, "'\\''") : '';
-        const cmd = arg !== undefined
-            ? `sh '${this.actionScript}' '${action}' '${safeArg}'`
+        const safe = arg !== undefined ? String(arg).replace(/'/g,"'\\''") : '';
+        const cmd  = arg !== undefined
+            ? `sh '${this.actionScript}' '${action}' '${safe}'`
             : `sh '${this.actionScript}' '${action}'`;
         return this.exec(cmd);
     }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 function parseJson(raw) {
     if (!raw) return null;
     const s = raw.indexOf('{'), e = raw.lastIndexOf('}');
-    if (s === -1 || e === -1) return null;
-    try { return JSON.parse(raw.substring(s, e + 1)); } catch { return null; }
+    if (s < 0 || e < 0) return null;
+    try { return JSON.parse(raw.substring(s, e+1)); } catch { return null; }
 }
 
-function escapeHtml(s) {
-    return String(s)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function patchSourceLabel(src) {
-    if (!src || src === 'none') return { icon: '🔍', cls: 'none',    name: 'No patch found',    desc: 'No compatible patch for this device.' };
-    if (src.startsWith('device-alias:')) return { icon: '📱', cls: 'device',  name: src.replace('device-alias:','Alias: '), desc: 'Matched via device alias' };
-    if (src.startsWith('device:'))       return { icon: '📱', cls: 'device',  name: src.replace('device:','Device: '),       desc: 'Device-specific patch' };
-    if (src.startsWith('soc:'))          return { icon: '🔧', cls: 'soc',     name: src.replace('soc:','SoC: '),             desc: 'SoC family patch'  };
-    if (src === 'generic_qcom')          return { icon: '⚙️', cls: 'generic', name: 'Generic Qualcomm',                      desc: 'Fallback — consider contributing a device patch!' };
-    return { icon: '📦', cls: 'device', name: src, desc: '' };
+function patchLabel(src) {
+    if (!src || src === 'none')          return { icon:'⬡', name:'NO PATCH FOUND',    meta:'' };
+    if (src.startsWith('device-alias:')) return { icon:'◈', name:src.replace('device-alias:','ALIAS // ').toUpperCase(), meta:'hardware alias matched' };
+    if (src.startsWith('device:'))       return { icon:'◈', name:src.replace('device:','DEVICE // ').toUpperCase(), meta:'device-specific profile' };
+    if (src.startsWith('soc:'))          return { icon:'◇', name:src.replace('soc:','SOC // ').toUpperCase(), meta:'soc family profile' };
+    if (src === 'generic_qcom')          return { icon:'△', name:'GENERIC // QCOM', meta:'fallback profile — contribute a device patch!' };
+    return { icon:'◈', name:src.toUpperCase(), meta:'' };
 }
 
-// ---------------------------------------------------------------------------
-// App
-// ---------------------------------------------------------------------------
 class App {
     constructor() {
         this.ksu = new KsuBridge();
         this.processing = false;
         this.driverType = 'unknown';
         this.driverName = 'unknown';
-        this.$console = document.getElementById('console-output');
-        this.$resetBtn = document.getElementById('reset-btn');
-        this.$rebootBanner = document.getElementById('reboot-banner');
+        this.$log    = document.getElementById('console-output');
+        this.$reset  = document.getElementById('reset-btn');
+        this.$banner = document.getElementById('reboot-banner');
         this.init();
     }
 
     async init() {
-        this.log('Initializing…', 'system');
-        await Promise.all([
-            this.detectDriver(),
-            this.loadPatchInfo(),
-            this.checkMode(),
-        ]);
+        this.log('SYSTEM INIT…', 'system');
+        this.loadVersion();
+        await Promise.all([this.detectDriver(), this.loadPatchInfo(), this.checkMode()]);
         this.fetchStats();
         setInterval(() => this.fetchStats(), 5000);
     }
 
-    // ---- Driver Detection ----
+    loadVersion() {
+        // Read version from module.prop via backend action
+        this.ksu.runAction('get_version').then(raw => {
+            const r = parseJson(raw);
+            const el = document.getElementById('version-badge');
+            if (r && r.version && el) {
+                // Strip leading 'v' since ::before adds it
+                el.textContent = r.version.replace(/^v/i, '');
+            }
+        });
+    }
+
+    // Driver
     async detectDriver() {
-        const res = parseJson(await this.ksu.runAction('get_driver_type'));
-        this.driverType = res?.driver_type || 'unknown';
-        this.driverName = res?.driver_name || 'unknown';
-        this.updateDriverPill();
-        this.logDriverInfo();
+        const r = parseJson(await this.ksu.runAction('get_driver_type'));
+        this.driverType = r?.driver_type || 'unknown';
+        this.driverName = r?.driver_name || 'unknown';
+        this.updateDriverTag();
+        if (this.driverType === 'modular')
+            this.log(`[DRV] MODULAR · ${this.driverName} — live reload supported`, 'success');
+        else if (this.driverType === 'builtin')
+            this.log(`[DRV] BUILT-IN · ${this.driverName} — reboot required`, 'builtin');
+        else
+            this.log('[DRV] TYPE UNKNOWN — detection inconclusive', 'warning');
     }
 
-    updateDriverPill() {
-        const pill  = document.getElementById('driver-pill');
+    updateDriverTag() {
+        const tag   = document.getElementById('driver-pill');
         const label = document.getElementById('driver-label');
-        pill.className = `driver-pill ${this.driverType}`;
-        if (this.driverType === 'modular') {
-            label.textContent = `Modular · ${this.driverName}`;
-            this.$resetBtn.classList.replace('warning','danger');
-            this.$resetBtn.querySelector('svg + *') && null;
-        } else if (this.driverType === 'builtin') {
-            label.textContent = `Built-in · ${this.driverName}`;
-            this.$resetBtn.classList.replace('danger','warning');
-        } else {
-            label.textContent = 'Driver Unknown';
-        }
-    }
-
-    logDriverInfo() {
-        if (this.driverType === 'modular') {
-            this.log(`[DRIVER] MODULAR · ${this.driverName} — reload supported`, 'success');
-        } else if (this.driverType === 'builtin') {
-            this.log(`[DRIVER] BUILT-IN · ${this.driverName} — reboot required for config changes`, 'builtin');
-        } else {
-            this.log('[DRIVER] Type unknown — detection inconclusive', 'warning');
-        }
+        tag.className = `driver-tag ${this.driverType}`;
+        if      (this.driverType === 'modular') label.textContent = `MODULAR · ${this.driverName}`;
+        else if (this.driverType === 'builtin') label.textContent = `BUILT-IN · ${this.driverName}`;
+        else                                    label.textContent = 'UNKNOWN';
     }
 
     async showDriverInfo() {
-        this.log('[DRIVER] Fetching detailed driver evidence…', 'info');
-        const res = parseJson(await this.ksu.runAction('get_driver_info'));
-        if (!res) { this.log('[DRIVER] Failed to get driver info.', 'error'); return; }
-        this.log(`[DRIVER] name          : ${res.driver_name}`,          'info');
-        this.log(`[DRIVER] detected type : ${res.driver_type}`,          'info');
-        this.log(`[DRIVER] kconf WLAN    : ${res.kconf_wlan}`,           'info');
-        this.log(`[DRIVER] kconf driver  : ${res.kconf_driver}`,         'info');
-        this.log(`[DRIVER] sys/module sections : ${res.sys_module_sections}`, 'info');
-        this.log(`[DRIVER] /proc/modules entry : ${res.proc_modules_entry}`,  'info');
-        this.log(`[DRIVER] /module symlink     : ${res.module_symlink}`,      'info');
-        this.log(`[DRIVER] subsystem bus       : ${res.subsystem}`,           'info');
-        this.log(`[DRIVER] lsmod empty         : ${res.lsmod_empty}`,         'info');
+        this.log('[DRV] QUERYING DETECTION EVIDENCE…', 'info');
+        const r = parseJson(await this.ksu.runAction('get_driver_info'));
+        if (!r) { this.log('[DRV] NO RESPONSE', 'error'); return; }
+        this.log(`[DRV] name          : ${r.driver_name}`,          'info');
+        this.log(`[DRV] type          : ${r.driver_type}`,          'info');
+        this.log(`[DRV] kconf WLAN    : ${r.kconf_wlan}`,           'info');
+        this.log(`[DRV] kconf driver  : ${r.kconf_driver}`,         'info');
+        this.log(`[DRV] sys/mod sects : ${r.sys_module_sections}`,  'info');
+        this.log(`[DRV] proc/modules  : ${r.proc_modules_entry}`,   'info');
+        this.log(`[DRV] /module link  : ${r.module_symlink}`,       'info');
+        this.log(`[DRV] subsystem     : ${r.subsystem}`,            'info');
+        this.log(`[DRV] lsmod empty   : ${r.lsmod_empty}`,          'info');
     }
 
-    // ---- Patch Info ----
+    // Patch
     async loadPatchInfo() {
-        const res = parseJson(await this.ksu.runAction('get_patch_info'));
-        if (!res) {
-            document.getElementById('patch-name').textContent = 'Failed to load';
-            document.getElementById('patch-meta').textContent = '';
-            return;
-        }
-
-        const info = patchSourceLabel(res.patch_source || 'none');
-        const iconEl = document.getElementById('patch-icon');
-        iconEl.textContent = info.icon;
-        iconEl.className = `patch-icon ${info.cls}`;
-        document.getElementById('patch-name').textContent = info.name;
-
-        const metaParts = [];
-        if (res.device && res.device !== 'unknown') metaParts.push(`device: ${res.device}`);
-        if (res.soc    && res.soc    !== 'unknown') metaParts.push(`soc: ${res.soc}`);
-        if (info.desc) metaParts.push(info.desc);
-        document.getElementById('patch-meta').textContent = metaParts.join('  ·  ') || '—';
-
-        // Update param count hints on buttons
-        if (res.perf_params)     document.getElementById('hint-perf').textContent     = `${res.perf_params} params`;
-        if (res.balanced_params) document.getElementById('hint-balanced').textContent = `${res.balanced_params} params`;
-
-        this.log(`[PATCH] Source: ${res.patch_source || 'none'} · perf=${res.perf_params ?? '?'} params, balanced=${res.balanced_params ?? '?'} params`, 'info');
-
-        // Warn if on generic fallback
-        if (res.patch_source === 'generic_qcom') {
-            this.log(`[PATCH] ⚠ Generic fallback active for ${res.device}/${res.soc}. Consider adding a device-specific patch!`, 'warning');
-        }
+        const r = parseJson(await this.ksu.runAction('get_patch_info'));
+        if (!r) { document.getElementById('patch-name').textContent = 'LOAD FAILED'; return; }
+        const lbl = patchLabel(r.patch_source || 'none');
+        document.getElementById('patch-icon').textContent = lbl.icon;
+        document.getElementById('patch-name').textContent = lbl.name;
+        const parts = [];
+        if (r.device && r.device !== 'unknown') parts.push(`dev:${r.device}`);
+        if (r.soc    && r.soc    !== 'unknown') parts.push(`soc:${r.soc}`);
+        if (lbl.meta) parts.push(lbl.meta);
+        document.getElementById('patch-meta').textContent = parts.join(' · ') || '—';
+        if (r.perf_params)     document.getElementById('hint-perf').textContent     = `[${r.perf_params}p]`;
+        if (r.balanced_params) document.getElementById('hint-balanced').textContent = `[${r.balanced_params}p]`;
+        this.log(`[PATCH] ${r.patch_source || 'none'} · perf=${r.perf_params ?? '?'}p bal=${r.balanced_params ?? '?'}p`, 'info');
+        if (r.patch_source === 'generic_qcom')
+            this.log(`[PATCH] ⚠ GENERIC FALLBACK — contribute a device patch!`, 'warning');
     }
 
-    // ---- Mode ----
+    // Mode
     async checkMode() {
-        const res = parseJson(await this.ksu.runAction('get_mode'));
-        this.updateUIState(res?.mode || 'stock');
+        const r = parseJson(await this.ksu.runAction('get_mode'));
+        this.updateUIState(r?.mode || 'stock');
     }
 
     updateUIState(mode) {
         const dot   = document.getElementById('status-dot');
         const label = document.getElementById('current-mode');
-        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        ['btn-perf','btn-bal','btn-stock'].forEach(id => document.getElementById(id)?.classList.remove('active'));
         if (mode === 'perf') {
             label.textContent = 'PERFORMANCE';
-            dot.style.color = 'var(--accent-success)';
-            document.querySelector('.btn-perf').classList.add('active');
+            dot.style.cssText = 'background:var(--green);box-shadow:0 0 6px var(--green),0 0 12px var(--green-dim)';
+            document.getElementById('btn-perf')?.classList.add('active');
         } else if (mode === 'balanced') {
             label.textContent = 'BALANCED';
-            dot.style.color = 'var(--accent-warning)';
-            document.querySelector('.btn-balanced').classList.add('active');
+            dot.style.cssText = 'background:var(--amber);box-shadow:0 0 6px var(--amber),0 0 12px var(--amber-dim)';
+            document.getElementById('btn-bal')?.classList.add('active');
         } else {
-            label.textContent = 'STOCK / READY';
-            dot.style.color = 'var(--text-main)';
-            document.querySelector('.btn-stock').classList.add('active');
+            label.textContent = 'STOCK';
+            dot.style.cssText = 'background:var(--text-dim);box-shadow:none';
+            document.getElementById('btn-stock')?.classList.add('active');
         }
     }
 
-    // ---- Apply Mode ----
+    // Apply
     async applyMode(mode) {
         if (this.processing) return;
         this.processing = true;
-
-        const btnMap = { perf: '.btn-perf', balanced: '.btn-balanced', stock: '.btn-stock' };
-        const activeBtn = document.querySelector(btnMap[mode]);
-        document.querySelectorAll('.mode-btn').forEach(b => b.disabled = true);
-        activeBtn?.classList.add('processing');
+        const btnId = { perf:'btn-perf', balanced:'btn-bal', stock:'btn-stock' }[mode];
+        document.querySelectorAll('.prof-btn').forEach(b => b.disabled = true);
+        document.getElementById(btnId)?.classList.add('processing');
         document.getElementById('current-mode').textContent = 'APPLYING…';
-        this.log(`Applying mode: ${mode.toUpperCase()}…`, 'info');
+        this.log(`APPLYING MODE: ${mode.toUpperCase()}`, 'info');
 
         try {
-            const res = parseJson(await this.ksu.runAction('apply_mode', mode));
-
-            if (!res) { this.log('Failed to parse backend response.', 'error'); await this.checkMode(); return; }
-
-            if (res.status === 'success') {
-                const n = res.params_applied ?? '?';
-                this.log(`[CONFIG] ${res.message} (${n} params patched)`, 'success');
+            const r = parseJson(await this.ksu.runAction('apply_mode', mode));
+            if (!r) { this.log('PARSE ERROR — no response', 'error'); await this.checkMode(); return; }
+            if (r.status === 'success') {
+                this.log(`[CFG] ${r.message} (${r.params_applied ?? '?'} params)`, 'success');
                 this.updateUIState(mode);
-
-                // Update driver info if returned
-                if (res.driver_type) { this.driverType = res.driver_type; this.driverName = res.driver_name || this.driverName; this.updateDriverPill(); }
-
-                if (this.driverType === 'modular') {
-                    this.log(`[DRIVER] Modular driver — triggering automatic reload…`, 'info');
-                    setTimeout(() => this.softReset(true), 400);
-                } else if (this.driverType === 'builtin') {
-                    this.log(`[DRIVER] Built-in driver (${this.driverName}) — reload not possible at runtime.`, 'builtin');
-                    this.log(`[DRIVER] Config written. Reboot your device for changes to take effect.`, 'builtin');
-                    this.showRebootBanner();
-                } else {
-                    this.log('[DRIVER] Driver type unknown — skipping automatic reload.', 'warning');
-                }
+                if (r.driver_type) { this.driverType = r.driver_type; this.driverName = r.driver_name || this.driverName; this.updateDriverTag(); }
+                if      (this.driverType === 'modular') { this.log('[DRV] MODULAR — triggering reload…', 'info'); setTimeout(() => this.softReset(true), 400); }
+                else if (this.driverType === 'builtin') { this.log('[DRV] BUILT-IN — reboot required', 'builtin'); this.showRebootBanner(); }
+                else                                    { this.log('[DRV] UNKNOWN — skipping reload', 'warning'); }
             } else {
-                this.log(`Error: ${res.message || 'Unknown error'}`, 'error');
+                this.log(`ERROR: ${r.message || 'unknown'}`, 'error');
                 await this.checkMode();
             }
-        } catch (e) {
-            this.log(`Exception: ${e.message}`, 'error');
+        } catch(e) {
+            this.log(`EXCEPTION: ${e.message}`, 'error');
             await this.checkMode();
         } finally {
             this.processing = false;
-            document.querySelectorAll('.mode-btn').forEach(b => { b.disabled = false; b.classList.remove('processing'); });
+            document.querySelectorAll('.prof-btn').forEach(b => { b.disabled = false; b.classList.remove('processing'); });
         }
     }
 
-    // ---- Stats ----
+    // Stats
     async fetchStats() {
-        const data = parseJson(await this.ksu.runAction('stats'));
-        if (!data) return;
-        document.getElementById('stat-rssi').textContent  = data.rssi  || '--';
-        document.getElementById('stat-speed').textContent = data.speed || '--';
-        document.getElementById('stat-freq').textContent  = data.freq  || '--';
-        document.getElementById('stat-ssid').textContent  = data.ssid  || '--';
+        const d = parseJson(await this.ksu.runAction('stats'));
+        if (!d) return;
+        document.getElementById('stat-rssi').textContent  = d.rssi  || '--';
+        document.getElementById('stat-speed').textContent = d.speed || '--';
+        document.getElementById('stat-freq').textContent  = d.freq  || '--';
+        document.getElementById('stat-ssid').textContent  = d.ssid  || '--';
     }
 
-    // ---- Soft Reset ----
+    // Reset
     async softReset(silent = false) {
         if (!silent) {
-            if (this.driverType === 'builtin') {
-                this.log('[DRIVER] Built-in driver — cannot reload at runtime.', 'builtin');
-                this.log('[DRIVER] Reboot your device for pending config changes to take effect.', 'builtin');
-                this.showRebootBanner();
-                return;
-            }
-            this.log('Reloading Wi-Fi driver…', 'info');
+            if (this.driverType === 'builtin') { this.log('[DRV] BUILT-IN — cannot reload', 'builtin'); this.showRebootBanner(); return; }
+            this.log('[DRV] RELOADING DRIVER…', 'info');
         }
-
-        this.$resetBtn.classList.add('processing');
+        this.$reset.classList.add('processing');
         try {
-            const res = parseJson(await this.ksu.runAction('soft_reset'));
-            if (!res) { this.log('Failed to parse soft_reset response.', 'error'); return; }
-
-            if (res.status === 'success') {
-                this.log(`[DRIVER] ${res.message}`, 'success');
-            } else if (res.status === 'builtin') {
-                this.log(`[DRIVER] ${res.message}`, 'builtin');
-                this.showRebootBanner(res.driver_name);
-            } else if (res.status === 'warning') {
-                this.log(`[DRIVER] Warning: ${res.message}`, 'warning');
-            } else {
-                this.log(`[DRIVER] Error: ${res.message}`, 'error');
-            }
-        } catch (e) {
-            this.log(`Driver reload exception: ${e.message}`, 'error');
-        } finally {
-            this.$resetBtn.classList.remove('processing');
-        }
+            const r = parseJson(await this.ksu.runAction('soft_reset'));
+            if (!r) { this.log('PARSE ERROR', 'error'); return; }
+            if      (r.status === 'success') this.log(`[DRV] ${r.message}`, 'success');
+            else if (r.status === 'builtin') { this.log(`[DRV] ${r.message}`, 'builtin'); this.showRebootBanner(r.driver_name); }
+            else if (r.status === 'warning') this.log(`[DRV] WARN: ${r.message}`, 'warning');
+            else                             this.log(`[DRV] ERR: ${r.message}`, 'error');
+        } catch(e) { this.log(`EXCEPTION: ${e.message}`, 'error'); }
+        finally     { this.$reset.classList.remove('processing'); }
     }
 
-    // ---- Reboot Banner ----
-    showRebootBanner(driverName) {
-        const name = driverName || this.driverName || 'built-in';
+    // Banner
+    showRebootBanner(name) {
+        const n = name || this.driverName || 'built-in';
         document.getElementById('reboot-banner-desc').textContent =
-            `Your Wi-Fi driver (${name}) is compiled into the kernel and cannot be reloaded at runtime. ` +
-            `The new config has been written — a full reboot is required for changes to take effect.`;
-        this.$rebootBanner.classList.add('visible');
+            `Driver (${n}) is kernel-compiled. Config written — full reboot required.`;
+        this.$banner.classList.add('visible');
     }
 
     requestReboot() {
-        this.log('[SYS] Reboot requested…', 'warning');
-        this.ksu.exec('reboot').then(() => this.log('[SYS] Reboot command sent.', 'warning'))
-                               .catch(() => this.log('[SYS] Reboot failed — please reboot manually.', 'error'));
+        this.log('[SYS] REBOOT REQUESTED…', 'warning');
+        this.ksu.exec('reboot')
+            .then(() => this.log('[SYS] REBOOT CMD SENT', 'warning'))
+            .catch(() => this.log('[SYS] REBOOT FAILED — reboot manually', 'error'));
     }
 
-    // ---- Log ----
+    // Log
     log(msg, type = 'info') {
         const now = new Date();
-        const ts  = [now.getHours(), now.getMinutes(), now.getSeconds()]
-                        .map(n => String(n).padStart(2,'0')).join(':');
-        const line = document.createElement('span');
-        line.className = 'log-line';
-        line.innerHTML = `<span class="log-ts">[${ts}]</span><span class="log-${type}">${escapeHtml(msg)}</span>`;
-        this.$console.appendChild(line);
-        this.$console.scrollTop = this.$console.scrollHeight;
+        const ts  = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+        const el  = document.createElement('span');
+        el.className = 'log-line';
+        el.innerHTML = `<span class="log-ts">[${ts}]</span><span class="log-${type}">${escHtml(msg)}</span>`;
+        this.$log.appendChild(el);
+        // Scroll to bottom only when already near the bottom (user may be reading)
+        const nearBottom = this.$log.scrollHeight - this.$log.scrollTop - this.$log.clientHeight < 40;
+        if (nearBottom) this.$log.scrollTop = this.$log.scrollHeight;
     }
 
-    clearLog() { this.$console.innerHTML = ''; this.log('Log cleared.', 'system'); }
+    clearLog() {
+        this.$log.innerHTML = '';
+        this.log('LOG CLEARED', 'system');
+    }
 
     async runDebug() {
-        this.log('--- Debug Info ---', 'system');
-        const raw = await this.ksu.exec(
-            `sh '${this.ksu.actionScript}' 'get_debug_info'`
-        );
-        if (!raw) { this.log('No output from debug action.', 'error'); return; }
+        this.log('--- DEBUG DUMP ---', 'system');
+        const raw = await this.ksu.exec(`sh '${this.ksu.actionScript}' 'get_debug_info'`);
+        if (!raw) { this.log('NO OUTPUT', 'error'); return; }
         raw.split('\n').forEach(line => {
             if (!line.trim()) return;
-            const type = line.startsWith('===') ? 'system'
-                       : line.includes('FOUND')  ? 'success'
-                       : line.includes('absent') || line.includes('not') ? 'warning'
-                       : 'info';
-            this.log(line, type);
+            const t = line.startsWith('===') ? 'system' : line.includes('FOUND') ? 'success' : line.includes('absent') || line.includes('not') ? 'warning' : 'info';
+            this.log(line, t);
         });
     }
 }
