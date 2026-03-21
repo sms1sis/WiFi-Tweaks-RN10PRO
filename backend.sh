@@ -122,23 +122,33 @@ get_driver_name() {
 # During runtime the module overlay is already mounted by Magisk/KSU,
 # so we just need to find the live (possibly overlaid) config.
 find_wifi_config() {
-    # If customize.sh recorded the relative path, use that first
+    # If customize.sh recorded the relative path, use that first.
+    # The live overlaid path (e.g. /vendor/etc/wifi/WCNSS_qcom_cfg.ini)
+    # is what the system reads — KSU/Magisk mounts $MODDIR/system/<rel>
+    # over /<rel> at boot, so editing the live path edits the overlay file.
     if [ -f "$MODDIR/config_rel_path.txt" ]; then
         local rel
         rel=$(cat "$MODDIR/config_rel_path.txt")
-        # Try the live (overlaid) path — this is what the system actually reads
+
+        # 1. Live overlaid path — preferred, this IS the overlay file when mounted
         local live="/${rel}"
         [ -f "$live" ] && echo "$live" && return
-        # Try inside the module dir (overlay source)
-        local overlay="$MODDIR/${rel}"
-        [ -f "$overlay" ] && echo "$overlay" && return
+
+        # 2. Overlay source inside module (system/ prefix — correct KSU layout)
+        local overlay_system="$MODDIR/system/${rel}"
+        [ -f "$overlay_system" ] && echo "$overlay_system" && return
+
+        # 3. Legacy incorrect path (vendor/ without system/ prefix) — migration
+        local overlay_legacy="$MODDIR/${rel}"
+        [ -f "$overlay_legacy" ] && echo "$overlay_legacy" && return
     fi
 
-    # Fallback search
+    # Fallback search across all known vendor paths
     for p in \
         /vendor/etc/wifi/WCNSS_qcom_cfg.ini \
         /system/vendor/etc/wifi/WCNSS_qcom_cfg.ini \
         /data/vendor/wifi/WCNSS_qcom_cfg.ini \
+        /odm/vendor/etc/wifi/WCNSS_qcom_cfg.ini \
         /etc/wifi/WCNSS_qcom_cfg.ini; do
         [ -f "$p" ] && echo "$p" && return
     done
@@ -169,6 +179,7 @@ find_patch_dir() {
     case "$device" in
         sunny)   resolved_device="mojito" ;;
         sweet_k) resolved_device="sweet"  ;;
+        sweetin)  resolved_device="sweet"  ;;
         willow)  resolved_device="ginkgo" ;;
     esac
 
@@ -322,96 +333,47 @@ case "$1" in
     "stats")
         RSSI="--" SPEED="--" FREQ="--" SSID="--"
 
-        # --- Method 1: wpa_cli ---
-        # Qualcomm vendor wpa_supplicant uses a non-default socket path.
-        # Try all known socket locations before giving up.
-        if command -v wpa_cli >/dev/null 2>&1; then
-            WPA_STATUS="" WPA_SIGNAL=""
-            for WPA_SOCK in \
-                "/data/vendor/wifi/wpa/wlan0" \
-                "/data/vendor/wifi/wpa_supplicant/wlan0" \
-                "/data/misc/wifi/sockets/wlan0" \
-                "/var/run/wpa_supplicant/wlan0"; do
-                if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
-                    WPA_DIR=$(dirname "$WPA_SOCK")
-                    WPA_STATUS=$(wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" status 2>/dev/null)
-                    WPA_SIGNAL=$(wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>/dev/null)
-                    break
-                fi
-            done
-            # Fallback: try without explicit socket path (works on some ROMs)
-            if [ -z "$WPA_STATUS" ]; then
-                WPA_STATUS=$(wpa_cli -i "$WLAN_DEV" status 2>/dev/null)
-                WPA_SIGNAL=$(wpa_cli -i "$WLAN_DEV" signal_poll 2>/dev/null)
-            fi
-            if [ -n "$WPA_STATUS" ]; then
-                SSID_RAW=$(printf '%s' "$WPA_STATUS" | grep "^ssid=" | cut -d= -f2-)
-                FREQ_RAW=$(printf '%s' "$WPA_STATUS" | grep "^freq=" | cut -d= -f2)
-                [ -n "$SSID_RAW" ] && SSID="$SSID_RAW"
-                [ -n "$FREQ_RAW" ] && FREQ="${FREQ_RAW} MHz"
-            fi
-            if [ -n "$WPA_SIGNAL" ]; then
-                RSSI_RAW=$(printf '%s' "$WPA_SIGNAL" | grep "^RSSI=" | cut -d= -f2)
-                SPEED_RAW=$(printf '%s' "$WPA_SIGNAL" | grep "^LINKSPEED=" | cut -d= -f2)
-                [ -n "$RSSI_RAW" ]  && RSSI="${RSSI_RAW} dBm"
+        export PATH=/vendor/bin:/system/bin:/system/xbin:$PATH
+
+        # --- Method 1: cmd wifi status ---
+        # Single-line WifiInfo output, available on all Android 11+
+        # Format: WifiInfo: SSID: "name", ..., RSSI: -37, Link speed: 433Mbps, Frequency: 5745MHz, ...
+        if command -v cmd >/dev/null 2>&1; then
+            CMD_OUT=$(cmd wifi status 2>/dev/null | grep "^WifiInfo:")
+            if [ -n "$CMD_OUT" ]; then
+                SSID_RAW=$(printf '%s' "$CMD_OUT"  | grep -o 'SSID: "[^"]*"'      | head -1 | cut -d'"' -f2)
+                RSSI_RAW=$(printf '%s' "$CMD_OUT"  | grep -o 'RSSI: -\{0,1\}[0-9]*' | head -1 | awk '{print $2}')
+                FREQ_RAW=$(printf '%s' "$CMD_OUT"  | grep -o 'Frequency: [0-9]*'  | head -1 | awk '{print $2}')
+                SPEED_RAW=$(printf '%s' "$CMD_OUT" | grep -o 'Link speed: [0-9]*' | head -1 | awk '{print $3}')
+                [ -n "$SSID_RAW"  ] && SSID="$SSID_RAW"
+                [ -n "$RSSI_RAW"  ] && RSSI="${RSSI_RAW} dBm"
+                [ -n "$FREQ_RAW"  ] && FREQ="${FREQ_RAW} MHz"
                 [ -n "$SPEED_RAW" ] && SPEED="${SPEED_RAW} Mbps"
             fi
         fi
 
-        # --- Method 2: sysfs (always available, no tools needed) ---
-        # RSSI via sysfs if wpa_cli did not get it
+        # --- Method 2: dumpsys wifi mWifiInfo (fallback) ---
+        # Same single-line format, key is "mWifiInfo" on Android <=12
         if [ "$RSSI" = "--" ]; then
-            local sysfs_rssi="/sys/class/net/${WLAN_DEV}/statistics"
-            # Try Android thermal/wifi sysfs path used on many Qualcomm ROMs
-            for rssi_path in                 "/sys/class/net/${WLAN_DEV}/link_quality"                 "/proc/net/wireless"; do
-                if [ -r "$rssi_path" ]; then
-                    RSSI_RAW=$(grep "${WLAN_DEV}" "$rssi_path" 2>/dev/null | awk '{print $4}' | cut -d. -f1)
-                    [ -n "$RSSI_RAW" ] && RSSI="${RSSI_RAW} dBm" && break
-                fi
-            done
-        fi
-
-        # --- Method 3: dumpsys wifi (Android framework fallback) ---
-        if [ "$RSSI" = "--" ] || [ "$SSID" = "--" ]; then
             if command -v dumpsys >/dev/null 2>&1; then
-                DUMP=$(dumpsys wifi 2>/dev/null | grep -A5 "mWifiInfo" | head -10)
-                if [ -n "$DUMP" ]; then
-                    [ "$RSSI" = "--" ] && {
-                        RSSI_RAW=$(printf '%s' "$DUMP" | grep -o "rssi: -[0-9]*" | head -1 | cut -d' ' -f2)
-                        [ -n "$RSSI_RAW" ] && RSSI="${RSSI_RAW} dBm"
-                    }
-                    [ "$SSID" = "--" ] && {
-                        SSID_RAW=$(printf '%s' "$DUMP" | grep -o 'SSID: [^,]*' | head -1 | cut -d' ' -f2-)
-                        [ -n "$SSID_RAW" ] && SSID="$SSID_RAW"
-                    }
-                    [ "$SPEED" = "--" ] && {
-                        SPEED_RAW=$(printf '%s' "$DUMP" | grep -o "linkSpeed [0-9]*" | head -1 | awk '{print $2}')
-                        [ -n "$SPEED_RAW" ] && SPEED="${SPEED_RAW} Mbps"
-                    }
+                DMP_OUT=$(dumpsys wifi 2>/dev/null | grep "^mWifiInfo")
+                [ -z "$DMP_OUT" ] && DMP_OUT=$(dumpsys wifi 2>/dev/null | grep "^mConnectionInfo")
+                if [ -n "$DMP_OUT" ]; then
+                    SSID_RAW=$(printf '%s' "$DMP_OUT"  | grep -o 'SSID: "[^"]*"'      | head -1 | cut -d'"' -f2)
+                    RSSI_RAW=$(printf '%s' "$DMP_OUT"  | grep -o 'RSSI: -\{0,1\}[0-9]*' | head -1 | awk '{print $2}')
+                    FREQ_RAW=$(printf '%s' "$DMP_OUT"  | grep -o 'Frequency: [0-9]*'  | head -1 | awk '{print $2}')
+                    SPEED_RAW=$(printf '%s' "$DMP_OUT" | grep -o 'Link speed: [0-9]*' | head -1 | awk '{print $3}')
+                    [ -n "$SSID_RAW"  ] && [ "$SSID"  = "--" ] && SSID="$SSID_RAW"
+                    [ -n "$RSSI_RAW"  ] && [ "$RSSI"  = "--" ] && RSSI="${RSSI_RAW} dBm"
+                    [ -n "$FREQ_RAW"  ] && [ "$FREQ"  = "--" ] && FREQ="${FREQ_RAW} MHz"
+                    [ -n "$SPEED_RAW" ] && [ "$SPEED" = "--" ] && SPEED="${SPEED_RAW} Mbps"
                 fi
-            fi
-        fi
-
-        # --- Method 4: iw (available on some custom ROMs / rooted devices) ---
-        if [ "$RSSI" = "--" ] && command -v iw >/dev/null 2>&1; then
-            LINK=$(iw dev "$WLAN_DEV" link 2>/dev/null)
-            if [ -n "$LINK" ]; then
-                RSSI_RAW=$(printf '%s' "$LINK" | grep -o "signal: -[0-9]*" | awk '{print $2}')
-                SPEED_RAW=$(printf '%s' "$LINK" | grep -o "tx bitrate: [0-9.]*" | awk '{print $3}')
-                FREQ_RAW=$(printf '%s' "$LINK" | grep -o "freq: [0-9]*" | awk '{print $2}')
-                SSID_RAW=$(printf '%s' "$LINK" | grep "SSID:" | sed 's/.*SSID: //')
-                [ -n "$RSSI_RAW" ]  && RSSI="${RSSI_RAW} dBm"
-                [ -n "$SPEED_RAW" ] && SPEED="${SPEED_RAW} Mbps"
-                [ -n "$FREQ_RAW" ]  && FREQ="${FREQ_RAW} MHz"
-                [ -n "$SSID_RAW" ]  && SSID="$SSID_RAW"
             fi
         fi
 
         printf '{"rssi":"%s","speed":"%s","freq":"%s","ssid":"%s"}\n' \
             "$RSSI" "$SPEED" "$FREQ" "$SSID"
-        ;;
-
-    # -----------------------------------------------------------------------
+        ;;    # -----------------------------------------------------------------------
     "soft_reset")
         DTYPE=$(detect_driver_type)
         DNAME=$(get_driver_name)

@@ -42,6 +42,7 @@ if [ -z "$PATCH_DIR" ] && [ -n "$DEVICE" ]; then
     case "$DEVICE" in
         sunny)   ALIAS="mojito"  ;;
         sweet_k) ALIAS="sweet"   ;;
+        sweetin)  ALIAS="sweet"   ;;
         willow)  ALIAS="ginkgo"  ;;
         willow)  ALIAS="ginkgo"  ;;  # Redmi Note 8T shares hardware with ginkgo
         *)       ALIAS=""        ;;
@@ -118,13 +119,18 @@ if [ -z "$CONFIG_SRC" ]; then
 fi
 
 if [ -n "$CONFIG_SRC" ]; then
+    # KernelSU/Magisk overlay REQUIRES files to live under $MODPATH/system/
+    # The framework mirrors $MODPATH/system/ over / at boot.
+    # A file at $MODPATH/vendor/... is silently ignored — never mounted.
     REL_PATH="${CONFIG_SRC#/}"
-    DEST="$MODPATH/${REL_PATH}"
+    DEST="$MODPATH/system/${REL_PATH}"
     mkdir -p "$(dirname "$DEST")"
     cp "$CONFIG_SRC" "$DEST"
     chmod 644 "$DEST"
     ui_print "- Config  : Imported from $CONFIG_SRC ✓"
-    # Store the relative config path for backend.sh
+    ui_print "- Overlay : $MODPATH/system/${REL_PATH}"
+    # Store the relative path (without leading "system/") for backend.sh
+    # backend.sh finds the live path at /${REL_PATH} (the mounted overlay)
     echo "$REL_PATH" > "$MODPATH/config_rel_path.txt"
 else
     ui_print "! Warning : WCNSS_qcom_cfg.ini not found on this device."
