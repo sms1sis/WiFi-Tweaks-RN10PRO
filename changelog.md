@@ -1,3 +1,12 @@
+## v5.0.5
+- **Fix:** Stats cards (Signal, Speed, Frequency, SSID) empty on all devices. Root cause: `cmd wifi status` and `dumpsys wifi` both output all data on a **single line** (`WifiInfo: SSID: "x", RSSI: -37, Link speed: 433Mbps, Frequency: 5745MHz, ...`) — the previous multi-line grep/sed parsing extracted nothing. Rewrote parser to correctly extract each field inline using `grep -o` with precise patterns against the single-line WifiInfo format. Verified against real output from Redmi Note 8 (ginkgo).
+- **Confirmed working:** `cmd wifi status` (primary) and `dumpsys wifi mWifiInfo` (fallback). `wpa_cli` not available on this device. `/proc/net/wireless` exists but returns all zeros on icnss-based Qualcomm devices.
+- **New alias:** `sweetin` → `sweet` (Redmi Note 10 Pro India variant, same hardware as sweet).
+
+## v5.0.4
+- **Fix (critical):** Config overlay never mounted — patching had no effect on the live Wi-Fi config. Root cause: `customize.sh` was placing the imported config at `$MODPATH/vendor/etc/wifi/WCNSS_qcom_cfg.ini`. KernelSU (and Magisk) only mount paths under `$MODPATH/system/` over the root filesystem. Files placed outside `system/` are silently ignored and never bind-mounted. Fixed: destination is now always `$MODPATH/system/${REL_PATH}`, which correctly overlays as `/${REL_PATH}` at boot.
+- **Fix:** `find_wifi_config` in `backend.sh` updated to look for the overlay source under `$MODDIR/system/<rel>` first, with a legacy fallback for the old incorrect `$MODDIR/<rel>` path for devices upgrading from a previous install.
+
 ## v5.0.3
 - **Fix (critical):** Further hardened driver detection against false-modular classification on icnss-based kernels where `/proc/modules` is empty and `lsmod` returns only a header.
 - **New check: `/proc/config.gz` (kernel config — ground truth).** `CONFIG_WLAN=y` or `CONFIG_ICNSS=y` definitively confirms built-in. `=m` confirms loadable module. This fires before any sysfs heuristic.
