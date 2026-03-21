@@ -122,6 +122,7 @@ find_patch_dir() {
     case "$device" in
         sunny)   resolved_device="mojito" ;;
         sweet_k) resolved_device="sweet"  ;;
+        willow)  resolved_device="ginkgo" ;;
     esac
 
     [ -d "$base/devices/$resolved_device" ] && echo "$base/devices/$resolved_device" && return

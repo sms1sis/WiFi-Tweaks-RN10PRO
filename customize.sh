@@ -40,9 +40,11 @@ fi
 # Also check common aliases (e.g. mojito and sunny share hardware)
 if [ -z "$PATCH_DIR" ] && [ -n "$DEVICE" ]; then
     case "$DEVICE" in
-        sunny)   ALIAS="mojito" ;;
-        sweet_k) ALIAS="sweet"  ;;
-        *)       ALIAS=""       ;;
+        sunny)   ALIAS="mojito"  ;;
+        sweet_k) ALIAS="sweet"   ;;
+        willow)  ALIAS="ginkgo"  ;;
+        willow)  ALIAS="ginkgo"  ;;  # Redmi Note 8T shares hardware with ginkgo
+        *)       ALIAS=""        ;;
     esac
     if [ -n "$ALIAS" ] && [ -d "$PATCHES_BASE/devices/$ALIAS" ]; then
         if [ -f "$PATCHES_BASE/devices/$ALIAS/perf.patch" ] && \
