@@ -1,3 +1,6 @@
+## v5.0.6
+- **Fix (critical):** New config keys (e.g. `gChannelBondingMode24GHz`) were appended after the `END` marker in `WCNSS_qcom_cfg.ini`. The Wi-Fi driver ignores everything past `END` — so these params had no effect. `apply_patch` now inserts missing keys **before** the `END` line using `sed` instead of appending to the end of the file.
+
 ## v5.0.5
 - **Fix:** Stats cards (Signal, Speed, Frequency, SSID) empty on all devices. Root cause: `cmd wifi status` and `dumpsys wifi` both output all data on a **single line** (`WifiInfo: SSID: "x", RSSI: -37, Link speed: 433Mbps, Frequency: 5745MHz, ...`) — the previous multi-line grep/sed parsing extracted nothing. Rewrote parser to correctly extract each field inline using `grep -o` with precise patterns against the single-line WifiInfo format. Verified against real output from Redmi Note 8 (ginkgo).
 - **Confirmed working:** `cmd wifi status` (primary) and `dumpsys wifi mWifiInfo` (fallback). `wpa_cli` not available on this device. `/proc/net/wireless` exists but returns all zeros on icnss-based Qualcomm devices.

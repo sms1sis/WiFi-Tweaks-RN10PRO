@@ -1,7 +1,7 @@
 id=wifi_config_switcher
 name=WiFi Config Switcher
-version=v5.0.5
-versionCode=105
+version=v5.0.6
+versionCode=106
 author=sms1sis
 description=Generic Qualcomm Wi-Fi tuner. Patch-based profiles per device/SoC — no hardcoded params. Auto driver detection (modular/built-in), reboot prompts, live WebUI. Compatible with KernelSU-Next V3.
 updateJson=https://raw.githubusercontent.com/sms1sis/WiFi-Config-Switcher/main/update.json
