@@ -1,0 +1,10 @@
+# Snapdragon 675/710/712 (sm6150 family) — Performance Profile
+
+gEnableBmps=0
+gEnableImps=0
+gDataInactivityTimeout=0
+TxPower2g=16
+TxPower5g=15
+gChannelBondingMode24GHz=1
+gRoamScanOffloadEnabled=0
+gEnableRoamDelayStats=0

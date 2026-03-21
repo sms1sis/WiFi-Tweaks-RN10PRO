@@ -1,0 +1,11 @@
+# Snapdragon 730/730G/732G (sm7150 family) — Balanced Profile
+
+gEnableBmps=1
+gEnableImps=1
+gDataInactivityTimeout=200
+TxPower2g=14
+TxPower5g=14
+gChannelBondingMode24GHz=1
+gRoamScanOffloadEnabled=1
+gEnableRoamDelayStats=1
+gRoamRescanRssiDiff=5

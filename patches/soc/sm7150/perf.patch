@@ -1,0 +1,12 @@
+# Snapdragon 730/730G/732G (sm7150 family) — Performance Profile
+
+gEnableBmps=0
+gEnableImps=0
+gDataInactivityTimeout=0
+TxPower2g=17
+TxPower5g=17
+gChannelBondingMode24GHz=1
+gRoamScanOffloadEnabled=0
+gEnableRoamDelayStats=0
+gRoamRescanRssiDiff=5
+gEnableAMPDUPS=1

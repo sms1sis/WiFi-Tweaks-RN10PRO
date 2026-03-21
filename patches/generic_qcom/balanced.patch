@@ -1,0 +1,10 @@
+# Generic Qualcomm — Balanced Profile
+# Safe conservative values for any Qualcomm device with WCNSS_qcom_cfg.ini
+
+gEnableBmps=1
+gEnableImps=1
+gDataInactivityTimeout=200
+TxPower2g=13
+TxPower5g=13
+gChannelBondingMode24GHz=1
+gRoamScanOffloadEnabled=1

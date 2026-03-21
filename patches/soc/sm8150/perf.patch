@@ -1,0 +1,13 @@
+# Snapdragon 855/855+ (sm8150) — Performance Profile
+
+gEnableBmps=0
+gEnableImps=0
+gDataInactivityTimeout=0
+TxPower2g=17
+TxPower5g=17
+gChannelBondingMode24GHz=1
+gChannelBondingMode5GHz=1
+gRoamScanOffloadEnabled=0
+gEnableRoamDelayStats=0
+gEnableAMPDUPS=1
+gMaxHTMCSForTxData=0x2f2f

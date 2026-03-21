@@ -1,0 +1,11 @@
+# Redmi Note 10 (mojito/sunny) — Balanced Profile
+# SoC: Snapdragon 678 (sm6150)
+
+gEnableBmps=1
+gEnableImps=1
+gDataInactivityTimeout=200
+TxPower2g=13
+TxPower5g=13
+gChannelBondingMode24GHz=1
+gRoamScanOffloadEnabled=1
+gEnableRoamDelayStats=1

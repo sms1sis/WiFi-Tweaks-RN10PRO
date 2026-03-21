@@ -1,0 +1,24 @@
+# Redmi Note 10 Pro (sweet) — Performance Profile
+# SoC: Snapdragon 732G (sm7150-ac)
+# Driver: qca_cld3_wlan
+
+# Disable power-saving modes
+gEnableBmps=0
+gEnableImps=0
+gDataInactivityTimeout=0
+
+# Max TX power (dBm) — sweet supports up to 17 on both bands
+TxPower2g=17
+TxPower5g=17
+
+# Enable 40MHz bonding on 2.4GHz
+gChannelBondingMode24GHz=1
+
+# Disable roam scanning (reduces interruptions during gaming/streaming)
+gRoamScanOffloadEnabled=0
+gEnableRoamDelayStats=0
+gRoamRescanRssiDiff=5
+
+# Aggressive 11n/11ac aggregation
+gMaxHTMCSForTxData=0x2f2f
+gEnableAMPDUPS=1

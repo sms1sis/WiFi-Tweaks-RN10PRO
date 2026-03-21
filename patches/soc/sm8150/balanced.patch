@@ -1,0 +1,11 @@
+# Snapdragon 855/855+ (sm8150) — Balanced Profile
+
+gEnableBmps=1
+gEnableImps=1
+gDataInactivityTimeout=200
+TxPower2g=15
+TxPower5g=15
+gChannelBondingMode24GHz=1
+gChannelBondingMode5GHz=1
+gRoamScanOffloadEnabled=1
+gEnableRoamDelayStats=1

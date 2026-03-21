@@ -1,0 +1,11 @@
+# Generic Qualcomm — Performance Profile
+# Safe conservative values for any Qualcomm device with WCNSS_qcom_cfg.ini
+# These params exist on virtually all Qualcomm Wi-Fi drivers (WCN36xx, WCN39xx, QCA)
+
+gEnableBmps=0
+gEnableImps=0
+gDataInactivityTimeout=0
+TxPower2g=15
+TxPower5g=15
+gChannelBondingMode24GHz=1
+gRoamScanOffloadEnabled=0

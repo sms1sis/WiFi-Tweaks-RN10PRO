@@ -1,0 +1,20 @@
+# Redmi Note 10 Pro (sweet) — Balanced Profile
+# SoC: Snapdragon 732G (sm7150-ac)
+# Driver: qca_cld3_wlan
+
+# Moderate power-saving
+gEnableBmps=1
+gEnableImps=1
+gDataInactivityTimeout=200
+
+# Moderate TX power
+TxPower2g=14
+TxPower5g=14
+
+# 40MHz bonding on
+gChannelBondingMode24GHz=1
+
+# Roam scanning enabled with sane thresholds
+gRoamScanOffloadEnabled=1
+gEnableRoamDelayStats=1
+gRoamRescanRssiDiff=5
