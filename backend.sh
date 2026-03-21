@@ -216,11 +216,17 @@ apply_patch() {
         key=$(printf '%s' "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
         [ -z "$key" ] && continue
 
-        # Update existing key (handles commented-out lines too) or append
+        # Update existing key (handles commented-out lines too) or insert before END marker
         if grep -qE "^[#[:space:]]*${key}[[:space:]]*=" "$config_file" 2>/dev/null; then
             sed -i "s|^[#[:space:]]*${key}[[:space:]]*=.*|${key}=${value}|" "$config_file"
         else
-            printf '%s=%s\n' "$key" "$value" >> "$config_file"
+            # Insert before the END marker so the driver sees the new key.
+            # If no END marker exists, append normally.
+            if grep -q "^END" "$config_file" 2>/dev/null; then
+                sed -i "s|^END|${key}=${value}\nEND|" "$config_file"
+            else
+                printf '%s=%s\n' "$key" "$value" >> "$config_file"
+            fi
         fi
         applied=$((applied + 1))
     done < "$patch_file"
