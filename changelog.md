@@ -1,3 +1,8 @@
+## v5.1.1
+- **UI:** Increased vertical padding across all panels, buttons, stat cells, and rows — elements were too short/cramped on device screens.
+- **UI:** Reduced top-sided layout feel — increased header, container, and dashboard padding evenly so content is balanced vertically.
+- **UI:** Increased gap between all panels and rows for better visual separation.
+
 ## v5.1.0
 - **UI:** Complete sci-fi visual overhaul — Orbitron + Share Tech Mono fonts, deep navy background, cyan/green/amber accent system, corner-accented panels, animated status dot with glow, circuit board background art embedded as base64 SVG (no external files).
 - **UI:** Profile buttons redesigned as compact single-line row (Perf / Balanced / Stock) with param count hints and per-mode color glow on active state.
