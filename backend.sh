@@ -366,22 +366,49 @@ case "$1" in
         fi
 
         # --- Method 2: dumpsys wifi mWifiInfo (fallback) ---
-        # Same single-line format, key is "mWifiInfo" on Android <=12
+        # mWifiInfo line may have leading whitespace on some Android versions
         if [ "$RSSI" = "--" ]; then
             if command -v dumpsys >/dev/null 2>&1; then
-                DMP_OUT=$(dumpsys wifi 2>/dev/null | grep "^mWifiInfo")
-                [ -z "$DMP_OUT" ] && DMP_OUT=$(dumpsys wifi 2>/dev/null | grep "^mConnectionInfo")
+                DMP_OUT=$(dumpsys wifi 2>/dev/null | grep -m1 "mWifiInfo" | sed 's/^[[:space:]]*//')
+                [ -z "$DMP_OUT" ] && DMP_OUT=$(dumpsys wifi 2>/dev/null | grep -m1 "mConnectionInfo" | sed 's/^[[:space:]]*//')
                 if [ -n "$DMP_OUT" ]; then
-                    SSID_RAW=$(printf '%s' "$DMP_OUT"  | grep -o 'SSID: "[^"]*"'      | head -1 | cut -d'"' -f2)
-                    RSSI_RAW=$(printf '%s' "$DMP_OUT"  | grep -o 'RSSI: -\{0,1\}[0-9]*' | head -1 | awk '{print $2}')
-                    FREQ_RAW=$(printf '%s' "$DMP_OUT"  | grep -o 'Frequency: [0-9]*'  | head -1 | awk '{print $2}')
-                    SPEED_RAW=$(printf '%s' "$DMP_OUT" | grep -o 'Link speed: [0-9]*' | head -1 | awk '{print $3}')
+                    SSID_RAW=$(printf '%s' "$DMP_OUT"  | grep -o 'SSID: "[^"]*"'         | head -1 | cut -d'"' -f2)
+                    RSSI_RAW=$(printf '%s' "$DMP_OUT"  | grep -o 'RSSI: -\{0,1\}[0-9]*'  | head -1 | awk '{print $2}')
+                    FREQ_RAW=$(printf '%s' "$DMP_OUT"  | grep -o 'Frequency: [0-9]*'      | head -1 | awk '{print $2}')
+                    SPEED_RAW=$(printf '%s' "$DMP_OUT" | grep -o 'Link speed: [0-9]*'     | head -1 | awk '{print $3}')
                     [ -n "$SSID_RAW"  ] && [ "$SSID"  = "--" ] && SSID="$SSID_RAW"
                     [ -n "$RSSI_RAW"  ] && [ "$RSSI"  = "--" ] && RSSI="${RSSI_RAW} dBm"
                     [ -n "$FREQ_RAW"  ] && [ "$FREQ"  = "--" ] && FREQ="${FREQ_RAW} MHz"
                     [ -n "$SPEED_RAW" ] && [ "$SPEED" = "--" ] && SPEED="${SPEED_RAW} Mbps"
                 fi
             fi
+        fi
+
+        # --- Method 3: wpa_cli signal_poll ---
+        if [ "$RSSI" = "--" ]; then
+            for WPA_SOCK in \
+                "/data/vendor/wifi/wpa/sockets/wlan0" \
+                "/data/vendor/wifi/wpa/wlan0" \
+                "/data/vendor/wifi/wpa_supplicant/sockets/wlan0" \
+                "/data/vendor/wifi/wpa_supplicant/wlan0" \
+                "/data/misc/wifi/sockets/wlan0"; do
+                [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ] || continue
+                WPA_DIR=$(dirname "$WPA_SOCK")
+                POLL=$(wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>/dev/null)
+                if [ -n "$POLL" ]; then
+                    RSSI_RAW=$(printf '%s' "$POLL" | grep "^RSSI="    | cut -d= -f2)
+                    FREQ_RAW=$(printf '%s' "$POLL" | grep "^FREQUENCY="| cut -d= -f2)
+                    SPEED_RAW=$(printf '%s' "$POLL"| grep "^LINKSPEED="| cut -d= -f2)
+                    [ -n "$RSSI_RAW"  ] && RSSI="${RSSI_RAW} dBm"
+                    [ -n "$FREQ_RAW"  ] && FREQ="${FREQ_RAW} MHz"
+                    [ -n "$SPEED_RAW" ] && SPEED="${SPEED_RAW} Mbps"
+                fi
+                # Get SSID from wpa_cli status
+                STATUS=$(wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" status 2>/dev/null)
+                SSID_RAW=$(printf '%s' "$STATUS" | grep "^ssid=" | cut -d= -f2)
+                [ -n "$SSID_RAW" ] && [ "$SSID" = "--" ] && SSID="$SSID_RAW"
+                break
+            done
         fi
 
         printf '{"rssi":"%s","speed":"%s","freq":"%s","ssid":"%s"}\n' \
@@ -565,7 +592,9 @@ case "$1" in
         # 4. Firmware version from wpa_cli / iw
         FW_VER="unknown"
         for WPA_SOCK in \
+            "/data/vendor/wifi/wpa/sockets/wlan0" \
             "/data/vendor/wifi/wpa/wlan0" \
+            "/data/vendor/wifi/wpa_supplicant/sockets/wlan0" \
             "/data/vendor/wifi/wpa_supplicant/wlan0" \
             "/data/misc/wifi/sockets/wlan0"; do
             [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ] || continue
@@ -854,7 +883,9 @@ case "$1" in
 
             printf '\n=== wpa_supplicant sockets ===\n'
             for WPA_SOCK in \
+                "/data/vendor/wifi/wpa/sockets/wlan0" \
                 "/data/vendor/wifi/wpa/wlan0" \
+                "/data/vendor/wifi/wpa_supplicant/sockets/wlan0" \
                 "/data/vendor/wifi/wpa_supplicant/wlan0" \
                 "/data/misc/wifi/sockets/wlan0" \
                 "/var/run/wpa_supplicant/wlan0"; do
@@ -936,7 +967,9 @@ case "$1" in
         printf 'detect_result  : %s\n' "$(detect_driver_type)"
         printf '\n=== wpa_supplicant socket search ===\n'
         for WPA_SOCK in \
+            "/data/vendor/wifi/wpa/sockets/wlan0" \
             "/data/vendor/wifi/wpa/wlan0" \
+            "/data/vendor/wifi/wpa_supplicant/sockets/wlan0" \
             "/data/vendor/wifi/wpa_supplicant/wlan0" \
             "/data/misc/wifi/sockets/wlan0" \
             "/var/run/wpa_supplicant/wlan0"; do

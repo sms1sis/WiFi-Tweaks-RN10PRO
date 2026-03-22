@@ -6,6 +6,16 @@
 
 ---
 
+## v6.1.2 — Fix Stats & wpa_supplicant Socket Path
+
+### Bug Fixes
+- **Fix: Link Telemetry showing dashes** — wpa_supplicant on many Qualcomm ROMs (confirmed on SDM665/Trinket) uses `/data/vendor/wifi/wpa/sockets/wlan0` with an extra `sockets/` subdirectory. The backend was only checking paths without that subdirectory so all four socket paths came back absent, killing `wpa_cli` signal_poll and SSID detection. Added `sockets/` variants at the top of every socket search list throughout the backend.
+- **Fix: `dumpsys wifi` stats parsing** — `mWifiInfo` line has leading whitespace on Android 13+. The `grep "^mWifiInfo"` anchor never matched so Method 2 was silently always failing. Fixed with `grep -m1 "mWifiInfo" | sed 's/^[[:space:]]*//'` to strip leading whitespace before parsing.
+- **Fix: Debug dump `=== current connection ===` empty** — same `^mWifiInfo` whitespace issue caused the current connection section to show nothing even when connected.
+- **Added Method 3 stats fallback** — `wpa_cli signal_poll` via the corrected socket path, with `wpa_cli status` for SSID. Kicks in if both `cmd wifi status` and `dumpsys` fail.
+
+---
+
 ## v6.1.1 — Debug Button Fix & Sci-Fi Default Theme
 
 ### Bug Fixes
