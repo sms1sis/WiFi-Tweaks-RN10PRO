@@ -883,8 +883,16 @@ case "$1" in
             printf '\n=== iw dev wlan0 link ===\n'
             iw dev "$WLAN_DEV" link 2>/dev/null || printf 'iw not available or not connected\n'
 
-            printf '\n=== dumpsys wifi ===\n'
-            dumpsys wifi 2>/dev/null | grep -E "mWifiInfo|SSID|BSSID|linkSpeed|rssi|frequency|mNetworkId" | head -12 || printf 'dumpsys not available\n'
+            printf '\n=== current connection ===\n'
+            # Extract clean current-state block — stop before the event log (rec[)
+            DUMPSYS_OUT=$(dumpsys wifi 2>/dev/null | sed '/rec\[/,$d')
+            if [ -n "$DUMPSYS_OUT" ]; then
+                printf '%s\n' "$DUMPSYS_OUT" | grep -E \
+                    "SSID|BSSID|linkSpeed|rssi|frequency|signalLevel|networkId|ipAddress|macAddress|WifiInfo|curState|mNetworkAgent" \
+                    | grep -v "rec\[" | head -20
+            else
+                printf 'dumpsys not available\n'
+            fi
         )
         ENCODED=$(printf '%s' "$DEBUG_OUT" | base64 2>/dev/null | tr -d '\n')
         printf '{"status":"success","content":"%s"}\n' "$ENCODED"
@@ -953,8 +961,15 @@ case "$1" in
         cat /proc/net/wireless 2>/dev/null || printf 'not available\n'
         printf '\n=== iw dev wlan0 link ===\n'
         iw dev "$WLAN_DEV" link 2>/dev/null || printf 'iw not available or not connected\n'
-        printf '\n=== dumpsys wifi (mWifiInfo) ===\n'
-        dumpsys wifi 2>/dev/null | grep -A5 "mWifiInfo" | head -8 || printf 'dumpsys not available\n'
+        printf '\n=== current connection ===\n'
+        DUMPSYS_OUT=$(dumpsys wifi 2>/dev/null | sed '/rec\[/,$d')
+        if [ -n "$DUMPSYS_OUT" ]; then
+            printf '%s\n' "$DUMPSYS_OUT" | grep -E \
+                "SSID|BSSID|linkSpeed|rssi|frequency|signalLevel|networkId|ipAddress|macAddress|WifiInfo|curState|mNetworkAgent" \
+                | grep -v "rec\[" | head -20
+        else
+            printf 'dumpsys not available\n'
+        fi
         ;;
 
     # -----------------------------------------------------------------------
