@@ -1,3 +1,35 @@
+## v6.0.3 — Robust Driver & Chip Identification
+
+### Backend (`backend.sh`)
+- **`get_driver_info`** now collects six additional chip-specific fields:
+  - **PCI vendor:device ID** — scans `/sys/bus/pci/devices/` for wireless-class devices (class `0x028x`). Gives the raw hardware ID, e.g. `17cb:1101`.
+  - **Chip name lookup** — maps known Qualcomm PCI IDs to chip names: QCA6390, WCN6855, WCN6750, QCA6490, WCN7850, QCA6174A, QCA9377, QCA9984, and more.
+  - **SDIO/MMC modalias** — scans `/sys/bus/sdio/devices/` and `/sys/bus/mmc/devices/` for the SDIO chip modalias string, covering SDIO-attached chips (e.g. QCA6174 on older devices).
+  - **Device-tree compatible string** — reads `of_node/compatible` from the device sysfs path and known DT locations. Exposes strings like `qcom,wcn3990-wifi` or `qcom,qca6390`.
+  - **Firmware version** — queries `wpa_cli status` for `fw_version`/`firmware_version`, with `iw dev info` as fallback.
+  - **Hardware uevent** — reads `PCI_ID`, `SDIO_ID`, `OF_COMPATIBLE`, and `DRIVER` lines from the device uevent file for an additional hardware fingerprint.
+- **`get_debug_info`** extended with a new **Chip identification** section at the top covering PCI ID, SDIO modalias, DT compatible string, and full uevent dump.
+- Added `_esc()` helper to sanitise all values before JSON serialisation (strips quotes and newlines that would break the JSON).
+
+### Frontend (`webroot/index.html`)
+- **Driver button log output** restructured — chip fields (`[CHIP]`) shown first and highlighted, driver evidence (`[DRV]`) follows. Chip name line uses `success` colour when identified, `warning` when unknown.
+
+---
+
+## v6.0.2 — Settings Expansion & UI Polish
+
+### Settings Page
+- **Stats Refresh Interval** — pick 3s / 5s / 10s / 30s. Preference persisted in `localStorage`. Timer restarts immediately on change.
+- **Diagnostics panel** — Export Log copies the current session log to clipboard as plain text. Export Debug Info runs the full `get_debug_info` backend action and copies the result to clipboard.
+- **Advanced panel** — Force Driver Reload exposes the soft reset action from the dashboard. Reset Preferences wipes saved theme and interval and restores defaults.
+
+### UI Fixes
+- Reboot banner warning icon is now red instead of default text color.
+- Patch profile device name is now `var(--cyan)`, meta line is `var(--text-bright)` — both fully visible instead of dimmed.
+- Default theme changed from Sci-Fi to Dark (Normal Dark). First-time users see the dark theme instead of the neon sci-fi theme.
+
+---
+
 ## v6.0.1 — UI Polish & Config Editor Fix
 
 ### Bug Fixes

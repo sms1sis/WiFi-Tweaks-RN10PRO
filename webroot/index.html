@@ -262,7 +262,7 @@
 
         .patch-name {
             font-size: 0.8rem;
-            color: var(--text-bright);
+            color: var(--cyan);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -270,7 +270,7 @@
 
         .patch-meta {
             font-size: 0.62rem;
-            color: var(--text);
+            color: var(--text-bright);
             margin-top: 2px;
             white-space: nowrap;
             overflow: hidden;
@@ -407,7 +407,7 @@
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
-        .banner-icon { font-size: 1.1rem; flex-shrink: 0; }
+        .banner-icon { font-size: 1.1rem; flex-shrink: 0; color: var(--red); }
         .banner-body { flex: 1; }
         .banner-title { font-family: var(--head); font-size: 0.7rem; letter-spacing: 2px; color: var(--amber); margin-bottom: 4px; }
         .banner-desc  { font-size: 0.68rem; color: var(--text); line-height: 1.5; }
@@ -978,6 +978,95 @@
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .header-title { font-size: 1rem; letter-spacing: 2px; }
         }
+        /* ═══════════════════════════════════════════════
+           SETTINGS PAGE
+           ═══════════════════════════════════════════════ */
+
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 13px 14px;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-family: var(--mono);
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            transition: background 0.12s;
+        }
+        .settings-row.static { cursor: default; }
+        button.settings-row:hover { background: var(--cyan-glow); }
+        button.settings-row:active { background: var(--cyan-glow); }
+
+        .settings-row-icon {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+        }
+
+        .settings-row-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .settings-row-title {
+            font-family: var(--head);
+            font-size: 0.65rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-bright);
+        }
+
+        .settings-row-sub {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 0.5px;
+        }
+
+        .settings-row-check {
+            font-size: 0.75rem;
+            color: var(--cyan);
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .settings-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0 14px;
+        }
+
+        [data-theme="normal"] .settings-row-title,
+        [data-theme="normal-dark"] .settings-row-title {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            letter-spacing: 0;
+            font-size: 0.8rem;
+            text-transform: none;
+        }
+        [data-theme="normal"] .settings-row-sub,
+        [data-theme="normal-dark"] .settings-row-sub {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            letter-spacing: 0;
+        }
+
+        .settings-row-arrow {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            flex-shrink: 0;
+        }
+
+        .settings-row-danger .settings-row-title { color: var(--red); }
+        .settings-row-danger .settings-row-sub   { color: var(--red); opacity: 0.7; }
+        button.settings-row-danger:hover { background: var(--red-glow); }
+
     </style>
 </head>
 <body>
@@ -989,7 +1078,6 @@
 
       <!-- Header -->
       <div class="header">
-        <button class="theme-toggle" id="theme-toggle" onclick="app.toggleTheme()" title="Sci-Fi">🎨</button>
         <div class="header-title">WI-FI TUNER</div>
         <div class="header-sub">Qualcomm Config Switcher // KernelSU</div>
         <span class="version-badge" id="version-badge">—</span>
@@ -1144,9 +1232,188 @@
     </div>
   </div>
 
-</div>
+  <!-- ═══════════════ PAGE: SETTINGS ═══════════════ -->
+  <div class="page" id="page-settings">
+    <div class="page-container">
 
-<!-- ═══════════════ BOTTOM NAVIGATION ═══════════════ -->
+      <div class="header">
+        <div class="header-title">SETTINGS</div>
+        <div class="header-sub">Preferences &amp; Module Info</div>
+      </div>
+
+      <!-- Theme -->
+      <div class="panel">
+        <div class="panel-label">Appearance</div>
+        <div class="panel-body" style="padding:0">
+          <button class="settings-row theme-opt" id="theme-opt-scifi" onclick="app.setTheme('scifi')">
+            <span class="settings-row-icon">🎨</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Sci-Fi</span>
+              <span class="settings-row-sub">Dark navy · Cyan neon · Circuit art</span>
+            </span>
+            <span class="settings-row-check" id="check-scifi"></span>
+          </button>
+          <div class="settings-divider"></div>
+          <button class="settings-row theme-opt" id="theme-opt-normal" onclick="app.setTheme('normal')">
+            <span class="settings-row-icon">☀️</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Light</span>
+              <span class="settings-row-sub">White surfaces · Google palette</span>
+            </span>
+            <span class="settings-row-check" id="check-normal"></span>
+          </button>
+          <div class="settings-divider"></div>
+          <button class="settings-row theme-opt" id="theme-opt-normal-dark" onclick="app.setTheme('normal-dark')">
+            <span class="settings-row-icon">🌙</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Dark</span>
+              <span class="settings-row-sub">iOS-style dark grey · System palette</span>
+            </span>
+            <span class="settings-row-check" id="check-normal-dark">✔</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Refresh -->
+      <div class="panel">
+        <div class="panel-label">Stats Refresh Interval</div>
+        <div class="panel-body" style="padding:0">
+          <button class="settings-row interval-opt" id="interval-opt-3" onclick="app.setRefreshInterval(3)">
+            <span class="settings-row-icon">⚡</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">3 seconds</span>
+              <span class="settings-row-sub">Faster updates · higher CPU wake rate</span>
+            </span>
+            <span class="settings-row-check" id="check-interval-3"></span>
+          </button>
+          <div class="settings-divider"></div>
+          <button class="settings-row interval-opt" id="interval-opt-5" onclick="app.setRefreshInterval(5)">
+            <span class="settings-row-icon">🔄</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">5 seconds</span>
+              <span class="settings-row-sub">Default · balanced</span>
+            </span>
+            <span class="settings-row-check" id="check-interval-5">✔</span>
+          </button>
+          <div class="settings-divider"></div>
+          <button class="settings-row interval-opt" id="interval-opt-10" onclick="app.setRefreshInterval(10)">
+            <span class="settings-row-icon">🐢</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">10 seconds</span>
+              <span class="settings-row-sub">Slower updates · lower battery impact</span>
+            </span>
+            <span class="settings-row-check" id="check-interval-10"></span>
+          </button>
+          <div class="settings-divider"></div>
+          <button class="settings-row interval-opt" id="interval-opt-30" onclick="app.setRefreshInterval(30)">
+            <span class="settings-row-icon">💤</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">30 seconds</span>
+              <span class="settings-row-sub">Minimal polling</span>
+            </span>
+            <span class="settings-row-check" id="check-interval-30"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Diagnostics -->
+      <div class="panel">
+        <div class="panel-label">Diagnostics</div>
+        <div class="panel-body" style="padding:0">
+          <button class="settings-row" onclick="app.exportLog()">
+            <span class="settings-row-icon">📋</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Copy Log to Clipboard</span>
+              <span class="settings-row-sub">Export current session log as plain text</span>
+            </span>
+            <span class="settings-row-arrow">›</span>
+          </button>
+          <div class="settings-divider"></div>
+          <button class="settings-row" onclick="app.exportDebugInfo()">
+            <span class="settings-row-icon">🛠</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Export Debug Info</span>
+              <span class="settings-row-sub" id="debug-export-status">Run full diagnostics and copy to clipboard</span>
+            </span>
+            <span class="settings-row-arrow">›</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Advanced -->
+      <div class="panel">
+        <div class="panel-label">Advanced</div>
+        <div class="panel-body" style="padding:0">
+          <button class="settings-row" onclick="app.softReset()">
+            <span class="settings-row-icon">⚙️</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Force Driver Reload</span>
+              <span class="settings-row-sub">Unload and reload the Wi-Fi kernel module</span>
+            </span>
+            <span class="settings-row-arrow">›</span>
+          </button>
+          <div class="settings-divider"></div>
+          <button class="settings-row settings-row-danger" onclick="app.resetPreferences()">
+            <span class="settings-row-icon">🗑</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Reset Preferences</span>
+              <span class="settings-row-sub">Clear saved theme and interval · restores defaults</span>
+            </span>
+            <span class="settings-row-arrow">›</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="panel">
+        <div class="panel-label">About</div>
+        <div class="panel-body" style="padding:0">
+          <div class="settings-row static">
+            <span class="settings-row-icon">📦</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Module</span>
+              <span class="settings-row-sub">WiFi Config Switcher</span>
+            </span>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row static">
+            <span class="settings-row-icon">🔖</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Version</span>
+              <span class="settings-row-sub" id="about-version">—</span>
+            </span>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row static">
+            <span class="settings-row-icon">👤</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Author</span>
+              <span class="settings-row-sub">sms1sis</span>
+            </span>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row static">
+            <span class="settings-row-icon">⚙️</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Platform</span>
+              <span class="settings-row-sub">Qualcomm · KernelSU · Driver-aware</span>
+            </span>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row static">
+            <span class="settings-row-icon">🔗</span>
+            <span class="settings-row-body">
+              <span class="settings-row-title">Source</span>
+              <span class="settings-row-sub">github.com/sms1sis/WiFi-Config-Switcher</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
 <nav class="bottom-nav">
   <button class="nav-btn active" id="nav-dashboard" onclick="app.navigate('dashboard')">
     <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
@@ -1155,6 +1422,10 @@
   <button class="nav-btn" id="nav-config" onclick="app.navigate('config')">
     <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
     <span>Config</span>
+  </button>
+  <button class="nav-btn" id="nav-settings" onclick="app.navigate('settings')">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+    <span>Settings</span>
   </button>
 </nav>
 
@@ -1217,13 +1488,14 @@ class App {
 
     async init() {
         this.loadTheme();
+        this.loadInterval();
         this.currentPage = 'dashboard';
         this.configLoaded = false;
         this.log('SYSTEM INIT…', 'system');
         this.loadVersion();
         await Promise.all([this.detectDriver(), this.loadPatchInfo(), this.checkMode()]);
         this.fetchStats();
-        setInterval(() => this.fetchStats(), 5000);
+        this._statsTimer = setInterval(() => this.fetchStats(), this.refreshInterval * 1000);
     }
 
     loadVersion() {
@@ -1231,9 +1503,10 @@ class App {
         this.ksu.runAction('get_version').then(raw => {
             const r = parseJson(raw);
             const el = document.getElementById('version-badge');
-            if (r && r.version && el) {
-                // Strip leading 'v' since ::before adds it
-                el.textContent = r.version.replace(/^v/i, '');
+            const av = document.getElementById('about-version');
+            if (r && r.version) {
+                if (el) el.textContent = r.version.replace(/^v/i, '');
+                if (av) av.textContent = r.version;
             }
         });
     }
@@ -1262,18 +1535,28 @@ class App {
     }
 
     async showDriverInfo() {
-        this.log('[DRV] QUERYING DETECTION EVIDENCE…', 'info');
+        this.log('[DRV] QUERYING DRIVER & CHIP INFO…', 'info');
         const r = parseJson(await this.ksu.runAction('get_driver_info'));
         if (!r) { this.log('[DRV] NO RESPONSE', 'error'); return; }
-        this.log(`[DRV] name          : ${r.driver_name}`,          'info');
-        this.log(`[DRV] type          : ${r.driver_type}`,          'info');
-        this.log(`[DRV] kconf WLAN    : ${r.kconf_wlan}`,           'info');
-        this.log(`[DRV] kconf driver  : ${r.kconf_driver}`,         'info');
-        this.log(`[DRV] sys/mod sects : ${r.sys_module_sections}`,  'info');
-        this.log(`[DRV] proc/modules  : ${r.proc_modules_entry}`,   'info');
-        this.log(`[DRV] /module link  : ${r.module_symlink}`,       'info');
-        this.log(`[DRV] subsystem     : ${r.subsystem}`,            'info');
-        this.log(`[DRV] lsmod empty   : ${r.lsmod_empty}`,          'info');
+
+        // Chip identity — most useful, show first
+        this.log(`[CHIP] name         : ${r.chip_name}`,        r.chip_name && r.chip_name !== 'unknown' ? 'success' : 'warning');
+        this.log(`[CHIP] pci id       : ${r.chip_pci_id}`,      'info');
+        this.log(`[CHIP] sdio id      : ${r.chip_sdio_id}`,     'info');
+        this.log(`[CHIP] dt compat    : ${r.chip_dt_compat}`,   'info');
+        this.log(`[CHIP] fw version   : ${r.fw_version}`,       'info');
+        this.log(`[CHIP] hw uevent    : ${r.hw_uevent}`,        'info');
+
+        // Driver detection evidence
+        this.log(`[DRV] name          : ${r.driver_name}`,      'info');
+        this.log(`[DRV] type          : ${r.driver_type}`,      r.driver_type === 'unknown' ? 'warning' : 'info');
+        this.log(`[DRV] subsystem     : ${r.subsystem}`,        'info');
+        this.log(`[DRV] kconf WLAN    : ${r.kconf_wlan}`,       'info');
+        this.log(`[DRV] kconf driver  : ${r.kconf_driver}`,     'info');
+        this.log(`[DRV] sys/mod sects : ${r.sys_module_sections}`, 'info');
+        this.log(`[DRV] proc/modules  : ${r.proc_modules_entry}`,  'info');
+        this.log(`[DRV] /module link  : ${r.module_symlink}`,   'info');
+        this.log(`[DRV] lsmod empty   : ${r.lsmod_empty}`,      'info');
     }
 
     // Patch
@@ -1432,36 +1715,100 @@ class App {
             this.configLoaded = true;
             this.loadConfig();
         }
+        // Sync settings UI on every visit
+        if (page === 'settings') {
+            this._syncIntervalChecks(this.refreshInterval);
+        }
     }
 
-    // ---- Theme Toggle ----
-    toggleTheme() {
-        const el   = document.documentElement;
-        const cur  = el.getAttribute('data-theme') || 'scifi';
-        // Cycle: scifi → normal → normal-dark → scifi
-        const cycle = { 'scifi': 'normal', 'normal': 'normal-dark', 'normal-dark': 'scifi' };
-        const icons = { 'scifi': '🎨', 'normal': '🌙', 'normal-dark': '🚀' };
+    // ---- Theme ----
+    setTheme(theme) {
         const labels = { 'scifi': 'Sci-Fi', 'normal': 'Light', 'normal-dark': 'Dark' };
-        const next = cycle[cur] || 'normal';
-        el.setAttribute('data-theme', next === 'scifi' ? '' : next);
-        const btn = document.getElementById('theme-toggle');
-        if (btn) { btn.textContent = icons[next]; btn.title = labels[next]; }
-        try { localStorage.setItem('wcs_theme', next); } catch {}
-        this.log(`[UI] Theme: ${labels[next]}`, 'system');
+        document.documentElement.setAttribute('data-theme', theme === 'scifi' ? '' : theme);
+        try { localStorage.setItem('wcs_theme', theme); } catch {}
+        this._syncThemeChecks(theme);
+        this.log(`[UI] Theme: ${labels[theme] || theme}`, 'system');
+    }
+
+    _syncThemeChecks(theme) {
+        ['scifi', 'normal', 'normal-dark'].forEach(t => {
+            const el = document.getElementById(`check-${t}`);
+            if (el) el.textContent = t === theme ? '✔' : '';
+        });
     }
 
     loadTheme() {
-        let saved = 'scifi';
-        try { saved = localStorage.getItem('wcs_theme') || 'scifi'; } catch {}
-        const icons  = { 'scifi': '🎨', 'normal': '🌙', 'normal-dark': '🚀' };
-        const labels = { 'scifi': 'Sci-Fi', 'normal': 'Light', 'normal-dark': 'Dark' };
-        const el = document.documentElement;
-        el.setAttribute('data-theme', saved === 'scifi' ? '' : saved);
-        const btn = document.getElementById('theme-toggle');
-        if (btn) { btn.textContent = icons[saved] || '🎨'; btn.title = labels[saved] || 'Sci-Fi'; }
+        let saved = 'normal-dark';
+        try { saved = localStorage.getItem('wcs_theme') || 'normal-dark'; } catch {}
+        document.documentElement.setAttribute('data-theme', saved === 'scifi' ? '' : saved);
+        this._syncThemeChecks(saved);
     }
 
-    // ---- Config Editor ----
+    // ---- Refresh Interval ----
+    loadInterval() {
+        let saved = 5;
+        try { saved = parseInt(localStorage.getItem('wcs_interval')) || 5; } catch {}
+        if (![3, 5, 10, 30].includes(saved)) saved = 5;
+        this.refreshInterval = saved;
+        this._syncIntervalChecks(saved);
+    }
+
+    setRefreshInterval(secs) {
+        this.refreshInterval = secs;
+        try { localStorage.setItem('wcs_interval', secs); } catch {}
+        this._syncIntervalChecks(secs);
+        if (this._statsTimer) clearInterval(this._statsTimer);
+        this._statsTimer = setInterval(() => this.fetchStats(), secs * 1000);
+        this.log(`[UI] Stats refresh: ${secs}s`, 'system');
+    }
+
+    _syncIntervalChecks(secs) {
+        [3, 5, 10, 30].forEach(s => {
+            const el = document.getElementById(`check-interval-${s}`);
+            if (el) el.textContent = s === secs ? '✔' : '';
+        });
+    }
+
+    // ---- Diagnostics ----
+    exportLog() {
+        const lines = [...this.$log.querySelectorAll('.log-line')].map(el => el.textContent).join('\n');
+        if (!lines.trim()) { this.log('[EXPORT] Log is empty', 'warning'); return; }
+        navigator.clipboard.writeText(lines)
+            .then(() => this.log('[EXPORT] Log copied to clipboard', 'success'))
+            .catch(() => this.log('[EXPORT] Clipboard access denied', 'error'));
+    }
+
+    async exportDebugInfo() {
+        const statusEl = document.getElementById('debug-export-status');
+        if (statusEl) statusEl.textContent = 'Running…';
+        this.log('[EXPORT] Collecting debug info…', 'info');
+        const raw = await this.ksu.exec(`sh '${this.ksu.actionScript}' 'get_debug_info'`);
+        if (!raw) {
+            if (statusEl) statusEl.textContent = 'Failed — no output';
+            this.log('[EXPORT] No debug output received', 'error');
+            return;
+        }
+        navigator.clipboard.writeText(raw)
+            .then(() => {
+                if (statusEl) statusEl.textContent = 'Copied to clipboard ✔';
+                setTimeout(() => { if (statusEl) statusEl.textContent = 'Run full diagnostics and copy to clipboard'; }, 3000);
+                this.log('[EXPORT] Debug info copied to clipboard', 'success');
+            })
+            .catch(() => {
+                if (statusEl) statusEl.textContent = 'Clipboard access denied';
+                this.log('[EXPORT] Clipboard access denied', 'error');
+            });
+    }
+
+    // ---- Reset Preferences ----
+    resetPreferences() {
+        try { localStorage.removeItem('wcs_theme'); localStorage.removeItem('wcs_interval'); } catch {}
+        this.setTheme('normal-dark');
+        this.setRefreshInterval(5);
+        this.log('[UI] Preferences reset to defaults', 'system');
+    }
+
+
     async loadConfig() {
         const status = document.getElementById('config-status');
         const editor = document.getElementById('config-editor');

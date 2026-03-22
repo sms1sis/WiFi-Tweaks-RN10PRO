@@ -461,7 +461,8 @@ case "$1" in
 
         # subsystem
         SUBSYS="unknown"
-        [ -L "${DEVICE_PATH}/subsystem" ] &&             SUBSYS=$(basename "$(readlink "${DEVICE_PATH}/subsystem" 2>/dev/null)" 2>/dev/null)
+        [ -L "${DEVICE_PATH}/subsystem" ] && \
+            SUBSYS=$(basename "$(readlink "${DEVICE_PATH}/subsystem" 2>/dev/null)" 2>/dev/null)
 
         # lsmod empty?
         LSMOD_EMPTY="unknown"
@@ -469,8 +470,118 @@ case "$1" in
             [ -s "/proc/modules" ] && LSMOD_EMPTY="no" || LSMOD_EMPTY="yes"
         }
 
-        printf '{"status":"success","driver_name":"%s","driver_type":"%s","kconf_wlan":"%s","kconf_driver":"%s","sys_module_sections":"%s","proc_modules_entry":"%s","module_symlink":"%s","subsystem":"%s","lsmod_empty":"%s"}
-'             "$DNAME" "$DTYPE" "$KCONF_WLAN" "$KCONF_DRIVER" "$SECTIONS"             "$PROC_MOD" "$MOD_SYMLINK" "$SUBSYS" "$LSMOD_EMPTY"
+        # ── Chip identification ──────────────────────────────────────────────
+
+        # 1. PCI vendor:device ID (most precise — QCA6390=17cb:1101, WCN6855=17cb:1103, etc.)
+        CHIP_PCI="unknown"
+        for pci_dev in /sys/bus/pci/devices/*/; do
+            if [ -f "${pci_dev}class" ]; then
+                cls=$(cat "${pci_dev}class" 2>/dev/null)
+                # PCI class 0x028000 = Network / Wireless
+                case "$cls" in
+                    0x028000|0x028900|0x020000)
+                        vid=$(cat "${pci_dev}vendor" 2>/dev/null | sed 's/0x//')
+                        did=$(cat "${pci_dev}device" 2>/dev/null | sed 's/0x//')
+                        CHIP_PCI="${vid}:${did}"
+                        break
+                        ;;
+                esac
+            fi
+        done
+
+        # 2. SDIO/MMC modalias (QCA6174=sdio:c00v02D0d0301, etc.)
+        CHIP_SDIO="unknown"
+        for mmc_dev in /sys/bus/sdio/devices/*/; do
+            [ -f "${mmc_dev}modalias" ] && {
+                CHIP_SDIO=$(cat "${mmc_dev}modalias" 2>/dev/null)
+                break
+            }
+        done
+        # Also check mmc bus directly
+        if [ "$CHIP_SDIO" = "unknown" ]; then
+            for mmc_dev in /sys/bus/mmc/devices/mmc*/*/; do
+                [ -f "${mmc_dev}modalias" ] && {
+                    CHIP_SDIO=$(cat "${mmc_dev}modalias" 2>/dev/null)
+                    break
+                }
+            done
+        fi
+
+        # 3. Device-tree compatible string (e.g. "qcom,wcn3990-wifi", "qcom,qca6390")
+        CHIP_DT="unknown"
+        for dt_compat in \
+            "${DEVICE_PATH}/of_node/compatible" \
+            "${DEVICE_PATH}/../of_node/compatible" \
+            "/sys/firmware/devicetree/base/soc/wifi/compatible" \
+            "/sys/firmware/devicetree/base/soc/qcom,wcnss-wlan/compatible"; do
+            [ -f "$dt_compat" ] && {
+                CHIP_DT=$(cat "$dt_compat" 2>/dev/null | tr '\0' ',' | sed 's/,$//')
+                [ -n "$CHIP_DT" ] && break
+            }
+        done
+
+        # 4. Firmware version from wpa_cli / iw
+        FW_VER="unknown"
+        for WPA_SOCK in \
+            "/data/vendor/wifi/wpa/wlan0" \
+            "/data/vendor/wifi/wpa_supplicant/wlan0" \
+            "/data/misc/wifi/sockets/wlan0"; do
+            [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ] || continue
+            WPA_DIR=$(dirname "$WPA_SOCK")
+            FW_VER=$(wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" status 2>/dev/null \
+                | grep -i "^fw_version\|^firmware_version\|^wifi_generation" \
+                | head -1 | cut -d= -f2 | tr -d ' ')
+            [ -n "$FW_VER" ] && break
+        done
+        # Fallback: iw dev info
+        if [ "$FW_VER" = "unknown" ] || [ -z "$FW_VER" ]; then
+            FW_VER=$(iw dev "$WLAN_DEV" info 2>/dev/null \
+                | grep -i "firmware\|wiphy" | head -1 | sed 's/^[[:space:]]*//')
+            [ -z "$FW_VER" ] && FW_VER="unknown"
+        fi
+
+        # 5. Hardware revision from sysfs uevent
+        CHIP_HW_REV="unknown"
+        if [ -f "${DEVICE_PATH}/uevent" ]; then
+            CHIP_HW_REV=$(grep -i "^PCI_ID\|^SDIO_ID\|^OF_COMPATIBLE\|^DRIVER\b" \
+                "${DEVICE_PATH}/uevent" 2>/dev/null | head -3 | tr '\n' ' ')
+            [ -z "$CHIP_HW_REV" ] && CHIP_HW_REV="unknown"
+        fi
+
+        # 6. Chip name lookup from PCI ID
+        CHIP_NAME="unknown"
+        case "$CHIP_PCI" in
+            17cb:1101) CHIP_NAME="QCA6390" ;;
+            17cb:1103) CHIP_NAME="WCN6855" ;;
+            17cb:1104) CHIP_NAME="WCN6750" ;;
+            17cb:1110) CHIP_NAME="QCA6490" ;;
+            17cb:1112) CHIP_NAME="WCN7850" ;;
+            17cb:0042) CHIP_NAME="QCA6174A" ;;
+            168c:003e) CHIP_NAME="QCA6174" ;;
+            168c:0041) CHIP_NAME="QCA9377" ;;
+            168c:0042) CHIP_NAME="QCA9984" ;;
+            168c:0046) CHIP_NAME="QCA9887" ;;
+            168c:0056) CHIP_NAME="QCA9888" ;;
+            168c:0050) CHIP_NAME="QCA10.2" ;;
+            *:*)       CHIP_NAME="PCI-${CHIP_PCI}" ;;
+        esac
+        # Fallback chip name from DT compatible
+        if [ "$CHIP_NAME" = "unknown" ] && [ "$CHIP_DT" != "unknown" ]; then
+            CHIP_NAME=$(printf '%s' "$CHIP_DT" | grep -o 'qca[0-9a-zA-Z_-]*\|wcn[0-9a-zA-Z_-]*\|qcn[0-9a-zA-Z_-]*' | head -1 | tr '[:lower:]' '[:upper:]')
+            [ -z "$CHIP_NAME" ] && CHIP_NAME="unknown"
+        fi
+
+        # Escape values for JSON (strip quotes and newlines)
+        _esc() { printf '%s' "$1" | tr -d '"' | tr '\n' ' ' | sed 's/[[:space:]]*$//'; }
+
+        printf '{"status":"success","driver_name":"%s","driver_type":"%s","kconf_wlan":"%s","kconf_driver":"%s","sys_module_sections":"%s","proc_modules_entry":"%s","module_symlink":"%s","subsystem":"%s","lsmod_empty":"%s","chip_name":"%s","chip_pci_id":"%s","chip_sdio_id":"%s","chip_dt_compat":"%s","fw_version":"%s","hw_uevent":"%s"}\n' \
+            "$(_esc "$DNAME")" "$(_esc "$DTYPE")" \
+            "$(_esc "$KCONF_WLAN")" "$(_esc "$KCONF_DRIVER")" \
+            "$(_esc "$SECTIONS")" "$(_esc "$PROC_MOD")" \
+            "$(_esc "$MOD_SYMLINK")" "$(_esc "$SUBSYS")" "$(_esc "$LSMOD_EMPTY")" \
+            "$(_esc "$CHIP_NAME")" "$(_esc "$CHIP_PCI")" \
+            "$(_esc "$CHIP_SDIO")" "$(_esc "$CHIP_DT")" \
+            "$(_esc "$FW_VER")" "$(_esc "$CHIP_HW_REV")"
         ;;
 
     # -----------------------------------------------------------------------
@@ -548,7 +659,34 @@ case "$1" in
     "get_debug_info")
         # Dumps sysfs driver info and tests every stats method.
         # Run this when stats are empty or driver detection seems wrong.
-        printf '=== Driver sysfs ===\n'
+        printf '=== Chip identification ===\n'
+        DEVICE_PATH="${WLAN_SYS}/device"
+        # PCI
+        for pci_dev in /sys/bus/pci/devices/*/; do
+            [ -f "${pci_dev}class" ] || continue
+            cls=$(cat "${pci_dev}class" 2>/dev/null)
+            case "$cls" in
+                0x028000|0x028900|0x020000)
+                    printf 'pci vendor:device : %s:%s\n' \
+                        "$(cat "${pci_dev}vendor" 2>/dev/null)" \
+                        "$(cat "${pci_dev}device" 2>/dev/null)"
+                    break ;;
+            esac
+        done
+        # SDIO
+        for mmc_dev in /sys/bus/sdio/devices/*/ /sys/bus/mmc/devices/mmc*/*/; do
+            [ -f "${mmc_dev}modalias" ] && printf 'sdio modalias     : %s\n' "$(cat "${mmc_dev}modalias" 2>/dev/null)" && break
+        done
+        # DT compatible
+        for dt_compat in \
+            "${DEVICE_PATH}/of_node/compatible" \
+            "${DEVICE_PATH}/../of_node/compatible" \
+            "/sys/firmware/devicetree/base/soc/wifi/compatible"; do
+            [ -f "$dt_compat" ] && printf 'dt compatible     : %s\n' "$(cat "$dt_compat" 2>/dev/null | tr '\0' ',')" && break
+        done
+        # uevent
+        [ -f "${DEVICE_PATH}/uevent" ] && printf 'uevent            :\n' && cat "${DEVICE_PATH}/uevent" 2>/dev/null | head -8 | sed 's/^/  /'
+        printf '\n=== Driver sysfs ===\n'
         printf 'driver symlink : %s\n' "$(readlink "${WLAN_SYS}/device/driver" 2>/dev/null || echo 'not found')"
         printf 'module symlink : %s\n' "$(readlink "${WLAN_SYS}/device/driver/module" 2>/dev/null || echo 'not found')"
         printf 'subsystem      : %s\n' "$(basename "$(readlink "${WLAN_SYS}/device/subsystem" 2>/dev/null)" 2>/dev/null || echo 'not found')"
