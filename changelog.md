@@ -1,3 +1,11 @@
+## v6.0.1 — UI Polish & Config Editor Fix
+
+### Bug Fixes
+- **Fix:** Config editor was displaying raw base64 string instead of the decoded file content. Backend correctly encodes the config as base64 for safe JSON transport, but the frontend was setting the textarea value without decoding it first. Now properly decodes via `atob()` with UTF-8 handling before populating the editor.
+- **UI:** Bottom navigation bar was oversized — reduced button padding from `16px 0 20px` to `8px 0 10px`, icon size from `28px` to `20px`, and internal gap from `6px` to `4px` for a more proportionate nav bar height.
+
+---
+
 ## v6.0.0 — Two-Page UI, Theme System & Config Editor
 
 This is a major UI release. The WebUI has been restructured into a two-page app with a bottom navigation bar.
