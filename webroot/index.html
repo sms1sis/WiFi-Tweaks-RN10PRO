@@ -1540,23 +1540,30 @@ class App {
         if (!r) { this.log('[DRV] NO RESPONSE', 'error'); return; }
 
         // Chip identity — most useful, show first
-        this.log(`[CHIP] name         : ${r.chip_name}`,        r.chip_name && r.chip_name !== 'unknown' ? 'success' : 'warning');
-        this.log(`[CHIP] pci id       : ${r.chip_pci_id}`,      'info');
-        this.log(`[CHIP] sdio id      : ${r.chip_sdio_id}`,     'info');
-        this.log(`[CHIP] dt compat    : ${r.chip_dt_compat}`,   'info');
-        this.log(`[CHIP] fw version   : ${r.fw_version}`,       'info');
-        this.log(`[CHIP] hw uevent    : ${r.hw_uevent}`,        'info');
+        this.log(`[CHIP] name         : ${r.chip_name}`,       r.chip_name && r.chip_name !== 'unknown' ? 'success' : 'warning');
+        this.log(`[CHIP] pci id       : ${r.chip_pci_id}`,     'info');
+        this.log(`[CHIP] sdio id      : ${r.chip_sdio_id}`,    'info');
+        this.log(`[CHIP] dt compat    : ${r.chip_dt_compat}`,  'info');
+        this.log(`[CHIP] fw version   : ${r.fw_version}`,      'info');
+        this.log(`[CHIP] bdf file     : ${r.bdf_file}`,        r.bdf_file && r.bdf_file !== 'unknown' ? 'success' : 'info');
+        this.log(`[CHIP] wcss addr    : ${r.wcss_addr}`,       'info');
+        this.log(`[CHIP] hw uevent    : ${r.hw_uevent}`,       'info');
+
+        // SoC identity
+        this.log(`[SOC]  id           : ${r.soc_id}`,          'info');
+        this.log(`[SOC]  machine      : ${r.soc_machine}`,     r.soc_machine && r.soc_machine !== 'unknown' ? 'success' : 'info');
+        this.log(`[SOC]  family       : ${r.soc_family}`,      'info');
 
         // Driver detection evidence
-        this.log(`[DRV] name          : ${r.driver_name}`,      'info');
-        this.log(`[DRV] type          : ${r.driver_type}`,      r.driver_type === 'unknown' ? 'warning' : 'info');
-        this.log(`[DRV] subsystem     : ${r.subsystem}`,        'info');
-        this.log(`[DRV] kconf WLAN    : ${r.kconf_wlan}`,       'info');
-        this.log(`[DRV] kconf driver  : ${r.kconf_driver}`,     'info');
+        this.log(`[DRV] name          : ${r.driver_name}`,     'info');
+        this.log(`[DRV] type          : ${r.driver_type}`,     r.driver_type === 'unknown' ? 'warning' : 'info');
+        this.log(`[DRV] subsystem     : ${r.subsystem}`,       'info');
+        this.log(`[DRV] kconf WLAN    : ${r.kconf_wlan}`,      'info');
+        this.log(`[DRV] kconf driver  : ${r.kconf_driver}`,    'info');
         this.log(`[DRV] sys/mod sects : ${r.sys_module_sections}`, 'info');
         this.log(`[DRV] proc/modules  : ${r.proc_modules_entry}`,  'info');
-        this.log(`[DRV] /module link  : ${r.module_symlink}`,   'info');
-        this.log(`[DRV] lsmod empty   : ${r.lsmod_empty}`,      'info');
+        this.log(`[DRV] /module link  : ${r.module_symlink}`,  'info');
+        this.log(`[DRV] lsmod empty   : ${r.lsmod_empty}`,     'info');
     }
 
     // Patch

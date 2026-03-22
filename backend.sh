@@ -519,6 +519,48 @@ case "$1" in
                 [ -n "$CHIP_DT" ] && break
             }
         done
+        # Also search all DT nodes for wcn/wlan/qca compatible strings
+        if [ "$CHIP_DT" = "unknown" ] || printf '%s' "$CHIP_DT" | grep -q "^qcom,icnss"; then
+            DT_SEARCH=$(find /sys/firmware/devicetree/base -name "compatible" 2>/dev/null \
+                | xargs grep -rl "wcn\|qca.*wifi\|wil6" 2>/dev/null | head -1)
+            [ -n "$DT_SEARCH" ] && \
+                CHIP_DT=$(cat "$DT_SEARCH" 2>/dev/null | tr '\0' ',' | sed 's/,$//')
+        fi
+
+        # 3b. SoC identity — key for SNOC/icnss devices (WCN3990 lives on SDM660/SDM665/etc.)
+        SOC_ID="unknown"
+        SOC_MACHINE="unknown"
+        SOC_FAMILY="unknown"
+        [ -f "/sys/devices/soc0/soc_id"  ] && SOC_ID=$(cat /sys/devices/soc0/soc_id 2>/dev/null)
+        [ -f "/sys/devices/soc0/machine" ] && SOC_MACHINE=$(cat /sys/devices/soc0/machine 2>/dev/null)
+        [ -f "/sys/devices/soc0/family"  ] && SOC_FAMILY=$(cat /sys/devices/soc0/family 2>/dev/null)
+
+        # 3c. BDF (board data file) — filename encodes chip + board variant
+        # Sourced from firmware dir or dmesg cnss-daemon log
+        BDF_FILE="unknown"
+        # Check firmware directory
+        for fw_dir in /vendor/firmware/wlan/qca_cld /vendor/firmware/wlan \
+                      /firmware/wlan /vendor/etc/wifi; do
+            bdf=$(ls "${fw_dir}"/bdf_*.bin 2>/dev/null | head -1)
+            [ -n "$bdf" ] && { BDF_FILE=$(basename "$bdf"); break; }
+        done
+        # Fallback: dmesg BDF log line from cnss-daemon
+        if [ "$BDF_FILE" = "unknown" ]; then
+            BDF_FILE=$(dmesg 2>/dev/null \
+                | grep -i "wlfw_send_bdf_download_req.*bdf_\|BDF file.*bdf_" \
+                | grep -v "regdb" \
+                | tail -1 \
+                | grep -o 'bdf[^[:space:]]*\.bin' | head -1)
+            [ -z "$BDF_FILE" ] && BDF_FILE="unknown"
+        fi
+
+        # 3d. WCSS memory address from icnss device path — unique per SoC
+        WCSS_ADDR="unknown"
+        icnss_dev=$(find /sys/devices -maxdepth 5 -name "*icnss*" -type d 2>/dev/null | head -1)
+        if [ -n "$icnss_dev" ]; then
+            WCSS_ADDR=$(basename "$icnss_dev" | grep -o '[0-9a-f]*\.qcom,icnss' | cut -d. -f1)
+            [ -z "$WCSS_ADDR" ] && WCSS_ADDR="unknown"
+        fi
 
         # 4. Firmware version from wpa_cli / iw
         FW_VER="unknown"
@@ -548,7 +590,7 @@ case "$1" in
             [ -z "$CHIP_HW_REV" ] && CHIP_HW_REV="unknown"
         fi
 
-        # 6. Chip name lookup from PCI ID
+        # 6. Chip name lookup — PCI ID first, then SoC ID for SNOC devices, then DT
         CHIP_NAME="unknown"
         case "$CHIP_PCI" in
             17cb:1101) CHIP_NAME="QCA6390" ;;
@@ -565,23 +607,122 @@ case "$1" in
             168c:0050) CHIP_NAME="QCA10.2" ;;
             *:*)       CHIP_NAME="PCI-${CHIP_PCI}" ;;
         esac
-        # Fallback chip name from DT compatible
+
+        # SNOC/icnss devices have no PCI — identify by SoC ID instead.
+        # Source: linux/drivers/soc/qcom/socinfo.c + linux/include/dt-bindings/arm/qcom,ids.h
+        # Wi-Fi chip per SoC sourced from Qualcomm product pages and kernel DT files.
+        #
+        # WCN3615/WCN3620  — MSM8916/MSM8952/MSM8953 era (SNOC, very old)
+        # WCN3680B          — SDM630/660/636 (SNOC)
+        # WCN3990           — SDM665/SDM710/SM6150/SM6125/SM6115 (SNOC)
+        # WCN3980           — SDM845 (SNOC)
+        # WCN3998           — SM8150/SM7150/SM8250/SM7225 (SNOC)
+        # WCN6750           — SM6375/SM7325/SM7350 (SNOC, Wi-Fi 6E)
+        # WCN6855           — SM8350/SM8450/SM8475/SM7450 (PCIe primary, SNOC fallback)
+        # WCN7850/WCN7851  — SM8550/SM8650/SM8750/SM7550/SM7675 (PCIe primary, SNOC fallback)
+        if [ "$CHIP_NAME" = "unknown" ] && [ "$DNAME" = "icnss" -o "$SUBSYS" = "platform" ]; then
+            case "$SOC_ID" in
+                # ── MSM8x era (WCN3620) ───────────────────────────────────────
+                206)  CHIP_NAME="WCN3620 (MSM8916)" ;;
+                233)  CHIP_NAME="WCN3620 (MSM8936)" ;;
+                239)  CHIP_NAME="WCN3620 (MSM8939)" ;;
+                264)  CHIP_NAME="WCN3620 (MSM8952)" ;;
+                246)  CHIP_NAME="WCN3660B (MSM8996)" ;;
+                # ── SDM4xx budget era (WCN3615) ───────────────────────────────
+                293)  CHIP_NAME="WCN3615 (MSM8937/SDM430)" ;;
+                294)  CHIP_NAME="WCN3615 (MSM8940)" ;;
+                303)  CHIP_NAME="WCN3615 (MSM8953/SDM450)" ;;
+                338)  CHIP_NAME="WCN3615 (SDM632)" ;;
+                # ── SDM630/660/636 (WCN3680B) ─────────────────────────────────
+                317|318) CHIP_NAME="WCN3680B (SDM660)" ;;
+                349|351) CHIP_NAME="WCN3680B (SDM636)" ;;
+                345)     CHIP_NAME="WCN3680B (SDM630)" ;;
+                # ── SDM710/712 (WCN3990) ──────────────────────────────────────
+                360)  CHIP_NAME="WCN3990 (SDM710)" ;;
+                393)  CHIP_NAME="WCN3990 (SDM712)" ;;
+                # ── SDM675 (WCN3990) ──────────────────────────────────────────
+                355)  CHIP_NAME="WCN3990 (SDM675)" ;;
+                # ── SDM845 (WCN3980) ──────────────────────────────────────────
+                321)  CHIP_NAME="WCN3980 (SDM845)" ;;
+                # ── SDM665/662/Trinket (WCN3990) ──────────────────────────────
+                394)  CHIP_NAME="WCN3990 (SDM665/Trinket)" ;;
+                407)  CHIP_NAME="WCN3990 (SDM662)" ;;
+                441)  CHIP_NAME="WCN3990 (SM6125/Trinket+)" ;;
+                # ── SM6150 family (WCN3990) ───────────────────────────────────
+                400)  CHIP_NAME="WCN3990 (SM6150)" ;;
+                440)  CHIP_NAME="WCN3990 (SM6150P)" ;;
+                # ── SM6125/Bengal family (WCN3990) ────────────────────────────
+                417)  CHIP_NAME="WCN3990 (SM6125/Bengal)" ;;
+                443)  CHIP_NAME="WCN3990 (SM6115/Bengalp)" ;;
+                518)  CHIP_NAME="WCN3990 (SM6115/Khaje)" ;;
+                # ── SM6225/SM6350/SM6375 ──────────────────────────────────────
+                384)  CHIP_NAME="WCN3990 (SM6350)" ;;
+                457)  CHIP_NAME="WCN3990 (SM6225/SDM680)" ;;
+                458)  CHIP_NAME="WCN6750 (SM6375)" ;;
+                # ── SM8150/SM7150 (WCN3998) ───────────────────────────────────
+                356)  CHIP_NAME="WCN3998 (SM8150/Kona)" ;;
+                365)  CHIP_NAME="WCN3998 (SM7150)" ;;
+                366)  CHIP_NAME="WCN3998 (SM7150P)" ;;
+                # ── SM8250/SM7225 (WCN3998) ───────────────────────────────────
+                415)  CHIP_NAME="WCN3998 (SM8250/Kona)" ;;
+                434)  CHIP_NAME="WCN3998 (SM7225)" ;;
+                # ── SM7325/SM7350 (WCN6750) ───────────────────────────────────
+                450)  CHIP_NAME="WCN6750 (SM7325/Yupik)" ;;
+                459)  CHIP_NAME="WCN6750 (SM7325P)" ;;
+                480)  CHIP_NAME="WCN6750 (SM7350/Cedros)" ;;
+                # ── SM8350/SM8450/SM8475/SM7450 (WCN6855, PCIe fallback) ──────
+                439)  CHIP_NAME="WCN6855 (SM8350/Lahaina)" ;;
+                456)  CHIP_NAME="WCN6855 (SM8450/Waipio)" ;;
+                506)  CHIP_NAME="WCN6855 (SM7450/Waipio-lite)" ;;
+                482)  CHIP_NAME="WCN6855 (SM8475)" ;;
+                530)  CHIP_NAME="WCN6855 (SM7475)" ;;
+                # ── SM8550/SM7550 (WCN7850, PCIe fallback) ───────────────────
+                519)  CHIP_NAME="WCN7850 (SM8550/Kalama)" ;;
+                536)  CHIP_NAME="WCN7850 (SM8550P)" ;;
+                557)  CHIP_NAME="WCN7850 (SM7550)" ;;
+                # ── SM8650/SM7675 (WCN7850, PCIe fallback) ───────────────────
+                591)  CHIP_NAME="WCN7850 (SM8650/Pineapple)" ;;
+                554)  CHIP_NAME="WCN7850 (SM7675)" ;;
+                # ── SM8750 (WCN7851, PCIe fallback) ──────────────────────────
+                603)  CHIP_NAME="WCN7851 (SM8750/Sun)" ;;
+                # ── QCM/QCS industrial variants ──────────────────────────────
+                347)  CHIP_NAME="WCN3990 (QCS605)" ;;
+                # ── Fallback: WCSS address ────────────────────────────────────
+                *)
+                    case "$WCSS_ADDR" in
+                        c800000)  CHIP_NAME="WCN3990 (SNOC@c800000)" ;;
+                        18800000) CHIP_NAME="WCN3998 (SNOC@18800000)" ;;
+                        a000000)  CHIP_NAME="WCN3990 (SNOC@a000000)" ;;
+                        18900000) CHIP_NAME="WCN6750 (SNOC@18900000)" ;;
+                        *)
+                            [ -n "$SOC_ID" ] && [ "$SOC_ID" != "unknown" ] && \
+                                CHIP_NAME="WCN-SNOC (SoC ${SOC_ID})" ;;
+                    esac
+                    ;;
+            esac
+        fi
+
+        # Fallback: extract chip name token from DT compatible
         if [ "$CHIP_NAME" = "unknown" ] && [ "$CHIP_DT" != "unknown" ]; then
-            CHIP_NAME=$(printf '%s' "$CHIP_DT" | grep -o 'qca[0-9a-zA-Z_-]*\|wcn[0-9a-zA-Z_-]*\|qcn[0-9a-zA-Z_-]*' | head -1 | tr '[:lower:]' '[:upper:]')
+            CHIP_NAME=$(printf '%s' "$CHIP_DT" \
+                | grep -o 'qca[0-9a-zA-Z_-]*\|wcn[0-9a-zA-Z_-]*\|qcn[0-9a-zA-Z_-]*\|wil[0-9a-zA-Z_-]*' \
+                | head -1 | tr '[:lower:]' '[:upper:]' | tr '-' '_')
             [ -z "$CHIP_NAME" ] && CHIP_NAME="unknown"
         fi
 
         # Escape values for JSON (strip quotes and newlines)
         _esc() { printf '%s' "$1" | tr -d '"' | tr '\n' ' ' | sed 's/[[:space:]]*$//'; }
 
-        printf '{"status":"success","driver_name":"%s","driver_type":"%s","kconf_wlan":"%s","kconf_driver":"%s","sys_module_sections":"%s","proc_modules_entry":"%s","module_symlink":"%s","subsystem":"%s","lsmod_empty":"%s","chip_name":"%s","chip_pci_id":"%s","chip_sdio_id":"%s","chip_dt_compat":"%s","fw_version":"%s","hw_uevent":"%s"}\n' \
+        printf '{"status":"success","driver_name":"%s","driver_type":"%s","kconf_wlan":"%s","kconf_driver":"%s","sys_module_sections":"%s","proc_modules_entry":"%s","module_symlink":"%s","subsystem":"%s","lsmod_empty":"%s","chip_name":"%s","chip_pci_id":"%s","chip_sdio_id":"%s","chip_dt_compat":"%s","fw_version":"%s","hw_uevent":"%s","soc_id":"%s","soc_machine":"%s","soc_family":"%s","bdf_file":"%s","wcss_addr":"%s"}\n' \
             "$(_esc "$DNAME")" "$(_esc "$DTYPE")" \
             "$(_esc "$KCONF_WLAN")" "$(_esc "$KCONF_DRIVER")" \
             "$(_esc "$SECTIONS")" "$(_esc "$PROC_MOD")" \
             "$(_esc "$MOD_SYMLINK")" "$(_esc "$SUBSYS")" "$(_esc "$LSMOD_EMPTY")" \
             "$(_esc "$CHIP_NAME")" "$(_esc "$CHIP_PCI")" \
             "$(_esc "$CHIP_SDIO")" "$(_esc "$CHIP_DT")" \
-            "$(_esc "$FW_VER")" "$(_esc "$CHIP_HW_REV")"
+            "$(_esc "$FW_VER")" "$(_esc "$CHIP_HW_REV")" \
+            "$(_esc "$SOC_ID")" "$(_esc "$SOC_MACHINE")" "$(_esc "$SOC_FAMILY")" \
+            "$(_esc "$BDF_FILE")" "$(_esc "$WCSS_ADDR")"
         ;;
 
     # -----------------------------------------------------------------------

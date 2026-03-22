@@ -1,3 +1,52 @@
+## v6.1.0 — Comprehensive Qualcomm Chip Coverage
+
+### Backend (`backend.sh`)
+- **Fixed duplicate SoC ID entries** — SoC IDs `415` and `457` appeared twice in the lookup table, causing silent misidentification. `415` is now correctly SM8250/WCN3998 (not SM8350), and `457` is SM6225/WCN3990 (not SM8450). SM8350/SM8450 use PCIe-attached chips identified by PCI ID, not SoC ID.
+- **Added missing SoC entries:**
+  - `SDM632 (338)` → WCN3615
+  - `SDM630 (345)` → WCN3680B
+  - `SM8475 (482)` → WCN6855
+  - `SM7475 (530)` → WCN6855
+  - `SM8650/Pineapple (591)` → WCN7850 *(was incorrectly mapped to SM8650 under wrong ID)*
+  - `SM7675 (554)` → WCN7850
+- **Cleaned up SoC table comments** — each chip family now has accurate generation notes clarifying which use PCIe (PCI ID path) vs SNOC (SoC ID path).
+
+---
+
+## v6.0.5 — Expanded SoC ID Table
+
+### Backend (`backend.sh`)
+- SoC ID → Wi-Fi chip lookup table expanded from 12 entries to 40+ entries, sourced directly from `linux/drivers/soc/qcom/socinfo.c` and `linux/include/dt-bindings/arm/qcom,ids.h`.
+- Full coverage across all SNOC-attached Wi-Fi chip generations:
+  - **WCN3620** — MSM8916/8936/8939/8952/8996
+  - **WCN3615** — MSM8953/SDM450, MSM8937/SDM430, MSM8940
+  - **WCN3680B** — SDM636, SDM660
+  - **WCN3990** — SDM665/Trinket, SDM662, SDM675, SDM710, SDM712, SM6115/Bengal/Khaje, SM6125, SM6150, SM6225/SDM680, SM6350, QCS605
+  - **WCN3980** — SDM845
+  - **WCN3998** — SM7150, SM7150P, SM7225, SM8150
+  - **WCN6750** — SM6375, SM7325/Yupik, SM7325P
+  - **WCN6855** — SM7350/Cedros, SM7450, SM8250, SM8350, SM8350P, SM8450 (PCIe fallback)
+  - **WCN7850** — SM7550, SM7675, SM8550, SM8550P, SM8650 (PCIe fallback)
+  - **WCN7851** — SM8750/Sun (PCIe fallback)
+- Added four additional WCSS memory address fallbacks: `a000000` (WCN3990), `18900000` (WCN6750).
+- Added inline comments explaining which chips use PCIe (identified by PCI ID above) vs SNOC (identified by SoC ID here).
+
+---
+
+## v6.0.4 — SNOC/icnss Chip Identification
+
+### Backend (`backend.sh`)
+- **SoC ID → chip name mapping** for SNOC/icnss devices (no PCI bus). Maps `/sys/devices/soc0/soc_id` to chip name: SDM665/Trinket (394) → WCN3990, SDM845 (321) → WCN3980, SM8150 (356) → WCN3998, and more.
+- **BDF file detection** — reads board data filename from `/vendor/firmware/wlan/qca_cld/` or falls back to dmesg `cnss-daemon` log. BDF name encodes chip + board variant (e.g. `bdf_c3j.bin`).
+- **WCSS memory address** — extracted from the icnss device sysfs path (e.g. `c800000`). Used as a secondary chip identifier when SoC ID lookup has no match.
+- **Broader DT search** — when `of_node/compatible` only returns `qcom,icnss` (the platform glue), now searches all DT nodes for `wcn`/`qca`/`wil6` compatible strings to find the actual chip node.
+- **New JSON fields:** `soc_id`, `soc_machine`, `soc_family`, `bdf_file`, `wcss_addr`.
+
+### Frontend (`webroot/index.html`)
+- Driver button log now shows `[SOC]` section (id, machine, family) between chip and driver sections. BDF file and WCSS address lines added to `[CHIP]` section, highlighted green when found.
+
+---
+
 ## v6.0.3 — Robust Driver & Chip Identification
 
 ### Backend (`backend.sh`)
