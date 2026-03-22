@@ -384,8 +384,8 @@ case "$1" in
             fi
         fi
 
-        # --- Method 3: wpa_cli signal_poll ---
-        if [ "$RSSI" = "--" ]; then
+        # --- Method 3: wpa_cli signal_poll (only if binary exists) ---
+        if [ "$RSSI" = "--" ] && command -v wpa_cli >/dev/null 2>&1; then
             for WPA_SOCK in \
                 "/data/vendor/wifi/wpa/sockets/wlan0" \
                 "/data/vendor/wifi/wpa/wlan0" \
@@ -396,14 +396,13 @@ case "$1" in
                 WPA_DIR=$(dirname "$WPA_SOCK")
                 POLL=$(wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>/dev/null)
                 if [ -n "$POLL" ]; then
-                    RSSI_RAW=$(printf '%s' "$POLL" | grep "^RSSI="    | cut -d= -f2)
-                    FREQ_RAW=$(printf '%s' "$POLL" | grep "^FREQUENCY="| cut -d= -f2)
-                    SPEED_RAW=$(printf '%s' "$POLL"| grep "^LINKSPEED="| cut -d= -f2)
+                    RSSI_RAW=$(printf '%s' "$POLL" | grep "^RSSI="     | cut -d= -f2)
+                    FREQ_RAW=$(printf '%s' "$POLL" | grep "^FREQUENCY=" | cut -d= -f2)
+                    SPEED_RAW=$(printf '%s' "$POLL" | grep "^LINKSPEED=" | cut -d= -f2)
                     [ -n "$RSSI_RAW"  ] && RSSI="${RSSI_RAW} dBm"
                     [ -n "$FREQ_RAW"  ] && FREQ="${FREQ_RAW} MHz"
                     [ -n "$SPEED_RAW" ] && SPEED="${SPEED_RAW} Mbps"
                 fi
-                # Get SSID from wpa_cli status
                 STATUS=$(wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" status 2>/dev/null)
                 SSID_RAW=$(printf '%s' "$STATUS" | grep "^ssid=" | cut -d= -f2)
                 [ -n "$SSID_RAW" ] && [ "$SSID" = "--" ] && SSID="$SSID_RAW"
@@ -897,16 +896,22 @@ case "$1" in
             done
 
             printf '\n=== wpa_cli signal_poll ===\n'
-            for WPA_SOCK in \
-                "/data/vendor/wifi/wpa/wlan0" \
-                "/data/vendor/wifi/wpa_supplicant/wlan0" \
-                "/data/misc/wifi/sockets/wlan0"; do
-                if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
-                    WPA_DIR=$(dirname "$WPA_SOCK")
-                    wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>&1 | head -6
-                    break
-                fi
-            done
+            if command -v wpa_cli >/dev/null 2>&1; then
+                for WPA_SOCK in \
+                    "/data/vendor/wifi/wpa/sockets/wlan0" \
+                    "/data/vendor/wifi/wpa/wlan0" \
+                    "/data/vendor/wifi/wpa_supplicant/sockets/wlan0" \
+                    "/data/vendor/wifi/wpa_supplicant/wlan0" \
+                    "/data/misc/wifi/sockets/wlan0"; do
+                    if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
+                        WPA_DIR=$(dirname "$WPA_SOCK")
+                        wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>&1 | head -6
+                        break
+                    fi
+                done
+            else
+                printf 'wpa_cli not available on this ROM\n'
+            fi
 
             printf '\n=== /proc/net/wireless ===\n'
             cat /proc/net/wireless 2>/dev/null || printf 'not available\n'
@@ -915,14 +920,31 @@ case "$1" in
             iw dev "$WLAN_DEV" link 2>/dev/null || printf 'iw not available or not connected\n'
 
             printf '\n=== current connection ===\n'
-            # Extract clean current-state block — stop before the event log (rec[)
-            DUMPSYS_OUT=$(dumpsys wifi 2>/dev/null | sed '/rec\[/,$d')
-            if [ -n "$DUMPSYS_OUT" ]; then
-                printf '%s\n' "$DUMPSYS_OUT" | grep -E \
-                    "SSID|BSSID|linkSpeed|rssi|frequency|signalLevel|networkId|ipAddress|macAddress|WifiInfo|curState|mNetworkAgent" \
-                    | grep -v "rec\[" | head -20
+            # Try cmd wifi status first (Android 11+, no leading whitespace issues)
+            WIFI_LINE=""
+            if command -v cmd >/dev/null 2>&1; then
+                WIFI_LINE=$(cmd wifi status 2>/dev/null \
+                    | grep -m1 "WifiInfo:" | sed 's/^[[:space:]]*//')
+            fi
+            # Fallback: dumpsys wifi (mWifiInfo may have leading whitespace)
+            if [ -z "$WIFI_LINE" ] && command -v dumpsys >/dev/null 2>&1; then
+                WIFI_LINE=$(dumpsys wifi 2>/dev/null \
+                    | grep -m1 "mWifiInfo\|WifiInfo" \
+                    | sed 's/^[[:space:]]*//')
+            fi
+            if [ -n "$WIFI_LINE" ]; then
+                printf '%s\n' \
+                    "$(printf '%s' "$WIFI_LINE" | grep -o 'SSID: "[^"]*"'          | head -1)" \
+                    "$(printf '%s' "$WIFI_LINE" | grep -o 'BSSID: [^,]*'           | head -1)" \
+                    "$(printf '%s' "$WIFI_LINE" | grep -o 'RSSI: -\{0,1\}[0-9]*'   | head -1)" \
+                    "$(printf '%s' "$WIFI_LINE" | grep -o 'Link speed: [0-9]*Mbps' | head -1)" \
+                    "$(printf '%s' "$WIFI_LINE" | grep -o 'Frequency: [0-9]*MHz'   | head -1)" \
+                    "$(printf '%s' "$WIFI_LINE" | grep -o 'Wi-Fi standard: [^,]*'  | head -1)" \
+                    "$(printf '%s' "$WIFI_LINE" | grep -o 'IP: [^,]*'              | head -1)" \
+                    "$(printf '%s' "$WIFI_LINE" | grep -o 'MAC: [^,]*'             | head -1)" \
+                    | grep -v '^$'
             else
-                printf 'dumpsys not available\n'
+                printf 'not connected or dumpsys unavailable\n'
             fi
         )
         ENCODED=$(printf '%s' "$DEBUG_OUT" | base64 2>/dev/null | tr -d '\n')
@@ -980,28 +1002,43 @@ case "$1" in
             fi
         done
         printf '\n=== wpa_cli signal_poll (vendor socket) ===\n'
-        for WPA_SOCK in \
-            "/data/vendor/wifi/wpa/wlan0" \
-            "/data/vendor/wifi/wpa_supplicant/wlan0" \
-            "/data/misc/wifi/sockets/wlan0"; do
-            if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
-                WPA_DIR=$(dirname "$WPA_SOCK")
-                wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>&1 | head -6
-                break
-            fi
-        done
+        if command -v wpa_cli >/dev/null 2>&1; then
+            for WPA_SOCK in \
+                "/data/vendor/wifi/wpa/sockets/wlan0" \
+                "/data/vendor/wifi/wpa/wlan0" \
+                "/data/vendor/wifi/wpa_supplicant/sockets/wlan0" \
+                "/data/vendor/wifi/wpa_supplicant/wlan0" \
+                "/data/misc/wifi/sockets/wlan0"; do
+                if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
+                    WPA_DIR=$(dirname "$WPA_SOCK")
+                    wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>&1 | head -6
+                    break
+                fi
+            done
+        else
+            printf 'wpa_cli not available on this ROM\n'
+        fi
         printf '\n=== /proc/net/wireless ===\n'
         cat /proc/net/wireless 2>/dev/null || printf 'not available\n'
         printf '\n=== iw dev wlan0 link ===\n'
         iw dev "$WLAN_DEV" link 2>/dev/null || printf 'iw not available or not connected\n'
         printf '\n=== current connection ===\n'
-        DUMPSYS_OUT=$(dumpsys wifi 2>/dev/null | sed '/rec\[/,$d')
-        if [ -n "$DUMPSYS_OUT" ]; then
-            printf '%s\n' "$DUMPSYS_OUT" | grep -E \
-                "SSID|BSSID|linkSpeed|rssi|frequency|signalLevel|networkId|ipAddress|macAddress|WifiInfo|curState|mNetworkAgent" \
-                | grep -v "rec\[" | head -20
+        WIFI_LINE=$(dumpsys wifi 2>/dev/null \
+            | grep -m1 "WifiInfo\|mWifiInfo" \
+            | sed 's/^[[:space:]]*//')
+        if [ -n "$WIFI_LINE" ]; then
+            printf '%s\n' \
+                "$(printf '%s' "$WIFI_LINE" | grep -o 'SSID: "[^"]*"'          | head -1)" \
+                "$(printf '%s' "$WIFI_LINE" | grep -o 'BSSID: [^,]*'           | head -1)" \
+                "$(printf '%s' "$WIFI_LINE" | grep -o 'RSSI: -\{0,1\}[0-9]*'   | head -1)" \
+                "$(printf '%s' "$WIFI_LINE" | grep -o 'Link speed: [0-9]*Mbps' | head -1)" \
+                "$(printf '%s' "$WIFI_LINE" | grep -o 'Frequency: [0-9]*MHz'   | head -1)" \
+                "$(printf '%s' "$WIFI_LINE" | grep -o 'Wi-Fi standard: [^,]*'  | head -1)" \
+                "$(printf '%s' "$WIFI_LINE" | grep -o 'IP: [^,]*'              | head -1)" \
+                "$(printf '%s' "$WIFI_LINE" | grep -o 'MAC: [^,]*'             | head -1)" \
+                | grep -v '^$'
         else
-            printf 'dumpsys not available\n'
+            printf 'not connected or dumpsys unavailable\n'
         fi
         ;;
 

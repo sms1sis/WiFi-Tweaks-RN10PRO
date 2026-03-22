@@ -6,6 +6,22 @@
 
 ---
 
+## v6.1.3 — Fix Debug Current Connection Section
+
+### Bug Fixes
+- **Fix: `=== current connection ===` always empty in debug dump** — the `grep -E "SSID|BSSID|..."` pattern was matching against the raw dumpsys block which contains those keywords inside the `rec[]` event log lines, but the `sed '/rec\[/,$d'` cut happened to remove everything useful too. Replaced with a direct `grep -m1 "WifiInfo\|mWifiInfo"` that grabs the single status line, strips leading whitespace, then parses each field individually onto its own line. Output now shows SSID, BSSID, RSSI, link speed, frequency, Wi-Fi standard, IP, and MAC cleanly.
+- **Fix: `wpa_cli` method now guarded with existence check** — AOSP 16 removed `wpa_cli` entirely. The backend was attempting the call regardless, producing an error. Now checks `command -v wpa_cli` before trying, avoiding the pointless error on modern ROMs.
+
+---
+
+## v6.1.3 — Debug Dump Polish & wpa_cli Guard
+
+### Bug Fixes
+- **Fix: `=== current connection ===` empty in debug dump** — `cmd wifi status` is now tried first (primary source, no whitespace issues). `dumpsys wifi` used as fallback. Previously only `dumpsys` was called in the debug path.
+- **Fix: `wpa_cli signal_poll` section crashing on AOSP 16** — AOSP 16 removed `wpa_cli` entirely. The debug dump and stats fallback now guard every `wpa_cli` call with `command -v wpa_cli` and print `wpa_cli not available on this ROM` instead of a shell error. Socket paths in the signal_poll section also updated to include the `sockets/` subdirectory variant.
+
+---
+
 ## v6.1.2 — Fix Stats & wpa_supplicant Socket Path
 
 ### Bug Fixes
