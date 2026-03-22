@@ -644,8 +644,15 @@ case "$1" in
                 355)  CHIP_NAME="WCN3990 (SDM675)" ;;
                 # ── SDM845 (WCN3980) ──────────────────────────────────────────
                 321)  CHIP_NAME="WCN3980 (SDM845)" ;;
-                # ── SDM665/662/Trinket (WCN3990) ──────────────────────────────
-                394)  CHIP_NAME="WCN3990 (SDM665/Trinket)" ;;
+                # ── SDM665/Trinket vs SD732G/Lagoon — both report SoC ID 394 ──
+                # Disambiguate using machine name
+                394)
+                    case "$SOC_MACHINE" in
+                        TRINKET|trinket) CHIP_NAME="WCN3990 (SDM665/Trinket)" ;;
+                        LAGOON|lagoon)   CHIP_NAME="WCN3998 (SD732G/Lagoon)" ;;
+                        *)               CHIP_NAME="WCN3990/WCN3998 (SoC 394/${SOC_MACHINE})" ;;
+                    esac
+                    ;;
                 407)  CHIP_NAME="WCN3990 (SDM662)" ;;
                 441)  CHIP_NAME="WCN3990 (SM6125/Trinket+)" ;;
                 # ── SM6150 family (WCN3990) ───────────────────────────────────
@@ -794,6 +801,93 @@ case "$1" in
         else
             printf '{"mode":"stock"}\n'
         fi
+        ;;
+
+    # -----------------------------------------------------------------------
+    "get_debug_info_json")
+        # Same as get_debug_info but base64-encoded inside JSON so it
+        # travels safely through runAction() without buffer truncation.
+        DEBUG_OUT=$(
+            printf '=== Chip identification ===\n'
+            DEVICE_PATH="${WLAN_SYS}/device"
+            for pci_dev in /sys/bus/pci/devices/*/; do
+                [ -f "${pci_dev}class" ] || continue
+                cls=$(cat "${pci_dev}class" 2>/dev/null)
+                case "$cls" in
+                    0x028000|0x028900|0x020000)
+                        printf 'pci vendor:device : %s:%s\n' \
+                            "$(cat "${pci_dev}vendor" 2>/dev/null)" \
+                            "$(cat "${pci_dev}device" 2>/dev/null)"
+                        break ;;
+                esac
+            done
+            for mmc_dev in /sys/bus/sdio/devices/*/ /sys/bus/mmc/devices/mmc*/*/; do
+                [ -f "${mmc_dev}modalias" ] && \
+                    printf 'sdio modalias     : %s\n' "$(cat "${mmc_dev}modalias" 2>/dev/null)" && break
+            done
+            for dt_compat in \
+                "${DEVICE_PATH}/of_node/compatible" \
+                "${DEVICE_PATH}/../of_node/compatible" \
+                "/sys/firmware/devicetree/base/soc/wifi/compatible"; do
+                [ -f "$dt_compat" ] && \
+                    printf 'dt compatible     : %s\n' "$(cat "$dt_compat" 2>/dev/null | tr '\0' ',')" && break
+            done
+            [ -f "${DEVICE_PATH}/uevent" ] && \
+                printf 'uevent:\n' && \
+                cat "${DEVICE_PATH}/uevent" 2>/dev/null | head -8 | sed 's/^/  /'
+
+            printf '\n=== SoC identity ===\n'
+            printf 'soc_id   : %s\n' "$(cat /sys/devices/soc0/soc_id  2>/dev/null || echo 'unknown')"
+            printf 'machine  : %s\n' "$(cat /sys/devices/soc0/machine 2>/dev/null || echo 'unknown')"
+            printf 'family   : %s\n' "$(cat /sys/devices/soc0/family  2>/dev/null || echo 'unknown')"
+
+            printf '\n=== Driver sysfs ===\n'
+            printf 'driver symlink : %s\n' "$(readlink "${WLAN_SYS}/device/driver" 2>/dev/null || echo 'not found')"
+            printf 'module symlink : %s\n' "$(readlink "${WLAN_SYS}/device/driver/module" 2>/dev/null || echo 'not found')"
+            printf 'subsystem      : %s\n' "$(basename "$(readlink "${WLAN_SYS}/device/subsystem" 2>/dev/null)" 2>/dev/null || echo 'not found')"
+            printf 'detect_result  : %s\n' "$(detect_driver_type)"
+
+            printf '\n=== BDF / firmware ===\n'
+            for fw_dir in /vendor/firmware/wlan/qca_cld /vendor/firmware/wlan /firmware/wlan; do
+                [ -d "$fw_dir" ] && ls "$fw_dir" 2>/dev/null | head -10 | sed "s|^|  ${fw_dir}/|" && break
+            done
+
+            printf '\n=== wpa_supplicant sockets ===\n'
+            for WPA_SOCK in \
+                "/data/vendor/wifi/wpa/wlan0" \
+                "/data/vendor/wifi/wpa_supplicant/wlan0" \
+                "/data/misc/wifi/sockets/wlan0" \
+                "/var/run/wpa_supplicant/wlan0"; do
+                if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
+                    printf 'FOUND  : %s\n' "$WPA_SOCK"
+                else
+                    printf 'absent : %s\n' "$WPA_SOCK"
+                fi
+            done
+
+            printf '\n=== wpa_cli signal_poll ===\n'
+            for WPA_SOCK in \
+                "/data/vendor/wifi/wpa/wlan0" \
+                "/data/vendor/wifi/wpa_supplicant/wlan0" \
+                "/data/misc/wifi/sockets/wlan0"; do
+                if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
+                    WPA_DIR=$(dirname "$WPA_SOCK")
+                    wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>&1 | head -6
+                    break
+                fi
+            done
+
+            printf '\n=== /proc/net/wireless ===\n'
+            cat /proc/net/wireless 2>/dev/null || printf 'not available\n'
+
+            printf '\n=== iw dev wlan0 link ===\n'
+            iw dev "$WLAN_DEV" link 2>/dev/null || printf 'iw not available or not connected\n'
+
+            printf '\n=== dumpsys wifi ===\n'
+            dumpsys wifi 2>/dev/null | grep -E "mWifiInfo|SSID|BSSID|linkSpeed|rssi|frequency|mNetworkId" | head -12 || printf 'dumpsys not available\n'
+        )
+        ENCODED=$(printf '%s' "$DEBUG_OUT" | base64 2>/dev/null | tr -d '\n')
+        printf '{"status":"success","content":"%s"}\n' "$ENCODED"
         ;;
 
     # -----------------------------------------------------------------------

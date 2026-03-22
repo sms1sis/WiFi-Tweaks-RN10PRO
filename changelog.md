@@ -1,3 +1,19 @@
+## v6.1.1 — SoC ID Collision Fix (SD732G / SDM665)
+
+### Backend (`backend.sh`)
+- **Fixed misidentification of Redmi Note 10 Pro (SD732G)** — SD732G/Lagoon and SDM665/Trinket both report SoC ID `394`, causing SD732G to show `WCN3990 (SDM665/Trinket)` instead of `WCN3998 (SD732G/Lagoon)`. Now disambiguated using the machine name from `/sys/devices/soc0/machine`: `TRINKET` → WCN3990, `LAGOON` → WCN3998, anything else shows both possibilities with the raw machine name.
+- Verified no other duplicate SoC IDs remain in the lookup table.
+
+---
+
+## v6.1.1 — Debug Button Fix & Sci-Fi Default Theme
+
+### Bug Fixes
+- **Fix (critical): Debug button** was returning only one line (`mLastBssid …`) instead of the full diagnostic dump. Root cause: `runDebug()` and `exportDebugInfo()` used raw `ksu.exec()` which has a stdout buffer limit — output was silently truncated, leaving only the last line that fit. Fixed by adding a new `get_debug_info_json` backend action that base64-encodes the full output inside a JSON envelope, then decoding it on the frontend. Same safe transport pattern used by `read_config`. Both the Debug button and Settings → Export Debug Info are fixed.
+- **Default theme restored to Sci-Fi** — was changed to Dark in v6.0.2, reverted back. Dark theme remains available in Settings.
+
+---
+
 ## v6.1.0 — Comprehensive Qualcomm Chip Coverage
 
 ### Backend (`backend.sh`)

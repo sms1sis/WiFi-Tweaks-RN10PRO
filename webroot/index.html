@@ -1251,7 +1251,7 @@
               <span class="settings-row-title">Sci-Fi</span>
               <span class="settings-row-sub">Dark navy · Cyan neon · Circuit art</span>
             </span>
-            <span class="settings-row-check" id="check-scifi"></span>
+            <span class="settings-row-check" id="check-scifi">✔</span>
           </button>
           <div class="settings-divider"></div>
           <button class="settings-row theme-opt" id="theme-opt-normal" onclick="app.setTheme('normal')">
@@ -1269,7 +1269,7 @@
               <span class="settings-row-title">Dark</span>
               <span class="settings-row-sub">iOS-style dark grey · System palette</span>
             </span>
-            <span class="settings-row-check" id="check-normal-dark">✔</span>
+            <span class="settings-row-check" id="check-normal-dark"></span>
           </button>
         </div>
       </div>
@@ -1745,8 +1745,8 @@ class App {
     }
 
     loadTheme() {
-        let saved = 'normal-dark';
-        try { saved = localStorage.getItem('wcs_theme') || 'normal-dark'; } catch {}
+        let saved = 'scifi';
+        try { saved = localStorage.getItem('wcs_theme') || 'scifi'; } catch {}
         document.documentElement.setAttribute('data-theme', saved === 'scifi' ? '' : saved);
         this._syncThemeChecks(saved);
     }
@@ -1789,13 +1789,15 @@ class App {
         const statusEl = document.getElementById('debug-export-status');
         if (statusEl) statusEl.textContent = 'Running…';
         this.log('[EXPORT] Collecting debug info…', 'info');
-        const raw = await this.ksu.exec(`sh '${this.ksu.actionScript}' 'get_debug_info'`);
-        if (!raw) {
+        const r = parseJson(await this.ksu.runAction('get_debug_info_json'));
+        if (!r || !r.content) {
             if (statusEl) statusEl.textContent = 'Failed — no output';
             this.log('[EXPORT] No debug output received', 'error');
             return;
         }
-        navigator.clipboard.writeText(raw)
+        let text;
+        try { text = decodeURIComponent(escape(atob(r.content))); } catch { text = r.content; }
+        navigator.clipboard.writeText(text)
             .then(() => {
                 if (statusEl) statusEl.textContent = 'Copied to clipboard ✔';
                 setTimeout(() => { if (statusEl) statusEl.textContent = 'Run full diagnostics and copy to clipboard'; }, 3000);
@@ -1810,7 +1812,7 @@ class App {
     // ---- Reset Preferences ----
     resetPreferences() {
         try { localStorage.removeItem('wcs_theme'); localStorage.removeItem('wcs_interval'); } catch {}
-        this.setTheme('normal-dark');
+        this.setTheme('scifi');
         this.setRefreshInterval(5);
         this.log('[UI] Preferences reset to defaults', 'system');
     }
@@ -1882,11 +1884,16 @@ class App {
 
     async runDebug() {
         this.log('--- DEBUG DUMP ---', 'system');
-        const raw = await this.ksu.exec(`sh '${this.ksu.actionScript}' 'get_debug_info'`);
-        if (!raw) { this.log('NO OUTPUT', 'error'); return; }
-        raw.split('\n').forEach(line => {
+        const r = parseJson(await this.ksu.runAction('get_debug_info_json'));
+        if (!r || !r.content) { this.log('[DEBUG] NO OUTPUT', 'error'); return; }
+        let text;
+        try { text = decodeURIComponent(escape(atob(r.content))); } catch { text = r.content; }
+        text.split('\n').forEach(line => {
             if (!line.trim()) return;
-            const t = line.startsWith('===') ? 'system' : line.includes('FOUND') ? 'success' : line.includes('absent') || line.includes('not') ? 'warning' : 'info';
+            const t = line.startsWith('===') ? 'system'
+                    : line.includes('FOUND')  ? 'success'
+                    : line.includes('absent') || line.includes('not found') || line.includes('not available') ? 'warning'
+                    : 'info';
             this.log(line, t);
         });
     }
