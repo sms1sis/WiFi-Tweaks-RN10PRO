@@ -1,3 +1,14 @@
+## v6.1.4 — Config Editor Search & Replace
+
+### Config Editor
+- **Search bar** — tap the 🔍 icon in the config panel header to open. Type to find, match count shows as `1/N` in cyan or `no match` in red.
+- **Next / Prev navigation** — ▲ ▼ buttons or Enter / Shift+Enter to jump between matches. Selection scrolls into view automatically.
+- **Replace** — second input row with Replace (current match) and All (all occurrences) buttons. Replace All reports count in the status bar and log.
+- **Keyboard shortcut** — Ctrl+F / Cmd+F opens the search bar when on the Config page. Esc closes it.
+- **Case-insensitive** matching. Special regex characters in the search query are escaped so literal strings always work.
+
+---
+
 ## v6.1.3 — Debug Dump Polish & wpa_cli Guard
 
 ### Bug Fixes

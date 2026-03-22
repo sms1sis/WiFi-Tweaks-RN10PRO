@@ -1,7 +1,7 @@
 id=wifi_config_switcher
 name=WiFi Config Switcher
-version=v6.1.3
-versionCode=133
+version=v6.1.4
+versionCode=134
 author=sms1sis
 description=Qualcomm Wi-Fi profile switcher with WebUI. Patch-based, driver-aware.
 updateJson=https://raw.githubusercontent.com/sms1sis/WiFi-Config-Switcher/main/update.json

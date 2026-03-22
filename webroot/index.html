@@ -867,6 +867,76 @@
             padding: 0 14px 12px;
         }
 
+        /* ── Config Search Bar ── */
+        .config-search-bar {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            padding: 8px 14px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+        .config-search-bar.visible { display: flex; }
+
+        .config-search-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .config-search-input {
+            flex: 1;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-bright);
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            padding: 5px 8px;
+            outline: none;
+        }
+        .config-search-input:focus { border-color: var(--cyan); }
+        .config-search-input::placeholder { color: var(--text-dim); }
+
+        .config-search-count {
+            font-family: var(--mono);
+            font-size: 0.62rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+            min-width: 52px;
+            text-align: right;
+        }
+        .config-search-count.found { color: var(--cyan); }
+        .config-search-count.none  { color: var(--red); }
+
+        .config-search-btn {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            color: var(--text-dim);
+            font-family: var(--head);
+            font-size: 0.55rem;
+            letter-spacing: 1px;
+            padding: 4px 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.12s;
+        }
+        .config-search-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+        .config-search-btn.active { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-glow); }
+
+        [data-theme="normal"] .config-search-input,
+        [data-theme="normal-dark"] .config-search-input {
+            font-family: monospace;
+            border-radius: 6px;
+        }
+        [data-theme="normal"] .config-search-btn,
+        [data-theme="normal-dark"] .config-search-btn {
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0;
+            border-radius: 6px;
+        }
+
         /* ── Bottom Navigation Bar ── */
         .bottom-nav {
             display: flex;
@@ -1208,8 +1278,29 @@
 
       <!-- Config Editor -->
       <div class="panel config-main-panel">
-        <div class="panel-label">WCNSS_qcom_cfg.ini</div>
-        <div class="panel-body" style="display:flex;flex-direction:column;flex:1;gap:8px">
+        <div class="panel-label" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 0">
+          <span>WCNSS_qcom_cfg.ini</span>
+          <button class="config-search-btn" id="search-toggle-btn" onclick="app.toggleSearch()" title="Search">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          </button>
+        </div>
+        <div class="panel-body" style="display:flex;flex-direction:column;flex:1;gap:0">
+
+          <!-- Search Bar -->
+          <div class="config-search-bar" id="config-search-bar">
+            <div class="config-search-row">
+              <input class="config-search-input" id="search-input" placeholder="Find…" oninput="app.searchUpdate()" onkeydown="app.searchKeydown(event)" autocomplete="off" spellcheck="false"/>
+              <span class="config-search-count" id="search-count"></span>
+              <button class="config-search-btn" onclick="app.searchPrev()" title="Previous">▲</button>
+              <button class="config-search-btn" onclick="app.searchNext()" title="Next">▼</button>
+            </div>
+            <div class="config-search-row">
+              <input class="config-search-input" id="replace-input" placeholder="Replace…" onkeydown="app.replaceKeydown(event)" autocomplete="off" spellcheck="false"/>
+              <button class="config-search-btn" onclick="app.replaceOne()">Replace</button>
+              <button class="config-search-btn" onclick="app.replaceAll()">All</button>
+            </div>
+          </div>
+
           <textarea class="config-textarea" id="config-editor" spellcheck="false" placeholder="Loading config…"></textarea>
           <div class="config-btn-row">
             <button class="config-btn primary" onclick="app.loadConfig()">
@@ -1496,6 +1587,15 @@ class App {
         await Promise.all([this.detectDriver(), this.loadPatchInfo(), this.checkMode()]);
         this.fetchStats();
         this._statsTimer = setInterval(() => this.fetchStats(), this.refreshInterval * 1000);
+        // Ctrl+F / Cmd+F opens search when on config page
+        document.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && this.currentPage === 'config') {
+                e.preventDefault();
+                const bar = document.getElementById('config-search-bar');
+                if (!bar.classList.contains('visible')) this.toggleSearch();
+                else document.getElementById('search-input').focus();
+            }
+        });
     }
 
     loadVersion() {
@@ -1817,6 +1917,113 @@ class App {
         this.log('[UI] Preferences reset to defaults', 'system');
     }
 
+
+    // ---- Config Search / Replace ----
+    toggleSearch() {
+        const bar = document.getElementById('config-search-bar');
+        const btn = document.getElementById('search-toggle-btn');
+        const visible = bar.classList.toggle('visible');
+        btn.classList.toggle('active', visible);
+        if (visible) {
+            document.getElementById('search-input').focus();
+        } else {
+            this._searchMatches = [];
+            this._searchIndex = -1;
+            document.getElementById('search-count').textContent = '';
+            document.getElementById('search-count').className = 'config-search-count';
+        }
+    }
+
+    searchUpdate() {
+        const query = document.getElementById('search-input').value;
+        const editor = document.getElementById('config-editor');
+        const countEl = document.getElementById('search-count');
+        this._searchMatches = [];
+        this._searchIndex = -1;
+        if (!query) { countEl.textContent = ''; countEl.className = 'config-search-count'; return; }
+        const text = editor.value;
+        const lower = text.toLowerCase();
+        const q = query.toLowerCase();
+        let pos = 0;
+        while ((pos = lower.indexOf(q, pos)) !== -1) {
+            this._searchMatches.push(pos);
+            pos += q.length;
+        }
+        if (this._searchMatches.length === 0) {
+            countEl.textContent = 'no match';
+            countEl.className = 'config-search-count none';
+        } else {
+            this._searchIndex = 0;
+            this._scrollToMatch(query.length);
+            countEl.textContent = `1/${this._searchMatches.length}`;
+            countEl.className = 'config-search-count found';
+        }
+    }
+
+    searchNext() {
+        if (!this._searchMatches?.length) return;
+        this._searchIndex = (this._searchIndex + 1) % this._searchMatches.length;
+        const q = document.getElementById('search-input').value;
+        this._scrollToMatch(q.length);
+        document.getElementById('search-count').textContent = `${this._searchIndex + 1}/${this._searchMatches.length}`;
+    }
+
+    searchPrev() {
+        if (!this._searchMatches?.length) return;
+        this._searchIndex = (this._searchIndex - 1 + this._searchMatches.length) % this._searchMatches.length;
+        const q = document.getElementById('search-input').value;
+        this._scrollToMatch(q.length);
+        document.getElementById('search-count').textContent = `${this._searchIndex + 1}/${this._searchMatches.length}`;
+    }
+
+    _scrollToMatch(qlen) {
+        const editor = document.getElementById('config-editor');
+        const start = this._searchMatches[this._searchIndex];
+        editor.focus();
+        editor.setSelectionRange(start, start + qlen);
+        // Scroll the textarea to show the selection
+        const lines = editor.value.substring(0, start).split('\n');
+        const lineH = parseInt(getComputedStyle(editor).lineHeight) || 18;
+        editor.scrollTop = Math.max(0, (lines.length - 4) * lineH);
+    }
+
+    searchKeydown(e) {
+        if (e.key === 'Enter') { e.shiftKey ? this.searchPrev() : this.searchNext(); e.preventDefault(); }
+        if (e.key === 'Escape') this.toggleSearch();
+    }
+
+    replaceKeydown(e) {
+        if (e.key === 'Enter') { this.replaceOne(); e.preventDefault(); }
+        if (e.key === 'Escape') this.toggleSearch();
+    }
+
+    replaceOne() {
+        if (!this._searchMatches?.length) return;
+        const editor = document.getElementById('config-editor');
+        const q = document.getElementById('search-input').value;
+        const r = document.getElementById('replace-input').value;
+        if (!q) return;
+        const start = this._searchMatches[this._searchIndex];
+        const text = editor.value;
+        editor.value = text.substring(0, start) + r + text.substring(start + q.length);
+        // Rerun search to update indices
+        this.searchUpdate();
+    }
+
+    replaceAll() {
+        const editor = document.getElementById('config-editor');
+        const q = document.getElementById('search-input').value;
+        const r = document.getElementById('replace-input').value;
+        if (!q || !this._searchMatches?.length) return;
+        const count = this._searchMatches.length;
+        const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        editor.value = editor.value.replace(regex, r);
+        this.searchUpdate();
+        const status = document.getElementById('config-status');
+        status.style.color = 'var(--green)';
+        status.textContent = `Replaced ${count} occurrence${count !== 1 ? 's' : ''}.`;
+        this.log(`[CFG] Replaced ${count} occurrence${count !== 1 ? 's' : ''} of "${q}"`, 'success');
+    }
 
     async loadConfig() {
         const status = document.getElementById('config-status');
