@@ -3,7 +3,7 @@
 > **Generic Qualcomm Edition** — patch-based Wi-Fi tuning for any Qualcomm Android device, managed through a clean WebUI inside KernelSU Manager.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v5.1.0-blue?style=flat-square"/>
+  <img src="https://img.shields.io/badge/version-v6.1.0-blue?style=flat-square"/>
   <img src="https://img.shields.io/badge/platform-Qualcomm-red?style=flat-square"/>
   <img src="https://img.shields.io/badge/root-KernelSU--Next_V3-orange?style=flat-square"/>
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square"/>
