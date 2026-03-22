@@ -7,6 +7,12 @@ MODDIR=${0%/*}
 WLAN_DEV="wlan0"
 WLAN_SYS="/sys/class/net/${WLAN_DEV}"
 
+# Persistent state directory — survives module updates/reflashes.
+# The module dir ($MODDIR) is wiped on each flash; /data/adb/wcs/ is not.
+WCS_STATE_DIR="/data/adb/wcs"
+MODE_FILE="${WCS_STATE_DIR}/mode_status.txt"
+mkdir -p "$WCS_STATE_DIR" 2>/dev/null
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -276,7 +282,7 @@ case "$1" in
             if [ -f "${CONFIG_FILE}.bak" ]; then
                 cp "${CONFIG_FILE}.bak" "$CONFIG_FILE"
                 sync
-                echo "stock" > "$MODDIR/mode_status.txt"
+                echo "stock" > "$MODE_FILE"
                 DTYPE=$(detect_driver_type)
                 DNAME=$(get_driver_name)
                 printf '{"status":"success","message":"Stock config restored.","driver_type":"%s","driver_name":"%s","params_applied":0}\n' \
@@ -304,7 +310,7 @@ case "$1" in
         # -- Apply patch --
         N=$(apply_patch "$CONFIG_FILE" "$PATCH_FILE")
         sync
-        echo "$MODE" > "$MODDIR/mode_status.txt"
+        echo "$MODE" > "$MODE_FILE"
 
         DTYPE=$(detect_driver_type)
         DNAME=$(get_driver_name)
@@ -474,9 +480,65 @@ case "$1" in
         printf '{"status":"success","version":"%s"}\n' "$VERSION"
         ;;
 
+    # -----------------------------------------------------------------------
+    "read_config")
+        CONFIG_FILE=$(find_wifi_config)
+        if [ -z "$CONFIG_FILE" ]; then
+            log_json "error" "Config file not found."
+            exit 1
+        fi
+        LINES=$(wc -l < "$CONFIG_FILE" 2>/dev/null || echo 0)
+        # Encode content as base64 to safely pass through JSON
+        CONTENT=$(base64 "$CONFIG_FILE" 2>/dev/null | tr -d '\n')
+        printf '{"status":"success","path":"%s","lines":%s,"content":"%s"}\n'             "$CONFIG_FILE" "$LINES" "$CONTENT"
+        ;;
+
+    # -----------------------------------------------------------------------
+    "write_config")
+        # $2 is base64-encoded config content
+        B64="$2"
+        if [ -z "$B64" ]; then
+            log_json "error" "No content provided."
+            exit 1
+        fi
+        CONFIG_FILE=$(find_wifi_config)
+        if [ -z "$CONFIG_FILE" ]; then
+            log_json "error" "Config file not found."
+            exit 1
+        fi
+        # Backup before first write if not already done
+        [ ! -f "${CONFIG_FILE}.bak" ] && cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
+        # Decode and write
+        printf '%s' "$B64" | base64 -d > "$CONFIG_FILE" 2>/dev/null
+        if [ $? -ne 0 ]; then
+            log_json "error" "Failed to decode or write config."
+            exit 1
+        fi
+        sync
+        LINES=$(wc -l < "$CONFIG_FILE" 2>/dev/null || echo 0)
+        printf '{"status":"success","message":"Config written.","lines":%s}\n' "$LINES"
+        ;;
+
+    # -----------------------------------------------------------------------
+    "restore_backup")
+        CONFIG_FILE=$(find_wifi_config)
+        if [ -z "$CONFIG_FILE" ]; then
+            log_json "error" "Config file not found."
+            exit 1
+        fi
+        if [ ! -f "${CONFIG_FILE}.bak" ]; then
+            log_json "error" "No backup found. Apply a profile first to create one."
+            exit 1
+        fi
+        cp "${CONFIG_FILE}.bak" "$CONFIG_FILE"
+        sync
+        log_json "success" "Stock backup restored."
+        ;;
+
+    # -----------------------------------------------------------------------
     "get_mode")
-        if [ -f "$MODDIR/mode_status.txt" ]; then
-            printf '{"mode":"%s"}\n' "$(cat "$MODDIR/mode_status.txt")"
+        if [ -f "$MODE_FILE" ]; then
+            printf '{"mode":"%s"}\n' "$(cat "$MODE_FILE")"
         else
             printf '{"mode":"stock"}\n'
         fi
