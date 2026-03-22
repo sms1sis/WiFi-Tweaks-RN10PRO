@@ -1,32 +1,16 @@
-## v6.1.1 — SoC ID Collision Fix (SD732G / SDM665)
-
-### Backend (`backend.sh`)
-- **Fixed misidentification of Redmi Note 10 Pro (SD732G)** — SD732G/Lagoon and SDM665/Trinket both report SoC ID `394`, causing SD732G to show `WCN3990 (SDM665/Trinket)` instead of `WCN3998 (SD732G/Lagoon)`. Now disambiguated using the machine name from `/sys/devices/soc0/machine`: `TRINKET` → WCN3990, `LAGOON` → WCN3998, anything else shows both possibilities with the raw machine name.
-- Verified no other duplicate SoC IDs remain in the lookup table.
-
----
-
-## v6.1.3 — Fix Debug Current Connection Section
-
-### Bug Fixes
-- **Fix: `=== current connection ===` always empty in debug dump** — the `grep -E "SSID|BSSID|..."` pattern was matching against the raw dumpsys block which contains those keywords inside the `rec[]` event log lines, but the `sed '/rec\[/,$d'` cut happened to remove everything useful too. Replaced with a direct `grep -m1 "WifiInfo\|mWifiInfo"` that grabs the single status line, strips leading whitespace, then parses each field individually onto its own line. Output now shows SSID, BSSID, RSSI, link speed, frequency, Wi-Fi standard, IP, and MAC cleanly.
-- **Fix: `wpa_cli` method now guarded with existence check** — AOSP 16 removed `wpa_cli` entirely. The backend was attempting the call regardless, producing an error. Now checks `command -v wpa_cli` before trying, avoiding the pointless error on modern ROMs.
-
----
-
 ## v6.1.3 — Debug Dump Polish & wpa_cli Guard
 
 ### Bug Fixes
 - **Fix: `=== current connection ===` empty in debug dump** — `cmd wifi status` is now tried first (primary source, no whitespace issues). `dumpsys wifi` used as fallback. Previously only `dumpsys` was called in the debug path.
-- **Fix: `wpa_cli signal_poll` section crashing on AOSP 16** — AOSP 16 removed `wpa_cli` entirely. The debug dump and stats fallback now guard every `wpa_cli` call with `command -v wpa_cli` and print `wpa_cli not available on this ROM` instead of a shell error. Socket paths in the signal_poll section also updated to include the `sockets/` subdirectory variant.
+- **Fix: `wpa_cli signal_poll` crashing on AOSP 16** — AOSP 16 removed `wpa_cli` entirely. Every `wpa_cli` call in the backend now checks `command -v wpa_cli` first and prints `wpa_cli not available on this ROM` instead of a shell error. Affects the debug dump signal_poll section and the Method 3 stats fallback.
 
 ---
 
 ## v6.1.2 — Fix Stats & wpa_supplicant Socket Path
 
 ### Bug Fixes
-- **Fix: Link Telemetry showing dashes** — wpa_supplicant on many Qualcomm ROMs (confirmed on SDM665/Trinket) uses `/data/vendor/wifi/wpa/sockets/wlan0` with an extra `sockets/` subdirectory. The backend was only checking paths without that subdirectory so all four socket paths came back absent, killing `wpa_cli` signal_poll and SSID detection. Added `sockets/` variants at the top of every socket search list throughout the backend.
-- **Fix: `dumpsys wifi` stats parsing** — `mWifiInfo` line has leading whitespace on Android 13+. The `grep "^mWifiInfo"` anchor never matched so Method 2 was silently always failing. Fixed with `grep -m1 "mWifiInfo" | sed 's/^[[:space:]]*//'` to strip leading whitespace before parsing.
+- **Fix: Link Telemetry showing dashes** — wpa_supplicant on many Qualcomm ROMs uses `/data/vendor/wifi/wpa/sockets/wlan0` with an extra `sockets/` subdirectory. The backend was only checking paths without that subdirectory so all socket paths came back absent, killing `wpa_cli` signal_poll and SSID detection. Added `sockets/` variants at the top of every socket search list throughout the backend.
+- **Fix: `dumpsys wifi` stats parsing** — `mWifiInfo` line has leading whitespace on Android 13+. The `grep "^mWifiInfo"` anchor never matched so Method 2 was silently always failing. Fixed with `grep -m1 "mWifiInfo" | sed 's/^[[:space:]]*//'`.
 - **Fix: Debug dump `=== current connection ===` empty** — same `^mWifiInfo` whitespace issue caused the current connection section to show nothing even when connected.
 - **Added Method 3 stats fallback** — `wpa_cli signal_poll` via the corrected socket path, with `wpa_cli status` for SSID. Kicks in if both `cmd wifi status` and `dumpsys` fail.
 
@@ -35,22 +19,17 @@
 ## v6.1.1 — Debug Button Fix & Sci-Fi Default Theme
 
 ### Bug Fixes
-- **Fix (critical): Debug button** was returning only one line (`mLastBssid …`) instead of the full diagnostic dump. Root cause: `runDebug()` and `exportDebugInfo()` used raw `ksu.exec()` which has a stdout buffer limit — output was silently truncated, leaving only the last line that fit. Fixed by adding a new `get_debug_info_json` backend action that base64-encodes the full output inside a JSON envelope, then decoding it on the frontend. Same safe transport pattern used by `read_config`. Both the Debug button and Settings → Export Debug Info are fixed.
+- **Fix (critical): Debug button** was returning only one line (`mLastBssid …`) instead of the full diagnostic dump. Root cause: `runDebug()` and `exportDebugInfo()` used raw `ksu.exec()` which has a stdout buffer limit — output was silently truncated. Fixed by adding a new `get_debug_info_json` backend action that base64-encodes the full output inside a JSON envelope, then decoding it on the frontend. Both the Debug button and Settings → Export Debug Info are fixed.
 - **Default theme restored to Sci-Fi** — was changed to Dark in v6.0.2, reverted back. Dark theme remains available in Settings.
+- **Brighter banner** — reprocessed with gamma correction to lift shadows and dark areas into clearly visible range in KSU manager.
 
 ---
 
 ## v6.1.0 — Comprehensive Qualcomm Chip Coverage
 
 ### Backend (`backend.sh`)
-- **Fixed duplicate SoC ID entries** — SoC IDs `415` and `457` appeared twice in the lookup table, causing silent misidentification. `415` is now correctly SM8250/WCN3998 (not SM8350), and `457` is SM6225/WCN3990 (not SM8450). SM8350/SM8450 use PCIe-attached chips identified by PCI ID, not SoC ID.
-- **Added missing SoC entries:**
-  - `SDM632 (338)` → WCN3615
-  - `SDM630 (345)` → WCN3680B
-  - `SM8475 (482)` → WCN6855
-  - `SM7475 (530)` → WCN6855
-  - `SM8650/Pineapple (591)` → WCN7850 *(was incorrectly mapped to SM8650 under wrong ID)*
-  - `SM7675 (554)` → WCN7850
+- **Fixed duplicate SoC ID entries** — SoC IDs `415` and `457` appeared twice in the lookup table, causing silent misidentification. `415` is now correctly SM8250/WCN3998 (not SM8350), and `457` is SM6225/WCN3990 (not SM8450).
+- **Added missing SoC entries:** SDM632 (338) → WCN3615, SDM630 (345) → WCN3680B, SM8475 (482) → WCN6855, SM7475 (530) → WCN6855, SM8650/Pineapple (591) → WCN7850, SM7675 (554) → WCN7850.
 - **Cleaned up SoC table comments** — each chip family now has accurate generation notes clarifying which use PCIe (PCI ID path) vs SNOC (SoC ID path).
 
 ---
