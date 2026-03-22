@@ -1936,12 +1936,11 @@ class App {
 
     searchUpdate() {
         const query = document.getElementById('search-input').value;
-        const editor = document.getElementById('config-editor');
         const countEl = document.getElementById('search-count');
         this._searchMatches = [];
         this._searchIndex = -1;
         if (!query) { countEl.textContent = ''; countEl.className = 'config-search-count'; return; }
-        const text = editor.value;
+        const text = document.getElementById('config-editor').value;
         const lower = text.toLowerCase();
         const q = query.toLowerCase();
         let pos = 0;
@@ -1954,7 +1953,7 @@ class App {
             countEl.className = 'config-search-count none';
         } else {
             this._searchIndex = 0;
-            this._scrollToMatch(query.length);
+            // Update count only — don't jump cursor or steal focus while typing
             countEl.textContent = `1/${this._searchMatches.length}`;
             countEl.className = 'config-search-count found';
         }
@@ -1977,14 +1976,15 @@ class App {
     }
 
     _scrollToMatch(qlen) {
+        if (this._searchIndex < 0 || !this._searchMatches?.length) return;
         const editor = document.getElementById('config-editor');
         const start = this._searchMatches[this._searchIndex];
-        editor.focus();
-        editor.setSelectionRange(start, start + qlen);
-        // Scroll the textarea to show the selection
+        // Scroll textarea to show match without stealing focus from search input
         const lines = editor.value.substring(0, start).split('\n');
         const lineH = parseInt(getComputedStyle(editor).lineHeight) || 18;
         editor.scrollTop = Math.max(0, (lines.length - 4) * lineH);
+        editor.focus();
+        editor.setSelectionRange(start, start + qlen);
     }
 
     searchKeydown(e) {
