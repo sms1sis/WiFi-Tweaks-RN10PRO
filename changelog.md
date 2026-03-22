@@ -1,5 +1,35 @@
-## v5.1.2
-- **UI:** Improved dashboard visibility.
+## v6.0.0 — Two-Page UI, Theme System & Config Editor
+
+This is a major UI release. The WebUI has been restructured into a two-page app with a bottom navigation bar.
+
+### Two-Page Layout with Bottom Navigation
+- **Dashboard** — all status, stats, patch profile, profile buttons, utilities, and log
+- **Config** — dedicated full-screen WCNSS_qcom_cfg.ini editor
+- Bottom navigation bar with icons and labels to switch between pages
+- Config page lazy-loads on first visit — no startup overhead
+- Nav bar: larger icons (28px), bigger tap targets, dimmed inactive state, cyan active indicator with glow
+
+### Built-in Config Editor
+- Live editor for `WCNSS_qcom_cfg.ini` loaded directly from the module overlay
+- **Reload** — fetch current config from device into editor
+- **Save & Apply** — write edited config back and trigger driver reload (modular) or reboot banner (built-in)
+- **Restore** — restore the stock backup taken at install time
+- Edge-to-edge layout on the config page for maximum editing space
+- Full panel frame visible (all four borders) with the textarea as a deep editing well inside
+
+### Three-Theme System
+The theme toggle (top-left of header) cycles through three themes:
+- 🎨 **Sci-Fi** — dark navy, cyan/green/amber neon, circuit board background, Orbitron font
+- 🌙 **Normal Light** — white/grey surfaces, Google-style palette, rounded cards, Inter font
+- 🚀 **Normal Dark** — iOS-style dark grey (`#1c1c1e`), system color palette, rounded cards, Inter font
+
+Theme preference is persisted in `localStorage` and restored on every load.
+
+### Bug Fixes
+- **Fix (critical):** Mode status (perf/balanced/stock) was reset to stock after every module flash/update. `mode_status.txt` was stored inside `$MODDIR` which is wiped on each install. Moved to `/data/adb/wcs/mode_status.txt` — a persistent directory outside the module that survives updates.
+- **Fix:** Nav bar icon misalignment — SVG elements wrapped with `display: block`, text labels wrapped in `<span>` with `display: block; line-height: 1`, explicit `width`/`height` attributes added to SVG elements.
+- **UI:** Increased panel, button, and row padding throughout for better readability and tap targets on small screens.
+- **UI:** Config panel border fully visible on all sides with `12px` page padding.
 
 ## v5.1.1
 - **UI:** Increased vertical padding across all panels, buttons, stat cells, and rows — elements were too short/cramped on device screens.
