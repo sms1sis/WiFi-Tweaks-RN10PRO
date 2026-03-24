@@ -48,6 +48,16 @@ All changes are **systemless** — the module overlays your vendor Wi-Fi config 
 
 ---
 
+## Packaging
+
+To package the module yourself, run the following command in the project root:
+
+```sh
+zip -r WiFi-Config-Switcher.zip . -x ".git/*" ".gitignore" "README.md" "LICENSE" "screenshots/*" "changelog.md"
+```
+
+---
+
 ## WebUI
 
 The WebUI is accessible directly from KernelSU Manager and shows:
@@ -58,6 +68,17 @@ The WebUI is accessible directly from KernelSU Manager and shows:
 - **Live stats** — Signal (dBm), Link speed (Mbps), Frequency (MHz), SSID
 - **Reboot banner** — shown automatically when a built-in driver is detected after a config change
 - **Log box** — timestamped, colour-coded log of every action taken
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/image1.png" width="23%" />
+  <img src="screenshots/image2.png" width="23%" />
+  <img src="screenshots/image3.png" width="23%" />
+  <img src="screenshots/image4.png" width="23%" />
+</p>
 
 ---
 
