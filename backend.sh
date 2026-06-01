@@ -199,46 +199,93 @@ find_patch_dir() {
 
 # Apply a patch file to a config file.
 # Patch format: KEY=VALUE lines; lines starting with # or blank are ignored.
+#
+# Implementation note: uses awk instead of sed for two reasons:
+#   1. Safety — values that contain sed special chars (& | \ newline) are passed
+#      as awk variables and never interpolated into a regex/replacement pattern.
+#   2. Portability — Android toybox sed does not support \n in replacements, so
+#      the END-marker insertion would silently produce literal \n on many devices.
 apply_patch() {
     local config_file="$1"
     local patch_file="$2"
-    local applied=0
-    local skipped=0
 
     [ ! -f "$config_file" ] && return 1
     [ ! -f "$patch_file"  ] && return 1
 
-    while IFS= read -r line || [ -n "$line" ]; do
-        # Skip comments and blank lines
-        case "$line" in
-            '#'*|'') continue ;;
-        esac
+    # Build associative arrays: keys[key]=value, order[n]=key
+    # Then rewrite the config in one awk pass (no repeated file rewrites).
+    awk '
+        # ── Pass 1: read patch file into arrays ──────────────────────────
+        NR == FNR {
+            # Skip blank lines and comments
+            if ($0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/) next
+            eq = index($0, "=")
+            if (eq == 0) next
+            k = substr($0, 1, eq-1)
+            v = substr($0, eq+1)
+            # Trim leading/trailing whitespace from key
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", k)
+            if (k == "") next
+            if (!(k in seen)) { order[++n] = k; seen[k] = 1 }
+            patches[k] = v
+            next
+        }
 
-        # Split on first '='
-        local key value
-        key="${line%%=*}"
-        value="${line#*=}"
+        # ── Pass 2: rewrite config lines ─────────────────────────────────
+        {
+            # Check if this line (active or commented-out) matches a patch key
+            test = $0
+            gsub(/^[#[:space:]]+/, "", test)        # strip leading # / spaces
+            eq = index(test, "=")
+            if (eq > 0) {
+                k = substr(test, 1, eq-1)
+                gsub(/[[:space:]]/, "", k)
+                if (k in patches) {
+                    print k "=" patches[k]
+                    applied[k] = 1
+                    next
+                }
+            }
+            # Insert new keys before the END marker
+            if ($0 ~ /^END[[:space:]]*$/ || $0 == "END") {
+                for (i = 1; i <= n; i++) {
+                    k = order[i]
+                    if (!(k in applied)) {
+                        print k "=" patches[k]
+                        applied[k] = 1
+                    }
+                }
+            }
+            print
+        }
 
-        # Trim whitespace from key
-        key=$(printf '%s' "$key" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-        [ -z "$key" ] && continue
+        # ── Pass 3: append any keys not yet written (no END marker) ──────
+        END {
+            for (i = 1; i <= n; i++) {
+                k = order[i]
+                if (!(k in applied)) {
+                    print k "=" patches[k]
+                }
+            }
+            # Print total applied count to stderr for the caller to capture
+            total = 0
+            for (k in patches) total++
+            print total > "/dev/stderr"
+        }
+    ' "$patch_file" "$config_file" 2>/tmp/wcs_patch_count > "${config_file}.new"
 
-        # Update existing key (handles commented-out lines too) or insert before END marker
-        if grep -qE "^[#[:space:]]*${key}[[:space:]]*=" "$config_file" 2>/dev/null; then
-            sed -i "s|^[#[:space:]]*${key}[[:space:]]*=.*|${key}=${value}|" "$config_file"
-        else
-            # Insert before the END marker so the driver sees the new key.
-            # If no END marker exists, append normally.
-            if grep -q "^END" "$config_file" 2>/dev/null; then
-                sed -i "s|^END|${key}=${value}\nEND|" "$config_file"
-            else
-                printf '%s=%s\n' "$key" "$value" >> "$config_file"
-            fi
-        fi
-        applied=$((applied + 1))
-    done < "$patch_file"
+    local rc=$?
+    if [ $rc -ne 0 ] || [ ! -s "${config_file}.new" ]; then
+        rm -f "${config_file}.new"
+        return 1
+    fi
 
-    printf '%d' "$applied"
+    # Atomic replace — move so partial writes never leave a truncated config
+    mv "${config_file}.new" "$config_file"
+
+    local applied_count
+    applied_count=$(cat /tmp/wcs_patch_count 2>/dev/null | tr -d '[:space:]')
+    printf '%d' "${applied_count:-0}"
 }
 
 # ---------------------------------------------------------------------------
@@ -268,6 +315,12 @@ case "$1" in
             *) log_json "error" "Unknown mode: $MODE"; exit 1 ;;
         esac
 
+        # -- Detect driver once (used in both stock-restore and apply paths) --
+        DTYPE=$(detect_driver_type)
+        DNAME=$(get_driver_name)
+        PATCH_SOURCE="none"
+        [ -f "$MODDIR/patch_source.txt" ] && PATCH_SOURCE=$(cat "$MODDIR/patch_source.txt")
+
         # -- Find config --
         CONFIG_FILE=$(find_wifi_config)
         if [ -z "$CONFIG_FILE" ]; then
@@ -283,8 +336,6 @@ case "$1" in
                 cp "${CONFIG_FILE}.bak" "$CONFIG_FILE"
                 sync
                 echo "stock" > "$MODE_FILE"
-                DTYPE=$(detect_driver_type)
-                DNAME=$(get_driver_name)
                 printf '{"status":"success","message":"Stock config restored.","driver_type":"%s","driver_name":"%s","params_applied":0}\n' \
                     "$DTYPE" "$DNAME"
             else
@@ -311,11 +362,6 @@ case "$1" in
         N=$(apply_patch "$CONFIG_FILE" "$PATCH_FILE")
         sync
         echo "$MODE" > "$MODE_FILE"
-
-        DTYPE=$(detect_driver_type)
-        DNAME=$(get_driver_name)
-        PATCH_SOURCE="none"
-        [ -f "$MODDIR/patch_source.txt" ] && PATCH_SOURCE=$(cat "$MODDIR/patch_source.txt")
 
         printf '{"status":"success","message":"Mode %s applied (%s params).","driver_type":"%s","driver_name":"%s","patch_source":"%s","params_applied":%s}\n' \
             "$MODE" "$N" "$DTYPE" "$DNAME" "$PATCH_SOURCE" "${N:-0}"
@@ -412,7 +458,9 @@ case "$1" in
 
         printf '{"rssi":"%s","speed":"%s","freq":"%s","ssid":"%s"}\n' \
             "$RSSI" "$SPEED" "$FREQ" "$SSID"
-        ;;    # -----------------------------------------------------------------------
+        ;;
+
+    # -----------------------------------------------------------------------
     "soft_reset")
         DTYPE=$(detect_driver_type)
         DNAME=$(get_driver_name)
@@ -795,12 +843,16 @@ case "$1" in
         fi
         # Backup before first write if not already done
         [ ! -f "${CONFIG_FILE}.bak" ] && cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
-        # Decode and write
-        printf '%s' "$B64" | base64 -d > "$CONFIG_FILE" 2>/dev/null
-        if [ $? -ne 0 ]; then
+        # Decode to a temp file first — atomic replace prevents half-written config
+        # if the process is killed mid-write
+        TMP_WRITE="${CONFIG_FILE}.wcs_tmp"
+        printf '%s' "$B64" | base64 -d > "$TMP_WRITE" 2>/dev/null
+        if [ $? -ne 0 ] || [ ! -s "$TMP_WRITE" ]; then
+            rm -f "$TMP_WRITE"
             log_json "error" "Failed to decode or write config."
             exit 1
         fi
+        mv "$TMP_WRITE" "$CONFIG_FILE"
         sync
         LINES=$(wc -l < "$CONFIG_FILE" 2>/dev/null || echo 0)
         printf '{"status":"success","message":"Config written.","lines":%s}\n' "$LINES"
@@ -825,7 +877,13 @@ case "$1" in
     # -----------------------------------------------------------------------
     "get_mode")
         if [ -f "$MODE_FILE" ]; then
-            printf '{"mode":"%s"}\n' "$(cat "$MODE_FILE")"
+            # Sanitize: only accept the three known values; default to stock otherwise
+            RAW_MODE=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
+            case "$RAW_MODE" in
+                perf|balanced|stock) MODE_VAL="$RAW_MODE" ;;
+                *)                   MODE_VAL="stock" ;;
+            esac
+            printf '{"mode":"%s"}\n' "$MODE_VAL"
         else
             printf '{"mode":"stock"}\n'
         fi

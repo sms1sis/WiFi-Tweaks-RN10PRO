@@ -4,8 +4,21 @@
     <title>Wi-Fi Config Tuner</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Theme pre-init: must run synchronously before first paint to prevent FOUC -->
+    <script>
+        (function() {
+            try {
+                var t = localStorage.getItem('wcs_theme') || 'scifi';
+                document.documentElement.setAttribute('data-theme', t);
+            } catch(e) {
+                document.documentElement.setAttribute('data-theme', 'scifi');
+            }
+        })();
+    </script>
     <style>
-        :root {
+        /* Sci-Fi theme variables — active when data-theme="scifi" (explicit) or unset (:root fallback) */
+        :root,
+        [data-theme="scifi"] {
             --bg:          #020b18;
             --bg-panel:    rgba(0, 18, 36, 0.97);
             --bg-card:     rgba(0, 25, 50, 0.95);
@@ -31,6 +44,18 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; margin: 0; padding: 0; }
+
+        /* Prevent theme flash: body stays invisible until JS runs loadTheme()
+           which removes this class. The inline <script> in <head> sets data-theme
+           before first paint, so colours are correct — we just wait for fonts. */
+        body.theme-loading {
+            visibility: hidden;
+        }
+
+        /* Suppress transitions during initial theme application */
+        body.no-transitions * {
+            transition: none !important;
+        }
 
         body {
             font-family: var(--mono);
@@ -598,7 +623,6 @@
         [data-theme="normal-dark"] #reboot-banner { border-radius: 10px; }
         [data-theme="normal-dark"] .banner-btn { border-radius: 8px; font-family: 'Inter', sans-serif; letter-spacing: 0; }
         [data-theme="normal-dark"] .log-clear { font-family: 'Inter', sans-serif; letter-spacing: 0; border-radius: 6px; }
-        [data-theme="normal-dark"] .theme-toggle { border-radius: 6px; }
         [data-theme="normal-dark"] .config-textarea { border-radius: 8px; font-family: monospace; }
         [data-theme="normal-dark"] .config-btn { border-radius: 8px; font-family: 'Inter', sans-serif; letter-spacing: 0; }
 
@@ -678,25 +702,7 @@
         /* Normal theme: log clear btn */
         [data-theme="normal"] .log-clear { font-family: 'Inter', sans-serif; letter-spacing: 0; border-radius: 6px; }
 
-        /* ═══════════════════════════════════════════════
-           THEME TOGGLE BUTTON
-           ═══════════════════════════════════════════════ */
-        .theme-toggle {
-            position: absolute;
-            top: 16px;
-            left: 0;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 3px;
-            padding: 3px 7px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            line-height: 1;
-            color: var(--text-dim);
-            transition: all 0.15s;
-        }
-        .theme-toggle:hover { border-color: var(--cyan); color: var(--cyan); }
-        [data-theme="normal"] .theme-toggle { border-radius: 6px; }
+        /* .theme-toggle rules removed — element replaced by Settings page */
 
         /* ═══════════════════════════════════════════════
            CONFIG EDITOR PANEL
@@ -1139,7 +1145,7 @@
 
     </style>
 </head>
-<body>
+<body class="theme-loading no-transitions">
 <div class="app-shell">
 
   <!-- ═══════════════ PAGE: DASHBOARD ═══════════════ -->
@@ -1342,7 +1348,7 @@
               <span class="settings-row-title">Sci-Fi</span>
               <span class="settings-row-sub">Dark navy · Cyan neon · Circuit art</span>
             </span>
-            <span class="settings-row-check" id="check-scifi">✔</span>
+            <span class="settings-row-check" id="check-scifi"></span>
           </button>
           <div class="settings-divider"></div>
           <button class="settings-row theme-opt" id="theme-opt-normal" onclick="app.setTheme('normal')">
@@ -1384,7 +1390,7 @@
               <span class="settings-row-title">5 seconds</span>
               <span class="settings-row-sub">Default · balanced</span>
             </span>
-            <span class="settings-row-check" id="check-interval-5">✔</span>
+            <span class="settings-row-check" id="check-interval-5"></span>
           </button>
           <div class="settings-divider"></div>
           <button class="settings-row interval-opt" id="interval-opt-10" onclick="app.setRefreshInterval(10)">
@@ -1587,6 +1593,10 @@ class App {
         await Promise.all([this.detectDriver(), this.loadPatchInfo(), this.checkMode()]);
         this.fetchStats();
         this._statsTimer = setInterval(() => this.fetchStats(), this.refreshInterval * 1000);
+        // Clean up timer when WebView navigates away or is destroyed
+        window.addEventListener('pagehide', () => {
+            if (this._statsTimer) { clearInterval(this._statsTimer); this._statsTimer = null; }
+        });
         // Ctrl+F / Cmd+F opens search when on config page
         document.addEventListener('keydown', e => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'f' && this.currentPage === 'config') {
@@ -1824,6 +1834,8 @@ class App {
         }
         // Sync settings UI on every visit
         if (page === 'settings') {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'scifi';
+            this._syncThemeChecks(currentTheme);
             this._syncIntervalChecks(this.refreshInterval);
         }
     }
@@ -1831,7 +1843,7 @@ class App {
     // ---- Theme ----
     setTheme(theme) {
         const labels = { 'scifi': 'Sci-Fi', 'normal': 'Light', 'normal-dark': 'Dark' };
-        document.documentElement.setAttribute('data-theme', theme === 'scifi' ? '' : theme);
+        document.documentElement.setAttribute('data-theme', theme);
         try { localStorage.setItem('wcs_theme', theme); } catch {}
         this._syncThemeChecks(theme);
         this.log(`[UI] Theme: ${labels[theme] || theme}`, 'system');
@@ -1847,8 +1859,17 @@ class App {
     loadTheme() {
         let saved = 'scifi';
         try { saved = localStorage.getItem('wcs_theme') || 'scifi'; } catch {}
-        document.documentElement.setAttribute('data-theme', saved === 'scifi' ? '' : saved);
+        // data-theme already applied by the inline <script> in <head> before first paint.
+        // Reaffirm here as a safety net in case the inline script failed.
+        document.documentElement.setAttribute('data-theme', saved);
         this._syncThemeChecks(saved);
+        // Reveal body now that theme is confirmed correct; re-enable transitions next frame
+        requestAnimationFrame(() => {
+            document.body.classList.remove('theme-loading');
+            requestAnimationFrame(() => {
+                document.body.classList.remove('no-transitions');
+            });
+        });
     }
 
     // ---- Refresh Interval ----
@@ -1896,7 +1917,10 @@ class App {
             return;
         }
         let text;
-        try { text = decodeURIComponent(escape(atob(r.content))); } catch { text = r.content; }
+        try {
+            const bytes = Uint8Array.from(atob(r.content), c => c.charCodeAt(0));
+            text = new TextDecoder().decode(bytes);
+        } catch { text = r.content; }
         navigator.clipboard.writeText(text)
             .then(() => {
                 if (statusEl) statusEl.textContent = 'Copied to clipboard ✔';
@@ -2033,7 +2057,8 @@ class App {
         const r = parseJson(await this.ksu.runAction('read_config'));
         if (r && r.status === 'success') {
             try {
-                editor.value = decodeURIComponent(escape(atob(r.content)));
+                const bytes = Uint8Array.from(atob(r.content), c => c.charCodeAt(0));
+                editor.value = new TextDecoder().decode(bytes);
             } catch (e) {
                 editor.value = r.content;
             }
@@ -2054,7 +2079,8 @@ class App {
         status.style.color = 'var(--cyan)';
         status.textContent = 'Saving…';
         // Encode as base64 to avoid shell escaping issues with special characters
-        const b64 = btoa(unescape(encodeURIComponent(content)));
+        const encoded = new TextEncoder().encode(content);
+        const b64 = btoa(String.fromCharCode(...encoded));
         const r = parseJson(await this.ksu.runAction('write_config', b64));
         if (r && r.status === 'success') {
             status.style.color = 'var(--green)';
@@ -2094,7 +2120,10 @@ class App {
         const r = parseJson(await this.ksu.runAction('get_debug_info_json'));
         if (!r || !r.content) { this.log('[DEBUG] NO OUTPUT', 'error'); return; }
         let text;
-        try { text = decodeURIComponent(escape(atob(r.content))); } catch { text = r.content; }
+        try {
+            const bytes = Uint8Array.from(atob(r.content), c => c.charCodeAt(0));
+            text = new TextDecoder().decode(bytes);
+        } catch { text = r.content; }
         text.split('\n').forEach(line => {
             if (!line.trim()) return;
             const t = line.startsWith('===') ? 'system'

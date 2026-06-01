@@ -43,7 +43,6 @@ if [ -z "$PATCH_DIR" ] && [ -n "$DEVICE" ]; then
         sunny)   ALIAS="mojito"  ;;
         sweet_k) ALIAS="sweet"   ;;
         sweetin)  ALIAS="sweet"   ;;
-        willow)  ALIAS="ginkgo"  ;;
         willow)  ALIAS="ginkgo"  ;;  # Redmi Note 8T shares hardware with ginkgo
         *)       ALIAS=""        ;;
     esac

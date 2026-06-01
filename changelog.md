@@ -1,3 +1,45 @@
+## v6.2.0 — Reliability & Correctness
+
+### Bug Fixes
+
+- **Fix (critical): `apply_patch` corrupts values containing `&` or `|`** — the old implementation used `sed -i "s|...|${key}=${value}|"` directly. Any value containing `&` expanded to the matched text in sed's replacement, silently writing wrong data. A `|` in the value broke the `s|...|` delimiter entirely. Current patch files only use integers so this was latent, but would have triggered the moment a patch added a string-typed value. Rewritten with `awk` — keys and values are passed as awk variables, never interpolated into a regex or replacement pattern.
+
+- **Fix (critical): `apply_patch` inserts literal `\n` on Android (toybox `sed` bug)** — when a key was new and the config contained an `END` marker, the old code used `sed -i "s|^END|${key}=${value}\nEND|"`. Android's toybox `sed` does not support `\n` in replacements; it writes the two characters `\n` literally instead of a newline, producing a malformed config line. The `awk` rewrite handles END insertion with correct newline semantics on all POSIX shells.
+
+- **Fix: `apply_patch` rewrites the whole file on every key** — the old implementation ran one `sed -i` per key, rewriting the entire config file N times (23 times for sm6125). The `awk` rewrite makes a single pass over the file regardless of patch size.
+
+- **Fix: `apply_patch` write is now atomic** — the old implementation wrote directly to the config file. A kill mid-write (OOM killer, force-stop) left a truncated config the driver could not parse. The new implementation writes to a `.wcs_tmp` sibling and `mv`s it into place — `mv` on the same filesystem is atomic.
+
+- **Fix: `write_config` (config editor save) is now atomic** — same issue as above. The base64 decode now targets a `.wcs_tmp` file; `mv` replaces the live config only after a successful decode.
+
+- **Fix: `get_mode` sanitizes mode file** — `cat mode_status.txt` was written raw into a JSON string. A corrupt or manually edited file could produce invalid JSON, breaking the dashboard on next open. The value is now validated against the three known modes (`perf`, `balanced`, `stock`) and defaults to `stock` for anything else.
+
+- **Fix: `apply_mode` ran `detect_driver_type` twice** — once in the stock-restore branch and once after applying a patch, each triggering a full sysfs scan. Now runs once at the top of the action, result shared by both paths.
+
+- **Fix: duplicate `willow` alias in `customize.sh`** — two identical `willow) ALIAS="ginkgo"` entries in the device alias `case` block. Second entry was dead code but a maintenance hazard. Removed.
+
+### New Features
+
+- **Boot-time profile re-application (`service.sh`)** — after a module update or reflash, `customize.sh` copies a fresh unpatched config from `/vendor` into the overlay, silently reverting the tuning even though the saved mode still says `perf` or `balanced`. `service.sh` now reads the saved mode on every boot and re-applies it automatically. Output is logged to `/data/adb/wcs/boot_restore.log` for verification. Stock mode takes no action.
+
+### WebUI Fixes
+
+- **Fix: theme flash (FOUC) on open** — the saved theme was applied by JS after the page rendered, causing a brief Sci-Fi flash before switching to Light or Dark. A blocking inline `<script>` in `<head>` now reads `localStorage` and sets `data-theme` before the first paint. A `visibility: hidden` guard covers the remaining gap while the JS module loads. No visible flash at any network/CPU speed.
+
+- **Fix: `data-theme` used empty string for Sci-Fi** — `setTheme('scifi')` set `data-theme=""` (empty string). While functional, it means `[data-theme]` attribute selectors would match the empty value unexpectedly. All theme paths now use explicit string values (`"scifi"`, `"normal"`, `"normal-dark"`). `:root` and `[data-theme="scifi"]` are co-selectors for the Sci-Fi variables.
+
+- **Fix: settings checkmarks hardcoded in HTML** — `check-scifi` and `check-interval-5` had `✔` baked into the HTML. If the user had changed those settings, reopening Settings briefly showed the wrong checkmark before JS corrected it. All checkmarks are now blank in HTML; JS always writes them via `_syncThemeChecks` / `_syncIntervalChecks`.
+
+- **Fix: theme checkmarks not updated on Settings visit** — `navigate('settings')` only called `_syncIntervalChecks`. If the theme was changed in the same session the checkmarks on the Settings page were stale until the page was re-visited. Now calls both sync functions on every visit.
+
+- **Fix: deprecated `escape()`/`unescape()` removed** — three `decodeURIComponent(escape(atob(...)))` calls and one `btoa(unescape(encodeURIComponent(...)))` replaced with `TextDecoder` / `TextEncoder`. The old functions are removed from the Web standard and log deprecation warnings in modern WebViews.
+
+- **Fix: stats interval timer not cleaned up** — `setInterval` for stats polling had no `clearInterval` on page unload. Added a `pagehide` listener to clean it up when the WebView is destroyed.
+
+- **Removed dead `.theme-toggle` CSS** — three rule blocks for `.theme-toggle` (a button replaced by the Settings page in an earlier version) were still in the stylesheet. Removed.
+
+---
+
 ## v6.1.4 — Config Editor Search & Replace
 
 ### Config Editor
