@@ -2,7 +2,7 @@
 SKIPUNZIP=0
 
 ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-ui_print "  WiFi Config Switcher"
+ui_print "  WiFi Config Tuner"
 ui_print "  Generic Qualcomm Edition"
 ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
@@ -37,15 +37,15 @@ if [ -n "$DEVICE" ] && [ -d "$PATCHES_BASE/devices/$DEVICE" ]; then
     fi
 fi
 
-# Also check common aliases (e.g. mojito and sunny share hardware)
+# Also check common aliases (e.g. mojito and sunny share hardware).
+# Alias map lives in device_aliases.txt (shipped alongside this script) so it
+# only has to be maintained in one place — backend.sh's resolve_device_alias()
+# reads the exact same file at runtime for its sideload fallback path.
 if [ -z "$PATCH_DIR" ] && [ -n "$DEVICE" ]; then
-    case "$DEVICE" in
-        sunny)   ALIAS="mojito"  ;;
-        sweet_k) ALIAS="sweet"   ;;
-        sweetin)  ALIAS="sweet"   ;;
-        willow)  ALIAS="ginkgo"  ;;  # Redmi Note 8T shares hardware with ginkgo
-        *)       ALIAS=""        ;;
-    esac
+    ALIAS=""
+    if [ -f "$MODPATH/device_aliases.txt" ]; then
+        ALIAS=$(grep -i "^${DEVICE}=" "$MODPATH/device_aliases.txt" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]')
+    fi
     if [ -n "$ALIAS" ] && [ -d "$PATCHES_BASE/devices/$ALIAS" ]; then
         if [ -f "$PATCHES_BASE/devices/$ALIAS/perf.patch" ] && \
            [ -f "$PATCHES_BASE/devices/$ALIAS/balanced.patch" ]; then

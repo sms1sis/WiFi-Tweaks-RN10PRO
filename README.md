@@ -1,9 +1,11 @@
-# Wi-Fi Config Switcher
+# WiFi Config Tuner
 
 > **Generic Qualcomm Edition** — patch-based Wi-Fi tuning for any Qualcomm Android device, managed through a clean WebUI inside KernelSU Manager.
+>
+> *(Formerly "WiFi Config Switcher" — renamed in v7.0.0. See [Upgrading](#upgrading-from-wifi-config-switcher-pre-v700) if you have an existing install.)*
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v6.2.0-blue?style=flat-square"/>
+  <img src="https://img.shields.io/badge/version-v7.0.0-blue?style=flat-square"/>
   <img src="https://img.shields.io/badge/platform-Qualcomm-red?style=flat-square"/>
   <img src="https://img.shields.io/badge/root-KernelSU--Next_V3-orange?style=flat-square"/>
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square"/>
@@ -13,7 +15,7 @@
 
 ## What It Does
 
-This Magisk/KernelSU module lets you switch your device's Wi-Fi driver configuration between three profiles without touching system partitions:
+This Magisk/KernelSU module lets you tune your device's Wi-Fi driver configuration between three profiles without touching system partitions:
 
 | Profile | Effect |
 |---|---|
@@ -35,16 +37,27 @@ All changes are **systemless** — the module overlays your vendor Wi-Fi config 
 
 ## Installation
 
-1. Download the latest `WiFi-Config-Switcher.zip` from [Releases](https://github.com/sms1sis/WiFi-Config-Switcher/releases).
+1. Download the latest `WiFi-Config-Tuner.zip` from [Releases](https://github.com/sms1sis/WiFi-Config-Tuner/releases).
 2. Flash via **KernelSU Manager → Modules → Install from storage**.
 3. During install the module will:
    - Detect your device codename and SoC platform automatically.
    - Select the most specific patch profile available (see [Patch Resolution](#patch-resolution) below).
    - Import your stock `WCNSS_qcom_cfg.ini` into the module overlay.
 4. Reboot once after flashing.
-5. Open **KernelSU Manager → Modules → Wi-Fi Config Switcher → Open WebUI**.
+5. Open **KernelSU Manager → Modules → WiFi Config Tuner → Open WebUI**.
 
 > **No reboot needed** to switch profiles on devices with a modular (loadable) Wi-Fi driver — the driver is reloaded automatically. Devices with a built-in (kernel-compiled) driver will prompt you to reboot.
+
+### Upgrading from WiFi Config Switcher (pre-v7.0.0)
+
+v7.0.0 renames the module's internal id (`wifi_config_switcher` → `wifi_config_tuner`) along with the display name. Because KernelSU/Magisk key a module's install directory off its id, **this does not upgrade in place** — flashing v7.0.0 installs it as a second, separate module alongside your existing one.
+
+To move over cleanly:
+1. Flash `WiFi-Config-Tuner.zip` as normal.
+2. In KernelSU Manager → Modules, **remove the old "WiFi Config Switcher" entry**.
+3. Reboot.
+
+Your saved profile (`perf`/`balanced`/`stock`) is preserved automatically — it's stored in `/data/adb/wcs/`, which lives outside either module's directory and isn't touched by this rename.
 
 ---
 
@@ -53,7 +66,7 @@ All changes are **systemless** — the module overlays your vendor Wi-Fi config 
 To package the module yourself, run the following command in the project root:
 
 ```sh
-zip -r WiFi-Config-Switcher.zip . -x ".git/*" ".gitignore" "README.md" "LICENSE" "screenshots/*" "changelog.md"
+zip -r WiFi-Config-Tuner.zip . -x ".git/*" ".gitignore" "README.md" "LICENSE" "screenshots/*" "changelog.md"
 ```
 
 ---
@@ -88,13 +101,13 @@ At install time `customize.sh` reads your device properties and walks this prior
 
 ```
 patches/devices/<ro.product.device>/    ← 1st — exact device codename
-       ↓ (alias map: sunny→mojito, sweet_k→sweet, …)
+       ↓ (alias map: sunny→mojito, sweet_k→sweet, willow→ginkgo, … — see device_aliases.txt)
 patches/soc/<ro.board.platform>/        ← 2nd — SoC platform family
        ↓
 patches/generic_qcom/                   ← 3rd — safe fallback for any Qualcomm device
 ```
 
-The resolved path is written to `patch_dir.txt` at install time so the backend never repeats `getprop` lookups at runtime.
+The resolved path is written to `patch_dir.txt` at install time so the backend never repeats `getprop` lookups at runtime. The device-alias map itself lives in `device_aliases.txt` (a plain `codename=alias` text file), shared by both `customize.sh` (install time) and `backend.sh` (runtime sideload fallback) — add a new alias in one place and both pick it up.
 
 ### Included Patch Profiles
 
@@ -168,7 +181,8 @@ KEY=VALUE
 
 # The key must match the WCNSS_qcom_cfg.ini key exactly (case-sensitive).
 # Existing keys (including commented-out ones) are updated in place.
-# Missing keys are appended to the end of the config file.
+# Missing keys are appended before the config's END marker (or at end-of-file
+# if there is no END marker).
 # No stock.patch is needed — Stock mode always restores from the .bak backup.
 ```
 
@@ -184,19 +198,21 @@ The module auto-detects which kind of Wi-Fi driver your kernel uses and adjusts 
 | **Built-in** (compiled into kernel) | Subsystem is `platform`/`soc`, no `/proc/modules` entry | Config is written. WebUI shows a **Reboot Required** banner. |
 | **Unknown** | Detection inconclusive | Config is written. Reload is skipped to avoid instability. Manual reboot advised. |
 
-Detection uses six layered checks in order (symlink → `/sys/module` → `/proc/modules` → known module names → driver path → subsystem bus type) to maximise accuracy across different kernel configurations.
+Detection uses seven layered checks in order (blocklist for platform-glue drivers → `/module` symlink → `/proc/config.gz` → `/sys/module/.../sections` → `/proc/modules` → known module names → subsystem bus type → `lsmod`) to maximise accuracy across different kernel configurations.
 
 ---
 
 ## File Structure
 
 ```
-WiFi-Config-Switcher/
+WiFi-Config-Tuner/
 ├── backend.sh              ← All backend logic (driver detect, patch apply, stats, reload)
 ├── customize.sh            ← Install-time: device detect, patch resolution, config import
-├── service.sh              ← Sets execute permission on backend.sh at boot
-├── module.prop             ← Module metadata
-├── update.json             ← OTA update descriptor
+├── service.sh              ← Re-applies the saved profile on every boot
+├── module.prop              ← Module metadata
+├── update.json              ← OTA update descriptor
+├── chip_map.tsv             ← SoC ID → Wi-Fi chip name lookup table (contributor-editable data file)
+├── device_aliases.txt       ← Device codename → alias map, shared by customize.sh and backend.sh
 ├── webroot/
 │   └── index.html          ← Full WebUI (single-file, no external dependencies at runtime)
 └── patches/
@@ -224,13 +240,15 @@ WiFi-Config-Switcher/
 
 ## How It Works (Technical)
 
-1. **Install (`customize.sh`)** — Reads `ro.product.device` and `ro.board.platform`, resolves the best patch directory, writes `patch_dir.txt` and `patch_source.txt`, then copies the stock `WCNSS_qcom_cfg.ini` into the module overlay tree so Magisk/KSU can mount it systemlessly.
+1. **Install (`customize.sh`)** — Reads `ro.product.device` and `ro.board.platform`, resolves the best patch directory (via `device_aliases.txt` for aliased hardware), writes `patch_dir.txt` and `patch_source.txt`, then copies the stock `WCNSS_qcom_cfg.ini` into the module overlay tree so Magisk/KSU can mount it systemlessly.
 
-2. **Mode Apply (`backend.sh apply_mode`)** — Restores the `.bak` backup first (clean slate), then reads the selected `.patch` file line by line, applying each `KEY=VALUE` via `sed` (update existing) or append (new key). Writes the new mode to `mode_status.txt`.
+2. **Mode Apply (`backend.sh apply_mode`)** — Restores the `.bak` backup first (clean slate), then reads the selected `.patch` file and rewrites the config in a single `awk` pass — updating existing `KEY=VALUE` lines in place and appending any new keys before the `END` marker. Writes the new mode to `mode_status.txt`.
 
 3. **Driver Reload (`backend.sh soft_reset`)** — For modular drivers: disables Wi-Fi via `svc`, unbinds the device from its driver via sysfs, rebinds it, re-enables Wi-Fi. For built-in drivers: skips reload and instructs the WebUI to show the reboot banner.
 
-4. **WebUI** — Pure HTML/JS served by KernelSU's built-in web server. Calls `backend.sh` via `window.ksu.exec()`. All log output is timestamped and colour-coded by type (info / success / warning / error / builtin).
+4. **Boot (`service.sh`)** — Re-applies the saved profile (`perf`/`balanced`) on every boot, since a module update/reflash resets the overlay to the stock config.
+
+5. **WebUI** — Pure HTML/JS served by KernelSU's built-in web server. Calls `backend.sh` via `window.ksu.exec()`. All log output is timestamped and colour-coded by type (info / success / warning / error / builtin).
 
 ---
 
@@ -250,7 +268,10 @@ No patch exists for your device or SoC and the `generic_qcom` folder is missing.
 If the driver is built-in (the WebUI will say so), you must reboot after applying a profile. The config is written correctly — only the running driver needs a restart.
 
 **WebUI shows "KSU not detected (Browser Mode)"**
-You're opening `index.html` directly in a browser instead of through KernelSU Manager. Open it via Manager → Modules → Wi-Fi Config Switcher → Open WebUI.
+You're opening `index.html` directly in a browser instead of through KernelSU Manager. Open it via Manager → Modules → WiFi Config Tuner → Open WebUI.
+
+**I flashed the update and now see two modules**
+Expected for the v7.0.0 rename — see [Upgrading](#upgrading-from-wifi-config-switcher-pre-v700) above.
 
 ---
 
@@ -261,6 +282,7 @@ Pull requests for new device/SoC patches are very welcome. Please:
 - Include the device codename, SoC platform, and model name in a comment at the top of the patch file.
 - Test both profiles on your device before submitting.
 - Keep `generic_qcom` values conservative — they run on hardware you haven't tested.
+- New SoC-ID → chip-name mappings (for `get_driver_info`/debug output) go in `chip_map.tsv`, not inline shell — see the comments at the top of that file.
 
 ---
 

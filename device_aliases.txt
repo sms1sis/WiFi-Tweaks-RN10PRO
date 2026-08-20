@@ -1,0 +1,12 @@
+# Device codename -> patch-directory alias, for devices that share Wi-Fi
+# hardware with another device that already has a patches/devices/ entry.
+# Format: <codename>=<alias>. One pair per line. "#" comments allowed.
+#
+# Read by both customize.sh (install-time patch resolution) and backend.sh's
+# resolve_device_alias() (runtime fallback for sideloaded installs). Keeping
+# a single file means a new alias only needs to be added once.
+
+sunny=mojito
+sweet_k=sweet
+sweetin=sweet
+willow=ginkgo

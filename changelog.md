@@ -1,4 +1,31 @@
-## v6.2.0 — Reliability & Correctness
+## v7.0.0 — Rename & Maintenance Audit
+
+### Renamed
+
+- **Project renamed: WiFi Config Switcher → WiFi Config Tuner.** Module `id` changed from `wifi_config_switcher` to `wifi_config_tuner` (`module.prop`), which also updates the on-disk install path (`/data/adb/modules/<id>/`) and the WebUI's hardcoded `actionScript` path in lockstep — both were updated together since a mismatch here silently breaks every WebUI action. Display name, install banner, About page, and GitHub source links updated to match. The new name also resolves a naming inconsistency that predated this release: the WebUI `<title>` already said "Wi-Fi Config Tuner" while `module.prop` said "WiFi Config Switcher" — everything now agrees.
+- **Breaking for existing installs:** because the module id changed, flashing this version installs alongside any existing "WiFi Config Switcher" install rather than replacing it in place. See the README's "Upgrading" section — the old module must be removed manually via KernelSU Manager. Saved profile state in `/data/adb/wcs/` is unaffected and carries over automatically.
+- `update.json` and `module.prop`'s `updateJson` now point at the renamed `WiFi-Config-Tuner` repository.
+
+### Reliability & Portability
+
+- **Removed non-POSIX `local` keyword** (17 uses across `detect_driver_type`, `get_driver_name`, `find_wifi_config`, `find_patch_dir`, `apply_patch`). `local` is a bash/toybox/mksh extension, not POSIX `sh` — on ROMs whose `/system/bin/sh` doesn't support it, these variables would silently become global instead of raising an error, a dangerous failure mode. Replaced with per-function variable-name prefixes so correctness no longer depends on shell-specific behaviour.
+- **Fix: `apply_patch` used a fixed `/tmp/wcs_patch_count` path** for passing the applied-key count out of an `awk` subprocess — a race risk if `apply_mode` were ever triggered twice concurrently (e.g. a double-tap on the WebUI profile button before it disables itself). Now uses `mktemp` under the module's own state directory, with the temp file cleaned up immediately after use.
+- **Removed dead code: the non-JSON `get_debug_info` action** (~90 lines). The WebUI has only ever called `get_debug_info_json`; the plain-text twin was unreferenced and had already drifted slightly out of sync with it.
+- **Removed dead code: legacy pre-v5.0.4 config-overlay path fallback** in `find_wifi_config()`. `MODDIR` is wiped on every flash (see `service.sh`), so a module update always re-runs `customize.sh` fresh — there was no upgrade path left that could still hit this branch.
+
+### Internal Cleanup
+
+- **Externalized the SoC-ID → Wi-Fi-chip-name table** (~90 lines of hardcoded `case` statements) into a new `chip_map.tsv` data file, looked up via `awk`. Contributing a new SoC ID is now a one-line data edit instead of a shell patch. The SDM665/SD732G (SoC 394) disambiguation and the WCSS-address fallback stay in `backend.sh` since they need logic beyond a flat lookup.
+- **Deduplicated the device-alias map** (`sunny→mojito`, `sweet_k`/`sweetin→sweet`, `willow→ginkgo`) out of `customize.sh` and `backend.sh` into a single shared `device_aliases.txt`, read by both `customize.sh` (install time) and a new `resolve_device_alias()` helper in `backend.sh` (runtime sideload fallback). Previously the same map had to be updated by hand in two places.
+- **Promoted the inline `_esc()` JSON-escaping helper** out of `get_driver_info` into the top-level Helpers section, next to `log_json()`.
+- **`detect_driver_type()`** is now a thin memoizing wrapper around the original detection logic (renamed `_detect_driver_type_impl`), guarding against any future code path calling it twice within the same action (it re-runs a `zcat /proc/config.gz` decompression each time). Does not cache across separate WebUI actions — each is its own fresh process.
+
+### WebUI Fixes
+
+- **Fix: `parseJson()` used naive `indexOf('{')`/`lastIndexOf('}')` brace matching**, which would silently grab the wrong substring if any JSON string value ever legitimately contained a literal `{` or `}` (e.g. an unescaped device-tree compatible string). Replaced with a proper depth-tracking scanner that respects quoted strings and escape sequences, so it finds the actual end of the intended object.
+- **Google Fonts stylesheet now loads asynchronously** (`media="print"` swapped to `all` on load, with a `<noscript>` fallback) instead of render-blocking. This is a Wi-Fi tuning tool — plausibly opened while the device's own connectivity is down or misconfigured — so first paint no longer waits on a network request that may never succeed. The existing `monospace`/`sans-serif` fallbacks in `--mono`/`--head` mean the UI stays fully legible either way.
+
+
 
 ### Bug Fixes
 
@@ -243,7 +270,7 @@ Theme preference is persisted in `localStorage` and restored on every load.
   8. **`lsmod` empty output** — zero loaded modules means everything is built-in
 - **Fix:** Stats cards (Signal, Speed, Frequency, SSID) always showing `--`. `iw` is not available on stock Android. Stats now use four methods in priority order: `wpa_cli status` + `wpa_cli signal_poll` (primary — always present on Android), `/proc/net/wireless` sysfs fallback, `dumpsys wifi` framework fallback, `iw` last (custom ROMs only).
 
-# WiFi Config Switcher — Changelog
+# WiFi Config Tuner — Changelog
 
 ## v5.0.1
 - **New patch: `devices/ginkgo/`** — Redmi Note 8 (Snapdragon 665 / sm6125 / WCN3980).

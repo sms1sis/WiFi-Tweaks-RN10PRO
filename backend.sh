@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# backend.sh - WiFi Config Switcher Backend (Generic Qualcomm Edition)
+# backend.sh - WiFi Config Tuner Backend (Generic Qualcomm Edition)
 # Patch-based architecture: reads perf.patch / balanced.patch instead of hardcoded params
 export PATH=/data/adb/ap/bin:/data/adb/ksu/bin:/system/bin:/system/xbin:/vendor/bin
 
@@ -21,13 +21,59 @@ log_json() {
     printf '{"status":"%s","message":"%s"}\n' "$1" "$2"
 }
 
+# Escape a value for embedding in a JSON string (strip quotes/newlines).
+_esc() { printf '%s' "$1" | tr -d '"' | tr '\n' ' ' | sed 's/[[:space:]]*$//'; }
+
+# Resolve a device codename to its patch-directory alias (e.g. "sunny" ->
+# "mojito" because they share hardware). Reads $MODDIR/device_aliases.txt,
+# format one "alias=canonical" pair per line, "#" comments allowed.
+# This file is the single source of truth for the alias map — customize.sh
+# uses the identical file at install time so the mapping never has to be
+# kept in sync by hand across two scripts.
+resolve_device_alias() {
+    rda_device="$1"
+    rda_file="$MODDIR/device_aliases.txt"
+    if [ -f "$rda_file" ]; then
+        rda_match=$(grep -i "^${rda_device}=" "$rda_file" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]')
+        [ -n "$rda_match" ] && echo "$rda_match" && return
+    fi
+    # No alias entry -> device codename is used as-is
+    echo "$rda_device"
+}
+
+# NOTE ON POSIX PORTABILITY (applies to every function below):
+# `local` is a bash/mksh/toybox-sh extension, not part of POSIX sh. Most Android
+# ROMs' /system/bin/sh (toybox) supports it, but not all — some minimal AOSP/
+# custom-ROM toybox builds do not, causing these vars to silently become GLOBAL
+# instead of raising an error. That's the dangerous failure mode: it doesn't
+# crash, it just quietly lets locals leak/collide with same-named vars in the
+# caller. To make correctness independent of `local` support entirely, every
+# function below uses a short per-function variable prefix instead of `local`.
+# This guarantees no collision with the top-level global vars used in the
+# action `case` block further down (DTYPE, DNAME, CONFIG_FILE, etc.) even
+# though the variables are technically global for the life of the process.
+
+# Public entry point: memoizes the (relatively expensive, zcat-using)
+# detection logic within this process. This does NOT help across separate
+# backend.sh invocations -- each action from the WebUI's runAction() is its
+# own fresh 'sh backend.sh <action>' process, so there's no cross-call cache
+# to build without persisting to disk (which would risk serving a stale
+# driver type after a hot-swap/rebind). It only guards against any future
+# code path that ends up calling this twice within a single action.
 detect_driver_type() {
+    if [ -z "$_ddt_cached_result" ]; then
+        _ddt_cached_result=$(_detect_driver_type_impl)
+    fi
+    echo "$_ddt_cached_result"
+}
+
+_detect_driver_type_impl() {
     DEVICE_PATH="${WLAN_SYS}/device"
 
     # Resolve driver name first — needed by multiple checks below
-    local driver_name=""
+    ddt_driver_name=""
     [ -L "${DEVICE_PATH}/driver" ] && \
-        driver_name=$(basename "$(readlink "${DEVICE_PATH}/driver" 2>/dev/null)" 2>/dev/null)
+        ddt_driver_name=$(basename "$(readlink "${DEVICE_PATH}/driver" 2>/dev/null)" 2>/dev/null)
 
     # ---- BLOCKLIST: platform glue / connectivity subsystem drivers ----
     # These appear in /sys/module but are NOT the real Wi-Fi driver.
@@ -35,7 +81,7 @@ detect_driver_type() {
     #   icnss / icnss2  : Qualcomm SNOC/AHB integrated connectivity subsystem
     #   cnss  / cnss2   : Qualcomm PCIe connectivity subsystem
     #   wlan_platform   : Generic Qualcomm platform glue
-    case "$driver_name" in
+    case "$ddt_driver_name" in
         icnss|icnss2|cnss|cnss2|wlan_platform)
             echo "builtin"
             return
@@ -48,20 +94,19 @@ detect_driver_type() {
     # Check 2: /proc/config.gz — definitive source of truth
     # CONFIG_X=y -> compiled into kernel (builtin)
     # CONFIG_X=m -> loadable module (modular)
-    if [ -n "$driver_name" ] && [ -r "/proc/config.gz" ]; then
-        local cfg_key=""
-        case "$driver_name" in
-            wlan|qca_cld3_wlan|qca_cld_wlan) cfg_key="CONFIG_WLAN" ;;
-            ath10k*)                          cfg_key="CONFIG_ATH10K" ;;
-            ath11k*)                          cfg_key="CONFIG_ATH11K" ;;
-            brcmfmac)                         cfg_key="CONFIG_BRCMFMAC" ;;
-            bcmdhd)                           cfg_key="CONFIG_BCMDHD" ;;
-            iwlwifi)                          cfg_key="CONFIG_IWLWIFI" ;;
+    if [ -n "$ddt_driver_name" ] && [ -r "/proc/config.gz" ]; then
+        ddt_cfg_key=""
+        case "$ddt_driver_name" in
+            wlan|qca_cld3_wlan|qca_cld_wlan) ddt_cfg_key="CONFIG_WLAN" ;;
+            ath10k*)                          ddt_cfg_key="CONFIG_ATH10K" ;;
+            ath11k*)                          ddt_cfg_key="CONFIG_ATH11K" ;;
+            brcmfmac)                         ddt_cfg_key="CONFIG_BRCMFMAC" ;;
+            bcmdhd)                           ddt_cfg_key="CONFIG_BCMDHD" ;;
+            iwlwifi)                          ddt_cfg_key="CONFIG_IWLWIFI" ;;
         esac
-        if [ -n "$cfg_key" ]; then
-            local cfg_val
-            cfg_val=$(zcat /proc/config.gz 2>/dev/null | grep "^${cfg_key}=" | cut -d= -f2)
-            case "$cfg_val" in
+        if [ -n "$ddt_cfg_key" ]; then
+            ddt_cfg_val=$(zcat /proc/config.gz 2>/dev/null | grep "^${ddt_cfg_key}=" | cut -d= -f2)
+            case "$ddt_cfg_val" in
                 y) echo "builtin";  return ;;
                 m) echo "modular";  return ;;
             esac
@@ -73,9 +118,9 @@ detect_driver_type() {
     # It is absent for drivers compiled in with CONFIG=y.
     # /sys/module/<name> itself exists for BOTH cases, so its mere presence
     # is not sufficient — this was the bug that caused the reboot on icnss.
-    if [ -n "$driver_name" ] && [ "$driver_name" != "." ]; then
-        if [ -d "/sys/module/${driver_name}" ]; then
-            if [ -d "/sys/module/${driver_name}/sections" ]; then
+    if [ -n "$ddt_driver_name" ] && [ "$ddt_driver_name" != "." ]; then
+        if [ -d "/sys/module/${ddt_driver_name}" ]; then
+            if [ -d "/sys/module/${ddt_driver_name}/sections" ]; then
                 echo "modular" && return   # sections/ present -> real .ko
             else
                 echo "builtin" && return   # no sections/ -> compiled in
@@ -85,8 +130,8 @@ detect_driver_type() {
 
     # Check 4: /proc/modules — only lists dynamically loaded modules.
     # If driver_name appears here it is definitely a loaded .ko.
-    if [ -n "$driver_name" ] && [ -f "/proc/modules" ]; then
-        grep -q "^${driver_name} " /proc/modules 2>/dev/null && echo "modular" && return
+    if [ -n "$ddt_driver_name" ] && [ -f "/proc/modules" ]; then
+        grep -q "^${ddt_driver_name} " /proc/modules 2>/dev/null && echo "modular" && return
     fi
 
     # Check 5: scan known real Wi-Fi loadable module names in /proc/modules
@@ -97,9 +142,8 @@ detect_driver_type() {
     # Check 6: subsystem bus type
     # Qualcomm icnss/cnss devices always sit on platform/soc bus
     if [ -L "${DEVICE_PATH}/subsystem" ]; then
-        local subsys
-        subsys=$(basename "$(readlink "${DEVICE_PATH}/subsystem" 2>/dev/null)" 2>/dev/null)
-        case "$subsys" in
+        ddt_subsys=$(basename "$(readlink "${DEVICE_PATH}/subsystem" 2>/dev/null)" 2>/dev/null)
+        case "$ddt_subsys" in
             platform|soc)     echo "builtin";  return ;;
             pci|usb|sdio|mmc) echo "modular";  return ;;
         esac
@@ -107,21 +151,20 @@ detect_driver_type() {
 
     # Check 7: lsmod — empty output (header only) means no loadable modules
     if command -v lsmod >/dev/null 2>&1; then
-        local mod_count
-        mod_count=$(lsmod 2>/dev/null | tail -n +2 | wc -l)
-        [ "$mod_count" -eq 0 ] && echo "builtin" && return
+        ddt_mod_count=$(lsmod 2>/dev/null | tail -n +2 | wc -l)
+        [ "$ddt_mod_count" -eq 0 ] && echo "builtin" && return
     fi
 
     echo "unknown"
 }
 
 get_driver_name() {
-    local n="unknown"
+    gdn_name="unknown"
     if [ -L "${WLAN_SYS}/device/driver" ]; then
-        n=$(basename "$(readlink "${WLAN_SYS}/device/driver" 2>/dev/null)" 2>/dev/null)
-        [ -z "$n" ] && n="unknown"
+        gdn_name=$(basename "$(readlink "${WLAN_SYS}/device/driver" 2>/dev/null)" 2>/dev/null)
+        [ -z "$gdn_name" ] && gdn_name="unknown"
     fi
-    echo "$n"
+    echo "$gdn_name"
 }
 
 # Resolve the active Wi-Fi config file path.
@@ -138,16 +181,16 @@ find_wifi_config() {
     # The overlay source at $MODDIR/system/<rel> is always the correct target.
 
     if [ -f "$MODDIR/config_rel_path.txt" ]; then
-        local rel
-        rel=$(cat "$MODDIR/config_rel_path.txt")
+        fwc_rel=$(cat "$MODDIR/config_rel_path.txt")
 
-        # 1. Overlay source (system/ prefix) — always patch this one
-        local overlay_system="$MODDIR/system/${rel}"
-        [ -f "$overlay_system" ] && echo "$overlay_system" && return
-
-        # 2. Legacy incorrect path (pre-v5.0.4 installs without system/ prefix)
-        local overlay_legacy="$MODDIR/${rel}"
-        [ -f "$overlay_legacy" ] && echo "$overlay_legacy" && return
+        # Overlay source (system/ prefix) — always patch this one.
+        # (A legacy non-"system/"-prefixed fallback for pre-v5.0.4 installs
+        # used to live here. Removed: MODDIR is wiped on every flash [see
+        # service.sh], so a module update always re-runs customize.sh fresh
+        # on the new zip -- there's no in-place upgrade path that could leave
+        # a stale pre-v5.0.4 layout underneath current backend.sh.)
+        fwc_overlay_system="$MODDIR/system/${fwc_rel}"
+        [ -f "$fwc_overlay_system" ] && echo "$fwc_overlay_system" && return
     fi
 
     # Fallback: search live paths (covers devices without config_rel_path.txt)
@@ -168,31 +211,25 @@ find_wifi_config() {
 find_patch_dir() {
     # Use recorded patch dir (most reliable)
     if [ -f "$MODDIR/patch_dir.txt" ]; then
-        local pd
-        pd=$(cat "$MODDIR/patch_dir.txt")
-        [ -d "$pd" ] && echo "$pd" && return
+        fpd_pd=$(cat "$MODDIR/patch_dir.txt")
+        [ -d "$fpd_pd" ] && echo "$fpd_pd" && return
     fi
 
     # Runtime fallback (if module was sideloaded or patch_dir.txt is missing)
-    local device soc
-    device=$(getprop ro.product.device 2>/dev/null | tr '[:upper:]' '[:lower:]')
-    soc=$(getprop ro.board.platform 2>/dev/null | tr '[:upper:]' '[:lower:]')
-    [ -z "$soc" ] && soc=$(getprop ro.hardware 2>/dev/null | tr '[:upper:]' '[:lower:]')
+    fpd_device=$(getprop ro.product.device 2>/dev/null | tr '[:upper:]' '[:lower:]')
+    fpd_soc=$(getprop ro.board.platform 2>/dev/null | tr '[:upper:]' '[:lower:]')
+    [ -z "$fpd_soc" ] && fpd_soc=$(getprop ro.hardware 2>/dev/null | tr '[:upper:]' '[:lower:]')
 
-    local base="$MODDIR/patches"
+    fpd_base="$MODDIR/patches"
 
-    # Device alias map
-    local resolved_device="$device"
-    case "$device" in
-        sunny)   resolved_device="mojito" ;;
-        sweet_k) resolved_device="sweet"  ;;
-        sweetin)  resolved_device="sweet"  ;;
-        willow)  resolved_device="ginkgo" ;;
-    esac
+    # Device alias resolution — reads the same device_aliases.txt used by
+    # customize.sh at install time (see resolve_device_alias() below), so the
+    # alias map only has to be maintained in one place.
+    fpd_resolved_device=$(resolve_device_alias "$fpd_device")
 
-    [ -d "$base/devices/$resolved_device" ] && echo "$base/devices/$resolved_device" && return
-    [ -d "$base/soc/$soc" ]                 && echo "$base/soc/$soc"                 && return
-    [ -d "$base/generic_qcom" ]             && echo "$base/generic_qcom"             && return
+    [ -d "$fpd_base/devices/$fpd_resolved_device" ] && echo "$fpd_base/devices/$fpd_resolved_device" && return
+    [ -d "$fpd_base/soc/$fpd_soc" ]                 && echo "$fpd_base/soc/$fpd_soc"                 && return
+    [ -d "$fpd_base/generic_qcom" ]                 && echo "$fpd_base/generic_qcom"                 && return
 
     return 1
 }
@@ -206,11 +243,18 @@ find_patch_dir() {
 #   2. Portability — Android toybox sed does not support \n in replacements, so
 #      the END-marker insertion would silently produce literal \n on many devices.
 apply_patch() {
-    local config_file="$1"
-    local patch_file="$2"
+    ap_config_file="$1"
+    ap_patch_file="$2"
 
-    [ ! -f "$config_file" ] && return 1
-    [ ! -f "$patch_file"  ] && return 1
+    [ ! -f "$ap_config_file" ] && return 1
+    [ ! -f "$ap_patch_file"  ] && return 1
+
+    # Unique per-invocation count file (was a fixed /tmp path — a race risk
+    # if apply_mode were ever triggered twice concurrently, e.g. a double-tap
+    # on the WebUI profile button before it disables itself). WCS_STATE_DIR
+    # is already guaranteed to exist (mkdir -p near the top of this script).
+    ap_count_file=$(mktemp "${WCS_STATE_DIR}/patch_count.XXXXXX" 2>/dev/null)
+    [ -z "$ap_count_file" ] && ap_count_file="${WCS_STATE_DIR}/patch_count.$$"
 
     # Build associative arrays: keys[key]=value, order[n]=key
     # Then rewrite the config in one awk pass (no repeated file rewrites).
@@ -272,20 +316,20 @@ apply_patch() {
             for (k in patches) total++
             print total > "/dev/stderr"
         }
-    ' "$patch_file" "$config_file" 2>/tmp/wcs_patch_count > "${config_file}.new"
+    ' "$ap_patch_file" "$ap_config_file" 2>"$ap_count_file" > "${ap_config_file}.new"
 
-    local rc=$?
-    if [ $rc -ne 0 ] || [ ! -s "${config_file}.new" ]; then
-        rm -f "${config_file}.new"
+    ap_rc=$?
+    if [ $ap_rc -ne 0 ] || [ ! -s "${ap_config_file}.new" ]; then
+        rm -f "${ap_config_file}.new" "$ap_count_file"
         return 1
     fi
 
     # Atomic replace — move so partial writes never leave a truncated config
-    mv "${config_file}.new" "$config_file"
+    mv "${ap_config_file}.new" "$ap_config_file"
 
-    local applied_count
-    applied_count=$(cat /tmp/wcs_patch_count 2>/dev/null | tr -d '[:space:]')
-    printf '%d' "${applied_count:-0}"
+    ap_applied_count=$(cat "$ap_count_file" 2>/dev/null | tr -d '[:space:]')
+    rm -f "$ap_count_file"
+    printf '%d' "${ap_applied_count:-0}"
 }
 
 # ---------------------------------------------------------------------------
@@ -697,92 +741,40 @@ case "$1" in
         # WCN6855           — SM8350/SM8450/SM8475/SM7450 (PCIe primary, SNOC fallback)
         # WCN7850/WCN7851  — SM8550/SM8650/SM8750/SM7550/SM7675 (PCIe primary, SNOC fallback)
         if [ "$CHIP_NAME" = "unknown" ] && [ "$DNAME" = "icnss" -o "$SUBSYS" = "platform" ]; then
-            case "$SOC_ID" in
-                # ── MSM8x era (WCN3620) ───────────────────────────────────────
-                206)  CHIP_NAME="WCN3620 (MSM8916)" ;;
-                233)  CHIP_NAME="WCN3620 (MSM8936)" ;;
-                239)  CHIP_NAME="WCN3620 (MSM8939)" ;;
-                264)  CHIP_NAME="WCN3620 (MSM8952)" ;;
-                246)  CHIP_NAME="WCN3660B (MSM8996)" ;;
-                # ── SDM4xx budget era (WCN3615) ───────────────────────────────
-                293)  CHIP_NAME="WCN3615 (MSM8937/SDM430)" ;;
-                294)  CHIP_NAME="WCN3615 (MSM8940)" ;;
-                303)  CHIP_NAME="WCN3615 (MSM8953/SDM450)" ;;
-                338)  CHIP_NAME="WCN3615 (SDM632)" ;;
-                # ── SDM630/660/636 (WCN3680B) ─────────────────────────────────
-                317|318) CHIP_NAME="WCN3680B (SDM660)" ;;
-                349|351) CHIP_NAME="WCN3680B (SDM636)" ;;
-                345)     CHIP_NAME="WCN3680B (SDM630)" ;;
-                # ── SDM710/712 (WCN3990) ──────────────────────────────────────
-                360)  CHIP_NAME="WCN3990 (SDM710)" ;;
-                393)  CHIP_NAME="WCN3990 (SDM712)" ;;
-                # ── SDM675 (WCN3990) ──────────────────────────────────────────
-                355)  CHIP_NAME="WCN3990 (SDM675)" ;;
-                # ── SDM845 (WCN3980) ──────────────────────────────────────────
-                321)  CHIP_NAME="WCN3980 (SDM845)" ;;
-                # ── SDM665/Trinket vs SD732G/Lagoon — both report SoC ID 394 ──
-                # Disambiguate using machine name
-                394)
-                    case "$SOC_MACHINE" in
-                        TRINKET|trinket) CHIP_NAME="WCN3990 (SDM665/Trinket)" ;;
-                        LAGOON|lagoon)   CHIP_NAME="WCN3998 (SD732G/Lagoon)" ;;
-                        *)               CHIP_NAME="WCN3990/WCN3998 (SoC 394/${SOC_MACHINE})" ;;
-                    esac
-                    ;;
-                407)  CHIP_NAME="WCN3990 (SDM662)" ;;
-                441)  CHIP_NAME="WCN3990 (SM6125/Trinket+)" ;;
-                # ── SM6150 family (WCN3990) ───────────────────────────────────
-                400)  CHIP_NAME="WCN3990 (SM6150)" ;;
-                440)  CHIP_NAME="WCN3990 (SM6150P)" ;;
-                # ── SM6125/Bengal family (WCN3990) ────────────────────────────
-                417)  CHIP_NAME="WCN3990 (SM6125/Bengal)" ;;
-                443)  CHIP_NAME="WCN3990 (SM6115/Bengalp)" ;;
-                518)  CHIP_NAME="WCN3990 (SM6115/Khaje)" ;;
-                # ── SM6225/SM6350/SM6375 ──────────────────────────────────────
-                384)  CHIP_NAME="WCN3990 (SM6350)" ;;
-                457)  CHIP_NAME="WCN3990 (SM6225/SDM680)" ;;
-                458)  CHIP_NAME="WCN6750 (SM6375)" ;;
-                # ── SM8150/SM7150 (WCN3998) ───────────────────────────────────
-                356)  CHIP_NAME="WCN3998 (SM8150/Kona)" ;;
-                365)  CHIP_NAME="WCN3998 (SM7150)" ;;
-                366)  CHIP_NAME="WCN3998 (SM7150P)" ;;
-                # ── SM8250/SM7225 (WCN3998) ───────────────────────────────────
-                415)  CHIP_NAME="WCN3998 (SM8250/Kona)" ;;
-                434)  CHIP_NAME="WCN3998 (SM7225)" ;;
-                # ── SM7325/SM7350 (WCN6750) ───────────────────────────────────
-                450)  CHIP_NAME="WCN6750 (SM7325/Yupik)" ;;
-                459)  CHIP_NAME="WCN6750 (SM7325P)" ;;
-                480)  CHIP_NAME="WCN6750 (SM7350/Cedros)" ;;
-                # ── SM8350/SM8450/SM8475/SM7450 (WCN6855, PCIe fallback) ──────
-                439)  CHIP_NAME="WCN6855 (SM8350/Lahaina)" ;;
-                456)  CHIP_NAME="WCN6855 (SM8450/Waipio)" ;;
-                506)  CHIP_NAME="WCN6855 (SM7450/Waipio-lite)" ;;
-                482)  CHIP_NAME="WCN6855 (SM8475)" ;;
-                530)  CHIP_NAME="WCN6855 (SM7475)" ;;
-                # ── SM8550/SM7550 (WCN7850, PCIe fallback) ───────────────────
-                519)  CHIP_NAME="WCN7850 (SM8550/Kalama)" ;;
-                536)  CHIP_NAME="WCN7850 (SM8550P)" ;;
-                557)  CHIP_NAME="WCN7850 (SM7550)" ;;
-                # ── SM8650/SM7675 (WCN7850, PCIe fallback) ───────────────────
-                591)  CHIP_NAME="WCN7850 (SM8650/Pineapple)" ;;
-                554)  CHIP_NAME="WCN7850 (SM7675)" ;;
-                # ── SM8750 (WCN7851, PCIe fallback) ──────────────────────────
-                603)  CHIP_NAME="WCN7851 (SM8750/Sun)" ;;
-                # ── QCM/QCS industrial variants ──────────────────────────────
-                347)  CHIP_NAME="WCN3990 (QCS605)" ;;
-                # ── Fallback: WCSS address ────────────────────────────────────
-                *)
-                    case "$WCSS_ADDR" in
-                        c800000)  CHIP_NAME="WCN3990 (SNOC@c800000)" ;;
-                        18800000) CHIP_NAME="WCN3998 (SNOC@18800000)" ;;
-                        a000000)  CHIP_NAME="WCN3990 (SNOC@a000000)" ;;
-                        18900000) CHIP_NAME="WCN6750 (SNOC@18900000)" ;;
-                        *)
-                            [ -n "$SOC_ID" ] && [ "$SOC_ID" != "unknown" ] && \
-                                CHIP_NAME="WCN-SNOC (SoC ${SOC_ID})" ;;
-                    esac
-                    ;;
-            esac
+            # SoC ID 394 is ambiguous between SDM665/Trinket and SD732G/Lagoon
+            # (both report the same soc_id) — disambiguate by machine name
+            # before falling back to the flat chip_map.tsv lookup below.
+            if [ "$SOC_ID" = "394" ]; then
+                case "$SOC_MACHINE" in
+                    TRINKET|trinket) CHIP_NAME="WCN3990 (SDM665/Trinket)" ;;
+                    LAGOON|lagoon)   CHIP_NAME="WCN3998 (SD732G/Lagoon)" ;;
+                    *)               CHIP_NAME="WCN3990/WCN3998 (SoC 394/${SOC_MACHINE})" ;;
+                esac
+            else
+                # Flat lookup against chip_map.tsv (see that file for format/sources).
+                # Kept out of shell logic so contributing a new SoC ID is a
+                # one-line data edit instead of a shell patch.
+                if [ -f "$MODDIR/chip_map.tsv" ]; then
+                    CHIP_NAME=$(awk -F'\t' -v id="$SOC_ID" \
+                        '$0 !~ /^#/ && $0 !~ /^[[:space:]]*$/ && $1 == id { print $2; exit }' \
+                        "$MODDIR/chip_map.tsv")
+                    [ -z "$CHIP_NAME" ] && CHIP_NAME="unknown"
+                fi
+            fi
+
+            # Fallback: WCSS memory address (unique per SoC, used when the
+            # SoC ID itself isn't in chip_map.tsv yet).
+            if [ "$CHIP_NAME" = "unknown" ]; then
+                case "$WCSS_ADDR" in
+                    c800000)  CHIP_NAME="WCN3990 (SNOC@c800000)" ;;
+                    18800000) CHIP_NAME="WCN3998 (SNOC@18800000)" ;;
+                    a000000)  CHIP_NAME="WCN3990 (SNOC@a000000)" ;;
+                    18900000) CHIP_NAME="WCN6750 (SNOC@18900000)" ;;
+                    *)
+                        [ -n "$SOC_ID" ] && [ "$SOC_ID" != "unknown" ] && \
+                            CHIP_NAME="WCN-SNOC (SoC ${SOC_ID})" ;;
+                esac
+            fi
         fi
 
         # Fallback: extract chip name token from DT compatible
@@ -792,9 +784,6 @@ case "$1" in
                 | head -1 | tr '[:lower:]' '[:upper:]' | tr '-' '_')
             [ -z "$CHIP_NAME" ] && CHIP_NAME="unknown"
         fi
-
-        # Escape values for JSON (strip quotes and newlines)
-        _esc() { printf '%s' "$1" | tr -d '"' | tr '\n' ' ' | sed 's/[[:space:]]*$//'; }
 
         printf '{"status":"success","driver_name":"%s","driver_type":"%s","kconf_wlan":"%s","kconf_driver":"%s","sys_module_sections":"%s","proc_modules_entry":"%s","module_symlink":"%s","subsystem":"%s","lsmod_empty":"%s","chip_name":"%s","chip_pci_id":"%s","chip_sdio_id":"%s","chip_dt_compat":"%s","fw_version":"%s","hw_uevent":"%s","soc_id":"%s","soc_machine":"%s","soc_family":"%s","bdf_file":"%s","wcss_addr":"%s"}\n' \
             "$(_esc "$DNAME")" "$(_esc "$DTYPE")" \
@@ -1007,97 +996,6 @@ case "$1" in
         )
         ENCODED=$(printf '%s' "$DEBUG_OUT" | base64 2>/dev/null | tr -d '\n')
         printf '{"status":"success","content":"%s"}\n' "$ENCODED"
-        ;;
-
-    # -----------------------------------------------------------------------
-    "get_debug_info")
-        # Dumps sysfs driver info and tests every stats method.
-        # Run this when stats are empty or driver detection seems wrong.
-        printf '=== Chip identification ===\n'
-        DEVICE_PATH="${WLAN_SYS}/device"
-        # PCI
-        for pci_dev in /sys/bus/pci/devices/*/; do
-            [ -f "${pci_dev}class" ] || continue
-            cls=$(cat "${pci_dev}class" 2>/dev/null)
-            case "$cls" in
-                0x028000|0x028900|0x020000)
-                    printf 'pci vendor:device : %s:%s\n' \
-                        "$(cat "${pci_dev}vendor" 2>/dev/null)" \
-                        "$(cat "${pci_dev}device" 2>/dev/null)"
-                    break ;;
-            esac
-        done
-        # SDIO
-        for mmc_dev in /sys/bus/sdio/devices/*/ /sys/bus/mmc/devices/mmc*/*/; do
-            [ -f "${mmc_dev}modalias" ] && printf 'sdio modalias     : %s\n' "$(cat "${mmc_dev}modalias" 2>/dev/null)" && break
-        done
-        # DT compatible
-        for dt_compat in \
-            "${DEVICE_PATH}/of_node/compatible" \
-            "${DEVICE_PATH}/../of_node/compatible" \
-            "/sys/firmware/devicetree/base/soc/wifi/compatible"; do
-            [ -f "$dt_compat" ] && printf 'dt compatible     : %s\n' "$(cat "$dt_compat" 2>/dev/null | tr '\0' ',')" && break
-        done
-        # uevent
-        [ -f "${DEVICE_PATH}/uevent" ] && printf 'uevent            :\n' && cat "${DEVICE_PATH}/uevent" 2>/dev/null | head -8 | sed 's/^/  /'
-        printf '\n=== Driver sysfs ===\n'
-        printf 'driver symlink : %s\n' "$(readlink "${WLAN_SYS}/device/driver" 2>/dev/null || echo 'not found')"
-        printf 'module symlink : %s\n' "$(readlink "${WLAN_SYS}/device/driver/module" 2>/dev/null || echo 'not found')"
-        printf 'subsystem      : %s\n' "$(basename "$(readlink "${WLAN_SYS}/device/subsystem" 2>/dev/null)" 2>/dev/null || echo 'not found')"
-        printf 'detect_result  : %s\n' "$(detect_driver_type)"
-        printf '\n=== wpa_supplicant socket search ===\n'
-        for WPA_SOCK in \
-            "/data/vendor/wifi/wpa/sockets/wlan0" \
-            "/data/vendor/wifi/wpa/wlan0" \
-            "/data/vendor/wifi/wpa_supplicant/sockets/wlan0" \
-            "/data/vendor/wifi/wpa_supplicant/wlan0" \
-            "/data/misc/wifi/sockets/wlan0" \
-            "/var/run/wpa_supplicant/wlan0"; do
-            if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
-                printf 'FOUND  : %s\n' "$WPA_SOCK"
-            else
-                printf 'absent : %s\n' "$WPA_SOCK"
-            fi
-        done
-        printf '\n=== wpa_cli signal_poll (vendor socket) ===\n'
-        if command -v wpa_cli >/dev/null 2>&1; then
-            for WPA_SOCK in \
-                "/data/vendor/wifi/wpa/sockets/wlan0" \
-                "/data/vendor/wifi/wpa/wlan0" \
-                "/data/vendor/wifi/wpa_supplicant/sockets/wlan0" \
-                "/data/vendor/wifi/wpa_supplicant/wlan0" \
-                "/data/misc/wifi/sockets/wlan0"; do
-                if [ -S "$WPA_SOCK" ] || [ -e "$WPA_SOCK" ]; then
-                    WPA_DIR=$(dirname "$WPA_SOCK")
-                    wpa_cli -i "$WLAN_DEV" -p "$WPA_DIR" signal_poll 2>&1 | head -6
-                    break
-                fi
-            done
-        else
-            printf 'wpa_cli not available on this ROM\n'
-        fi
-        printf '\n=== /proc/net/wireless ===\n'
-        cat /proc/net/wireless 2>/dev/null || printf 'not available\n'
-        printf '\n=== iw dev wlan0 link ===\n'
-        iw dev "$WLAN_DEV" link 2>/dev/null || printf 'iw not available or not connected\n'
-        printf '\n=== current connection ===\n'
-        WIFI_LINE=$(dumpsys wifi 2>/dev/null \
-            | grep -m1 "WifiInfo\|mWifiInfo" \
-            | sed 's/^[[:space:]]*//')
-        if [ -n "$WIFI_LINE" ]; then
-            printf '%s\n' \
-                "$(printf '%s' "$WIFI_LINE" | grep -o 'SSID: "[^"]*"'          | head -1)" \
-                "$(printf '%s' "$WIFI_LINE" | grep -o 'BSSID: [^,]*'           | head -1)" \
-                "$(printf '%s' "$WIFI_LINE" | grep -o 'RSSI: -\{0,1\}[0-9]*'   | head -1)" \
-                "$(printf '%s' "$WIFI_LINE" | grep -o 'Link speed: [0-9]*Mbps' | head -1)" \
-                "$(printf '%s' "$WIFI_LINE" | grep -o 'Frequency: [0-9]*MHz'   | head -1)" \
-                "$(printf '%s' "$WIFI_LINE" | grep -o 'Wi-Fi standard: [^,]*'  | head -1)" \
-                "$(printf '%s' "$WIFI_LINE" | grep -o 'IP: [^,]*'              | head -1)" \
-                "$(printf '%s' "$WIFI_LINE" | grep -o 'MAC: [^,]*'             | head -1)" \
-                | grep -v '^$'
-        else
-            printf 'not connected or dumpsys unavailable\n'
-        fi
         ;;
 
     # -----------------------------------------------------------------------

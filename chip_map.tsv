@@ -1,0 +1,87 @@
+# SoC ID -> Wi-Fi chip name, for SNOC/icnss devices that have no PCI ID.
+# Format: <soc_id><TAB><chip_name>. One soc_id per line (aliases from the
+# original grouped `case` entries, e.g. "317|318)", are expanded to two rows).
+# Lines starting with # and blank lines are ignored.
+#
+# Source: linux/drivers/soc/qcom/socinfo.c + linux/include/dt-bindings/arm/qcom,ids.h
+# Wi-Fi chip per SoC sourced from Qualcomm product pages and kernel DT files.
+#
+# NOTE: SoC ID 394 is intentionally NOT listed here — it is ambiguous between
+# SDM665/Trinket and SD732G/Lagoon and requires disambiguation by machine name.
+# That special case is still handled directly in backend.sh (get_driver_info).
+#
+# WCN3615/WCN3620  - MSM8916/MSM8952/MSM8953 era (SNOC, very old)
+# WCN3680B          - SDM630/660/636 (SNOC)
+# WCN3990           - SDM665/SDM710/SM6150/SM6125/SM6115 (SNOC)
+# WCN3980           - SDM845 (SNOC)
+# WCN3998           - SM8150/SM7150/SM8250/SM7225 (SNOC)
+# WCN6750           - SM6375/SM7325/SM7350 (SNOC, Wi-Fi 6E)
+# WCN6855           - SM8350/SM8450/SM8475/SM7450 (PCIe primary, SNOC fallback)
+# WCN7850/WCN7851  - SM8550/SM8650/SM8750/SM7550/SM7675 (PCIe primary, SNOC fallback)
+
+# ── MSM8x era (WCN3620) ──────────────────────────────────────
+206	WCN3620 (MSM8916)
+233	WCN3620 (MSM8936)
+239	WCN3620 (MSM8939)
+264	WCN3620 (MSM8952)
+246	WCN3660B (MSM8996)
+# ── SDM4xx budget era (WCN3615) ──────────────────────────────
+293	WCN3615 (MSM8937/SDM430)
+294	WCN3615 (MSM8940)
+303	WCN3615 (MSM8953/SDM450)
+338	WCN3615 (SDM632)
+# ── SDM630/660/636 (WCN3680B) ────────────────────────────────
+317	WCN3680B (SDM660)
+318	WCN3680B (SDM660)
+349	WCN3680B (SDM636)
+351	WCN3680B (SDM636)
+345	WCN3680B (SDM630)
+# ── SDM710/712 (WCN3990) ─────────────────────────────────────
+360	WCN3990 (SDM710)
+393	WCN3990 (SDM712)
+# ── SDM675 (WCN3990) ─────────────────────────────────────────
+355	WCN3990 (SDM675)
+# ── SDM845 (WCN3980) ─────────────────────────────────────────
+321	WCN3980 (SDM845)
+# ── (394 = SDM665/Trinket or SD732G/Lagoon — handled in backend.sh) ──
+407	WCN3990 (SDM662)
+441	WCN3990 (SM6125/Trinket+)
+# ── SM6150 family (WCN3990) ──────────────────────────────────
+400	WCN3990 (SM6150)
+440	WCN3990 (SM6150P)
+# ── SM6125/Bengal family (WCN3990) ───────────────────────────
+417	WCN3990 (SM6125/Bengal)
+443	WCN3990 (SM6115/Bengalp)
+518	WCN3990 (SM6115/Khaje)
+# ── SM6225/SM6350/SM6375 ─────────────────────────────────────
+384	WCN3990 (SM6350)
+457	WCN3990 (SM6225/SDM680)
+458	WCN6750 (SM6375)
+# ── SM8150/SM7150 (WCN3998) ──────────────────────────────────
+356	WCN3998 (SM8150/Kona)
+365	WCN3998 (SM7150)
+366	WCN3998 (SM7150P)
+# ── SM8250/SM7225 (WCN3998) ──────────────────────────────────
+415	WCN3998 (SM8250/Kona)
+434	WCN3998 (SM7225)
+# ── SM7325/SM7350 (WCN6750) ──────────────────────────────────
+450	WCN6750 (SM7325/Yupik)
+459	WCN6750 (SM7325P)
+480	WCN6750 (SM7350/Cedros)
+# ── SM8350/SM8450/SM8475/SM7450 (WCN6855, PCIe fallback) ─────
+439	WCN6855 (SM8350/Lahaina)
+456	WCN6855 (SM8450/Waipio)
+506	WCN6855 (SM7450/Waipio-lite)
+482	WCN6855 (SM8475)
+530	WCN6855 (SM7475)
+# ── SM8550/SM7550 (WCN7850, PCIe fallback) ───────────────────
+519	WCN7850 (SM8550/Kalama)
+536	WCN7850 (SM8550P)
+557	WCN7850 (SM7550)
+# ── SM8650/SM7675 (WCN7850, PCIe fallback) ───────────────────
+591	WCN7850 (SM8650/Pineapple)
+554	WCN7850 (SM7675)
+# ── SM8750 (WCN7851, PCIe fallback) ──────────────────────────
+603	WCN7851 (SM8750/Sun)
+# ── QCM/QCS industrial variants ──────────────────────────────
+347	WCN3990 (QCS605)
