@@ -118,7 +118,7 @@ if [ -z "$CONFIG_SRC" ]; then
 fi
 
 if [ -n "$CONFIG_SRC" ]; then
-    # KernelSU/Magisk overlay REQUIRES files to live under $MODPATH/system/
+    # The root solution's overlay REQUIRES files to live under $MODPATH/system/
     # The framework mirrors $MODPATH/system/ over / at boot.
     # A file at $MODPATH/vendor/... is silently ignored — never mounted.
     REL_PATH="${CONFIG_SRC#/}"

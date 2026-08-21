@@ -13,6 +13,18 @@ WCS_STATE_DIR="/data/adb/wcs"
 MODE_FILE="${WCS_STATE_DIR}/mode_status.txt"
 mkdir -p "$WCS_STATE_DIR" 2>/dev/null
 
+# Snapshot history — timestamped config copies + a TSV manifest (append-only,
+# oldest-first), so users get real rollback points instead of a single
+# silently-overwritten .bak. Capped at SNAP_MAX entries (pruned oldest-first).
+SNAP_DIR="${WCS_STATE_DIR}/snapshots"
+SNAP_MANIFEST="${SNAP_DIR}/manifest.tsv"
+SNAP_MAX=20
+
+# Custom profile — user-built patch from the WebUI's parameter builder.
+# Lives in the persistent state dir (not $MODDIR) so it survives module
+# updates/reflashes, same as MODE_FILE.
+CUSTOM_PATCH_FILE="${WCS_STATE_DIR}/custom.patch"
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -168,13 +180,13 @@ get_driver_name() {
 }
 
 # Resolve the active Wi-Fi config file path.
-# During runtime the module overlay is already mounted by Magisk/KSU,
+# During runtime the module overlay is already mounted by the root solution,
 # so we just need to find the live (possibly overlaid) config.
 find_wifi_config() {
     # IMPORTANT: Always patch the overlay source file inside the module tree,
     # NOT the live mounted path at /<rel>.
     #
-    # KSU/Magisk bind-mounts $MODDIR/system/<rel> over /<rel> at boot.
+    # The root solution bind-mounts $MODDIR/system/<rel> over /<rel> at boot.
     # On some devices (e.g. f2fs block device mounts) the live path
     # /<rel> resolves to the original read-only partition block device,
     # not the overlay file — so patching /<rel> modifies the wrong file.
@@ -332,6 +344,58 @@ apply_patch() {
     printf '%d' "${ap_applied_count:-0}"
 }
 
+# Remove the oldest snapshot(s) once the manifest exceeds SNAP_MAX entries.
+# Manifest is append-only -> oldest entries are always the first lines.
+_snapshot_prune() {
+    [ -f "$SNAP_MANIFEST" ] || return
+    sp_count=$(wc -l < "$SNAP_MANIFEST" 2>/dev/null | tr -d '[:space:]')
+    [ -z "$sp_count" ] && sp_count=0
+    [ "$sp_count" -le "$SNAP_MAX" ] 2>/dev/null && return
+
+    sp_excess=$((sp_count - SNAP_MAX))
+    for sp_id in $(head -n "$sp_excess" "$SNAP_MANIFEST" | cut -f1); do
+        rm -f "${SNAP_DIR}/${sp_id}.ini"
+    done
+    tail -n "$SNAP_MAX" "$SNAP_MANIFEST" > "${SNAP_MANIFEST}.tmp" 2>/dev/null \
+        && mv "${SNAP_MANIFEST}.tmp" "$SNAP_MANIFEST"
+}
+
+# Copy a config file into the snapshot store and record it in the manifest.
+# Args: $1 = label (may be empty -> "Snapshot"), $2 = mode (may be empty ->
+# read from MODE_FILE), $3 = config file path (required).
+# Echoes the new snapshot id on success; echoes nothing and returns 1 on failure.
+create_snapshot() {
+    cs_label="$1"
+    cs_mode="$2"
+    cs_config="$3"
+
+    [ -z "$cs_config" ] || [ ! -f "$cs_config" ] && return 1
+
+    mkdir -p "$SNAP_DIR" 2>/dev/null
+
+    cs_epoch=$(date +%s 2>/dev/null)
+    [ -z "$cs_epoch" ] && cs_epoch=0
+    # PID suffix guards against two snapshots landing in the same second.
+    cs_id="${cs_epoch}_$$"
+    cs_dest="${SNAP_DIR}/${cs_id}.ini"
+
+    cp "$cs_config" "$cs_dest" 2>/dev/null || return 1
+
+    [ -z "$cs_mode" ] && cs_mode=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
+    [ -z "$cs_mode" ] && cs_mode="stock"
+    [ -z "$cs_label" ] && cs_label="Snapshot"
+
+    cs_size=$(wc -c < "$cs_dest" 2>/dev/null | tr -d '[:space:]')
+    [ -z "$cs_size" ] && cs_size=0
+
+    # Manifest line: id<TAB>epoch<TAB>label<TAB>mode<TAB>size
+    printf '%s\t%s\t%s\t%s\t%s\n' \
+        "$cs_id" "$cs_epoch" "$(_esc "$cs_label")" "$cs_mode" "$cs_size" >> "$SNAP_MANIFEST"
+
+    _snapshot_prune
+    echo "$cs_id"
+}
+
 # ---------------------------------------------------------------------------
 # Actions
 # ---------------------------------------------------------------------------
@@ -372,8 +436,13 @@ case "$1" in
             exit 1
         fi
 
-        # -- Backup once --
+        # -- Backup once (legacy single-slot stock backup) --
         [ ! -f "${CONFIG_FILE}.bak" ] && cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
+
+        # -- Auto-snapshot before an actual mode change (safety net for the
+        #    snapshot history feature) — skip if re-applying the same mode --
+        PREV_MODE=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
+        [ "$PREV_MODE" != "$MODE" ] && create_snapshot "auto: before ${MODE}" "$PREV_MODE" "$CONFIG_FILE" >/dev/null
 
         if [ "$MODE" = "stock" ]; then
             if [ -f "${CONFIG_FILE}.bak" ]; then
@@ -864,13 +933,167 @@ case "$1" in
         ;;
 
     # -----------------------------------------------------------------------
+    "snapshot_create")
+        SC_LABEL="$2"
+        CONFIG_FILE=$(find_wifi_config)
+        if [ -z "$CONFIG_FILE" ]; then
+            log_json "error" "Config file not found."
+            exit 1
+        fi
+        SC_ID=$(create_snapshot "$SC_LABEL" "" "$CONFIG_FILE")
+        if [ -z "$SC_ID" ]; then
+            log_json "error" "Failed to create snapshot."
+            exit 1
+        fi
+        printf '{"status":"success","id":"%s","message":"Snapshot saved."}\n' "$SC_ID"
+        ;;
+
+    # -----------------------------------------------------------------------
+    "snapshot_list")
+        mkdir -p "$SNAP_DIR" 2>/dev/null
+        if [ ! -s "$SNAP_MANIFEST" ]; then
+            printf '{"status":"success","snapshots":[]}\n'
+        else
+            SL_JSON=$(awk -F'\t' '
+                {
+                    id[NR]=$1; ep[NR]=$2; lb[NR]=$3; md[NR]=$4; sz[NR]=$5; n=NR
+                }
+                END {
+                    printf "["
+                    first = 1
+                    # Newest first — manifest is append-only oldest-first.
+                    for (i = n; i >= 1; i--) {
+                        if (!first) printf ","
+                        first = 0
+                        printf "{\"id\":\"%s\",\"epoch\":%s,\"label\":\"%s\",\"mode\":\"%s\",\"size\":%s}", \
+                            id[i], ep[i], lb[i], md[i], sz[i]
+                    }
+                    printf "]"
+                }
+            ' "$SNAP_MANIFEST")
+            printf '{"status":"success","snapshots":%s}\n' "$SL_JSON"
+        fi
+        ;;
+
+    # -----------------------------------------------------------------------
+    "snapshot_restore")
+        SR_ID="$2"
+        if [ -z "$SR_ID" ]; then
+            log_json "error" "No snapshot id provided."
+            exit 1
+        fi
+        SR_SRC="${SNAP_DIR}/${SR_ID}.ini"
+        if [ ! -f "$SR_SRC" ]; then
+            log_json "error" "Snapshot not found (it may have been pruned)."
+            exit 1
+        fi
+        CONFIG_FILE=$(find_wifi_config)
+        if [ -z "$CONFIG_FILE" ]; then
+            log_json "error" "Config file not found."
+            exit 1
+        fi
+        # Safety net: snapshot the current live state before overwriting it,
+        # so restoring is itself undoable.
+        create_snapshot "auto: before restore" "" "$CONFIG_FILE" >/dev/null
+        cp "$SR_SRC" "$CONFIG_FILE"
+        sync
+        DTYPE=$(detect_driver_type)
+        printf '{"status":"success","message":"Snapshot restored.","driver_type":"%s"}\n' "$DTYPE"
+        ;;
+
+    # -----------------------------------------------------------------------
+    "snapshot_delete")
+        SD_ID="$2"
+        if [ -z "$SD_ID" ]; then
+            log_json "error" "No snapshot id provided."
+            exit 1
+        fi
+        if [ -f "$SNAP_MANIFEST" ]; then
+            awk -F'\t' -v id="$SD_ID" '$1 != id' "$SNAP_MANIFEST" > "${SNAP_MANIFEST}.tmp" 2>/dev/null \
+                && mv "${SNAP_MANIFEST}.tmp" "$SNAP_MANIFEST"
+        fi
+        rm -f "${SNAP_DIR}/${SD_ID}.ini"
+        log_json "success" "Snapshot deleted."
+        ;;
+
+    # -----------------------------------------------------------------------
+    # $2 is base64-encoded patch text (KEY=VALUE lines) built by the WebUI's
+    # Custom Profile Builder from only the parameters the user opted into —
+    # unmentioned keys are left exactly as the config currently has them.
+    "apply_custom")
+        B64="$2"
+        if [ -z "$B64" ]; then
+            log_json "error" "No parameters selected."
+            exit 1
+        fi
+
+        PATCH_TEXT=$(printf '%s' "$B64" | base64 -d 2>/dev/null)
+        if [ $? -ne 0 ] || [ -z "$PATCH_TEXT" ]; then
+            log_json "error" "Failed to decode custom profile."
+            exit 1
+        fi
+
+        CONFIG_FILE=$(find_wifi_config)
+        if [ -z "$CONFIG_FILE" ]; then
+            log_json "error" "Wi-Fi config file not found. Module may not be installed correctly."
+            exit 1
+        fi
+
+        # Stock backup, once
+        [ ! -f "${CONFIG_FILE}.bak" ] && cp "$CONFIG_FILE" "${CONFIG_FILE}.bak"
+
+        # Every custom apply is a checkpoint (unlike perf/balanced, the values
+        # themselves can differ between applies even while staying in "custom"
+        # mode) — the SNAP_MAX cap keeps this bounded.
+        create_snapshot "auto: before custom" "" "$CONFIG_FILE" >/dev/null
+
+        printf '%s\n' "$PATCH_TEXT" > "$CUSTOM_PATCH_FILE"
+
+        DTYPE=$(detect_driver_type)
+        DNAME=$(get_driver_name)
+        N=$(apply_patch "$CONFIG_FILE" "$CUSTOM_PATCH_FILE")
+        sync
+        echo "custom" > "$MODE_FILE"
+
+        printf '{"status":"success","message":"Custom profile applied (%s params).","driver_type":"%s","driver_name":"%s","params_applied":%s}\n' \
+            "$N" "$DTYPE" "$DNAME" "${N:-0}"
+        ;;
+
+    # -----------------------------------------------------------------------
+    # Returns the last-saved custom profile so the WebUI builder can restore
+    # checkbox/slider state on revisit. Empty content if none saved yet.
+    "get_custom_patch")
+        if [ -f "$CUSTOM_PATCH_FILE" ]; then
+            CONTENT=$(base64 "$CUSTOM_PATCH_FILE" 2>/dev/null | tr -d '\n')
+        else
+            CONTENT=""
+        fi
+        printf '{"status":"success","content":"%s"}\n' "$CONTENT"
+        ;;
+
+    # -----------------------------------------------------------------------
+    # Boot-time silent re-apply of the saved custom profile (service.sh only —
+    # not exposed as a UI action). No snapshot: this replays an already-applied
+    # state after customize.sh reset the overlay to stock, it isn't a new edit.
+    "reapply_custom")
+        CONFIG_FILE=$(find_wifi_config)
+        if [ -z "$CONFIG_FILE" ] || [ ! -f "$CUSTOM_PATCH_FILE" ]; then
+            log_json "error" "Nothing to reapply."
+            exit 1
+        fi
+        apply_patch "$CONFIG_FILE" "$CUSTOM_PATCH_FILE" >/dev/null
+        sync
+        log_json "success" "Custom profile re-applied."
+        ;;
+
+    # -----------------------------------------------------------------------
     "get_mode")
         if [ -f "$MODE_FILE" ]; then
             # Sanitize: only accept the three known values; default to stock otherwise
             RAW_MODE=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
             case "$RAW_MODE" in
-                perf|balanced|stock) MODE_VAL="$RAW_MODE" ;;
-                *)                   MODE_VAL="stock" ;;
+                perf|balanced|stock|custom) MODE_VAL="$RAW_MODE" ;;
+                *)                          MODE_VAL="stock" ;;
             esac
             printf '{"mode":"%s"}\n' "$MODE_VAL"
         else

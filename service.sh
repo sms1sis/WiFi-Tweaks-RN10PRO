@@ -21,5 +21,9 @@ if [ -f "$MODE_FILE" ]; then
             sh "$MODDIR/backend.sh" apply_mode "$SAVED_MODE" \
                 >> "${WCS_STATE_DIR}/boot_restore.log" 2>&1
             ;;
+        custom)
+            sh "$MODDIR/backend.sh" reapply_custom \
+                >> "${WCS_STATE_DIR}/boot_restore.log" 2>&1
+            ;;
     esac
 fi

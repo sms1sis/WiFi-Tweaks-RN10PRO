@@ -51,6 +51,8 @@
             --red:         #ff3860;
             --red-glow:    rgba(255, 56, 96, 0.12);
             --purple:      #c084fc;
+            --purple-dim:  rgba(192, 132, 252, 0.5);
+            --purple-glow: rgba(192, 132, 252, 0.12);
             --text:        rgba(200, 230, 255, 0.95);
             --text-bright: #e0f4ff;
             --text-dim:    rgba(140, 195, 235, 0.85);
@@ -317,9 +319,10 @@
             text-overflow: ellipsis;
         }
 
-        /* ---- Profile Buttons — single line, compact ---- */
+        /* ---- Profile Buttons — grid so a 4th (Custom) button fits cleanly ---- */
         .profile-row {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
             gap: 8px;
         }
 
@@ -377,6 +380,13 @@
             background: rgba(180,220,255,0.1);
             border-color: var(--text);
             color: var(--text-bright);
+        }
+
+        .prof-btn.custom { border-color: var(--purple-dim); color: var(--purple); }
+        .prof-btn.custom.active {
+            background: var(--purple-glow);
+            border-color: var(--purple);
+            box-shadow: 0 0 12px var(--purple-glow), inset 0 0 8px var(--purple-glow);
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -554,6 +564,8 @@
             --red:         #d93025;
             --red-glow:    rgba(217, 48, 37, 0.08);
             --purple:      #7c4dff;
+            --purple-dim:  rgba(124, 77, 255, 0.5);
+            --purple-glow: rgba(124, 77, 255, 0.08);
             --text:        #3c4043;
             --text-bright: #202124;
             --text-dim:    #5f6368;
@@ -580,6 +592,8 @@
             --red:         #ff453a;
             --red-glow:    rgba(255, 69, 58, 0.12);
             --purple:      #bf5af2;
+            --purple-dim:  rgba(191, 90, 242, 0.5);
+            --purple-glow: rgba(191, 90, 242, 0.1);
             --text:        rgba(235, 235, 245, 0.8);
             --text-bright: #f2f2f7;
             --text-dim:    rgba(235, 235, 245, 0.45);
@@ -774,6 +788,130 @@
         .config-btn.danger  { border-color: rgba(255,56,96,0.5); color: var(--red); }
         .config-btn.danger:hover  { background: var(--red-glow); }
         [data-theme="normal"] .config-btn { border-radius: 8px; font-family: 'Inter', sans-serif; letter-spacing: 0; }
+
+        /* ---- Custom Profile Builder ---- */
+        .cp-hint {
+            font-size: 0.58rem; color: var(--text-dim); line-height: 1.5;
+            padding: 0 14px 10px; letter-spacing: 0.2px;
+        }
+        .cp-count {
+            font-size: 0.55rem; color: var(--purple); letter-spacing: 0.5px;
+            text-transform: uppercase; padding-top: 12px;
+        }
+        .cp-row {
+            display: flex; gap: 10px; align-items: flex-start;
+            padding: 10px 14px; border-top: 1px solid var(--border);
+        }
+        .cp-row:first-child { border-top: none; }
+        .cp-row.enabled { background: var(--purple-glow); }
+        .cp-check-wrap { flex-shrink: 0; padding-top: 2px; }
+        .cp-switch {
+            position: relative; width: 34px; height: 19px; flex-shrink: 0;
+            cursor: pointer;
+        }
+        .cp-switch input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+        .cp-switch-track {
+            position: absolute; inset: 0; border-radius: 10px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            transition: all 0.15s;
+        }
+        .cp-switch-track::after {
+            content: ''; position: absolute; top: 2px; left: 2px;
+            width: 13px; height: 13px; border-radius: 50%;
+            background: var(--text-dim); transition: all 0.15s;
+        }
+        .cp-switch input:checked + .cp-switch-track {
+            background: var(--purple-glow); border-color: var(--purple);
+        }
+        .cp-switch input:checked + .cp-switch-track::after {
+            background: var(--purple); transform: translateX(15px);
+        }
+        .cp-info { flex: 1; min-width: 0; }
+        .cp-label {
+            font-size: 0.66rem; font-weight: 600; color: var(--text-bright);
+        }
+        .cp-desc {
+            font-size: 0.56rem; color: var(--text-dim); line-height: 1.4;
+            margin-top: 2px; margin-bottom: 8px;
+        }
+        .cp-control { opacity: 0.35; pointer-events: none; transition: opacity 0.15s; }
+        .cp-row.enabled .cp-control { opacity: 1; pointer-events: auto; }
+        .cp-toggle-pair { display: flex; gap: 6px; }
+        .cp-toggle-btn {
+            flex: 1; padding: 6px 4px; text-align: center;
+            font-family: var(--mono); font-size: 0.58rem;
+            border: 1px solid var(--border); border-radius: 3px;
+            background: var(--bg-card); color: var(--text-dim); cursor: pointer;
+        }
+        .cp-toggle-btn.on {
+            border-color: var(--purple); color: var(--purple); background: var(--purple-glow);
+        }
+        .cp-range-row { display: flex; align-items: center; gap: 10px; }
+        .cp-range-row input[type="range"] {
+            flex: 1; accent-color: var(--purple); height: 4px;
+        }
+        .cp-range-val {
+            font-family: var(--mono); font-size: 0.6rem; color: var(--purple);
+            min-width: 46px; text-align: right; flex-shrink: 0;
+        }
+        .cp-btn-row { display: flex; gap: 8px; padding: 12px 14px 0; }
+        [data-theme="normal"] .cp-row,
+        [data-theme="normal-dark"] .cp-row { border-radius: 0; }
+        [data-theme="normal"] .cp-toggle-btn,
+        [data-theme="normal-dark"] .cp-toggle-btn { border-radius: 6px; }
+
+        /* ---- Snapshot History ---- */
+        .snap-create-row { display: flex; gap: 8px; padding: 12px 14px 0; }
+        .snap-create-row .config-search-input { flex: 1; }
+        .snap-create-row .config-btn { flex: 0 0 auto; padding: 10px 14px; }
+        .snapshot-list {
+            display: flex; flex-direction: column; gap: 6px;
+            padding: 12px 14px 14px; max-height: 280px; overflow-y: auto;
+        }
+        .snapshot-empty {
+            padding: 14px 0; font-size: 0.6rem; text-align: center;
+            color: var(--text-dim); letter-spacing: 0.5px;
+        }
+        .snapshot-row {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 10px; border: 1px solid var(--border);
+            border-radius: 3px; background: var(--bg-card);
+        }
+        .snapshot-row.auto { border-style: dashed; opacity: 0.85; }
+        .snapshot-info { flex: 1; min-width: 0; }
+        .snapshot-label {
+            font-size: 0.68rem; font-weight: 600; color: var(--text-bright);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .snapshot-meta {
+            font-size: 0.55rem; color: var(--text-dim); margin-top: 2px;
+            letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        .snapshot-mode-tag {
+            display: inline-block; padding: 1px 5px; border-radius: 2px;
+            font-size: 0.5rem; letter-spacing: 0.5px; text-transform: uppercase;
+            margin-right: 5px; border: 1px solid currentColor;
+        }
+        .snapshot-mode-tag.perf     { color: var(--red); }
+        .snapshot-mode-tag.balanced { color: var(--amber); }
+        .snapshot-mode-tag.stock    { color: var(--cyan); }
+        .snapshot-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .snapshot-actions button {
+            width: 26px; height: 26px; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: transparent; border: 1px solid var(--border);
+            border-radius: 3px; cursor: pointer; transition: all 0.15s;
+        }
+        .snapshot-actions button svg { width: 12px; height: 12px; }
+        .snapshot-actions button.restore { color: var(--green); }
+        .snapshot-actions button.restore:hover { background: var(--green-glow); border-color: var(--green); }
+        .snapshot-actions button.delete { color: var(--red); }
+        .snapshot-actions button.delete:hover { background: var(--red-glow); border-color: var(--red); }
+        .snapshot-actions button:disabled { opacity: 0.4; pointer-events: none; }
+        [data-theme="normal"] .snapshot-row,
+        [data-theme="normal-dark"] .snapshot-row { border-radius: 8px; }
+        [data-theme="normal"] .snapshot-actions button,
+        [data-theme="normal-dark"] .snapshot-actions button { border-radius: 6px; }
 
         .config-status {
             font-size: 0.65rem;
@@ -1067,7 +1205,9 @@
 
         @media (max-width: 380px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .profile-row { grid-template-columns: repeat(2, 1fr); }
             .header-title { font-size: 1rem; letter-spacing: 2px; }
+            .nav-btn { font-size: 0.52rem; letter-spacing: 0.5px; }
         }
         /* ═══════════════════════════════════════════════
            SETTINGS PAGE
@@ -1170,7 +1310,7 @@
       <!-- Header -->
       <div class="header">
         <div class="header-title">WI-FI TUNER</div>
-        <div class="header-sub">Qualcomm Config Switcher // KernelSU</div>
+        <div class="header-sub">Qualcomm Config Tuner // Universal Root</div>
         <span class="version-badge" id="version-badge">—</span>
       </div>
 
@@ -1250,6 +1390,11 @@
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13,3H6V21H18V8L13,3M13,9V4.5L17.5,9H13Z"/></svg>
               Stock
             </button>
+            <button class="prof-btn custom" id="btn-custom" onclick="app.goToCustomBuilder()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+              Custom
+              <span class="phint" id="hint-custom"></span>
+            </button>
           </div>
         </div>
       </div>
@@ -1287,7 +1432,65 @@
     </div>
   </div>
 
-  <!-- ═══════════════ PAGE: CONFIG EDITOR ═══════════════ -->
+  <!-- ═══════════════ PAGE: TOOLS ═══════════════ -->
+  <div class="page" id="page-tools">
+    <div class="page-container">
+
+      <!-- Tools header -->
+      <div class="header">
+        <div class="header-title">TOOLS</div>
+        <div class="header-sub">Custom Profile &amp; Snapshot History</div>
+      </div>
+
+      <!-- Custom Profile Builder -->
+      <div class="panel" id="custom-builder-panel">
+        <div class="panel-label" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 0">
+          <span>Custom Profile Builder</span>
+          <span class="cp-count" id="cp-count">0 selected</span>
+        </div>
+        <div class="panel-body" style="padding:4px 0 12px">
+          <div class="cp-hint">Toggle on only the parameters you want to control — everything else is left as-is.</div>
+          <div id="cp-param-list"></div>
+          <div class="cp-btn-row">
+            <button class="config-btn success" onclick="app.applyCustomProfile()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              Apply Custom Profile
+            </button>
+            <button class="config-btn" onclick="app.clearCustomProfile()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              Clear
+            </button>
+          </div>
+          <div class="config-status" id="cp-status"></div>
+        </div>
+      </div>
+
+      <!-- Snapshot History -->
+      <div class="panel">
+        <div class="panel-label" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 0">
+          <span>Snapshot History</span>
+          <button class="config-search-btn" onclick="app.refreshSnapshots()" title="Refresh">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4C7.58 4 4 7.58 4 12s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+          </button>
+        </div>
+        <div class="panel-body" style="padding:0 0 4px">
+          <div class="snap-create-row">
+            <input class="config-search-input" id="snapshot-label-input" placeholder="Snapshot label (optional)…" maxlength="60" autocomplete="off" spellcheck="false"/>
+            <button class="config-btn primary" onclick="app.createSnapshot()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4zm-5 16a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm3-10H5V5h10v4z"/></svg>
+              Save
+            </button>
+          </div>
+          <div class="snapshot-list" id="snapshot-list">
+            <div class="snapshot-empty" id="snapshot-empty">No snapshots yet — save one before making changes.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════ PAGE: CONFIG ═══════════════ -->
   <div class="page" id="page-config">
     <div class="page-container">
 
@@ -1508,7 +1711,7 @@
             <span class="settings-row-icon">⚙️</span>
             <span class="settings-row-body">
               <span class="settings-row-title">Platform</span>
-              <span class="settings-row-sub">Qualcomm · KernelSU · Driver-aware</span>
+              <span class="settings-row-sub">Qualcomm · Universal Root · Driver-aware</span>
             </span>
           </div>
           <div class="settings-divider"></div>
@@ -1531,6 +1734,10 @@
     <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
     <span>Dashboard</span>
   </button>
+  <button class="nav-btn" id="nav-tools" onclick="app.navigate('tools')">
+    <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
+    <span>Tools</span>
+  </button>
   <button class="nav-btn" id="nav-config" onclick="app.navigate('config')">
     <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
     <span>Config</span>
@@ -1549,7 +1756,7 @@ class KsuBridge {
         this.actionScript = '/data/adb/modules/wifi_config_tuner/backend.sh';
     }
     async exec(cmd) {
-        if (!this.hasKsu) { console.log('Mock:', cmd); return '{"status":"error","message":"KSU not detected"}'; }
+        if (!this.hasKsu) { console.log('Mock:', cmd); return '{"status":"error","message":"Root manager API not detected"}'; }
         try {
             const r = await window.ksu.exec(cmd);
             if (typeof r === 'object' && r.errno !== undefined)
@@ -1610,12 +1817,41 @@ function patchLabel(src) {
     return { icon:'◈', name:src.toUpperCase(), meta:'' };
 }
 
+// Known WCNSS_qcom_cfg.ini keys exposed by the Custom Profile Builder.
+// Only checked ("enabled") params are written to custom.patch — unmentioned
+// keys are left exactly as the live config currently has them, so partial
+// selections are always safe.
+const CUSTOM_PARAMS = [
+    { key: 'gEnableBmps', label: 'Beacon Power Save', type: 'toggle',
+      desc: 'Sleep the radio between beacons. Off favors latency, On favors battery.',
+      offVal: '0', onVal: '1', offLabel: 'OFF · PERF', onLabel: 'ON · BATTERY', def: '0' },
+    { key: 'gEnableImps', label: 'Idle Mode Power Save', type: 'toggle',
+      desc: 'Deep power save while the screen is off and Wi-Fi is idle.',
+      offVal: '0', onVal: '1', offLabel: 'OFF', onLabel: 'ON', def: '0' },
+    { key: 'gDataInactivityTimeout', label: 'Data Inactivity Timeout', type: 'range',
+      desc: 'Milliseconds of inactivity before entering power-save. 0 disables the timeout.',
+      min: 0, max: 1000, step: 50, unit: 'ms', def: '0' },
+    { key: 'TxPower2g', label: 'TX Power — 2.4GHz', type: 'range',
+      desc: 'Transmit power in dBm. Higher can extend range at the cost of battery/heat.',
+      min: 5, max: 20, step: 1, unit: 'dBm', def: '15' },
+    { key: 'TxPower5g', label: 'TX Power — 5GHz', type: 'range',
+      desc: 'Transmit power in dBm for the 5GHz band.',
+      min: 5, max: 20, step: 1, unit: 'dBm', def: '15' },
+    { key: 'gChannelBondingMode24GHz', label: '40MHz Channel Bonding (2.4GHz)', type: 'toggle',
+      desc: 'Wider channel means more throughput but more susceptibility to interference.',
+      offVal: '0', onVal: '1', offLabel: '20MHz', onLabel: '40MHz', def: '0' },
+    { key: 'gRoamScanOffloadEnabled', label: 'Roam Scan Offload', type: 'toggle',
+      desc: 'Let firmware manage roam scans instead of the OS Wi-Fi stack.',
+      offVal: '0', onVal: '1', offLabel: 'OFF', onLabel: 'ON', def: '0' },
+];
+
 class App {
     constructor() {
         this.ksu = new KsuBridge();
         this.processing = false;
         this.driverType = 'unknown';
         this.driverName = 'unknown';
+        this.customState = {};
         this.$log    = document.getElementById('console-output');
         this.$reset  = document.getElementById('reset-btn');
         this.$banner = document.getElementById('reboot-banner');
@@ -1743,7 +1979,7 @@ class App {
     updateUIState(mode) {
         const dot   = document.getElementById('status-dot');
         const label = document.getElementById('current-mode');
-        ['btn-perf','btn-bal','btn-stock'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+        ['btn-perf','btn-bal','btn-stock','btn-custom'].forEach(id => document.getElementById(id)?.classList.remove('active'));
         if (mode === 'perf') {
             label.textContent = 'PERFORMANCE';
             dot.style.cssText = 'background:var(--green);box-shadow:0 0 6px var(--green),0 0 12px var(--green-dim)';
@@ -1752,6 +1988,10 @@ class App {
             label.textContent = 'BALANCED';
             dot.style.cssText = 'background:var(--amber);box-shadow:0 0 6px var(--amber),0 0 12px var(--amber-dim)';
             document.getElementById('btn-bal')?.classList.add('active');
+        } else if (mode === 'custom') {
+            label.textContent = 'CUSTOM';
+            dot.style.cssText = 'background:var(--purple);box-shadow:0 0 6px var(--purple),0 0 12px var(--purple-dim)';
+            document.getElementById('btn-custom')?.classList.add('active');
         } else {
             label.textContent = 'STOCK';
             dot.style.cssText = 'background:var(--text-dim);box-shadow:none';
@@ -1866,10 +2106,17 @@ class App {
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(`nav-${page}`)?.classList.add('active');
 
-        // Lazy-load config on first visit
+        // Lazy-load raw config editor on first visit to Config
         if (page === 'config' && !this.configLoaded) {
             this.configLoaded = true;
             this.loadConfig();
+        }
+        // Tools (Custom Profile Builder + Snapshot History) refreshes on every
+        // visit — both can change from actions taken on other pages (Dashboard
+        // mode switches, Config editor saves), so a stale one-time load isn't safe here.
+        if (page === 'tools') {
+            this.refreshSnapshots();
+            this.loadCustomBuilder();
         }
         // Sync settings UI on every visit
         if (page === 'settings') {
@@ -1877,6 +2124,10 @@ class App {
             this._syncThemeChecks(currentTheme);
             this._syncIntervalChecks(this.refreshInterval);
         }
+    }
+
+    goToCustomBuilder() {
+        this.navigate('tools');
     }
 
     // ---- Theme ----
@@ -2151,6 +2402,275 @@ class App {
         } else {
             status.style.color = 'var(--red)';
             status.textContent = r?.message || 'Restore failed';
+        }
+    }
+
+    // ---- Snapshot History ----
+
+    async createSnapshot() {
+        const input = document.getElementById('snapshot-label-input');
+        const label = input.value.trim();
+        const status = document.getElementById('config-status');
+        status.style.color = 'var(--cyan)';
+        status.textContent = 'Saving snapshot…';
+        const r = parseJson(await this.ksu.runAction('snapshot_create', label));
+        if (r && r.status === 'success') {
+            input.value = '';
+            status.style.color = 'var(--green)';
+            status.textContent = 'Snapshot saved.';
+            this.log(`[SNAP] Saved "${label || 'Snapshot'}"`, 'success');
+            await this.refreshSnapshots();
+        } else {
+            status.style.color = 'var(--red)';
+            status.textContent = r?.message || 'Snapshot failed';
+            this.log(`[SNAP] Save failed: ${r?.message}`, 'error');
+        }
+    }
+
+    async refreshSnapshots() {
+        const list = document.getElementById('snapshot-list');
+        const r = parseJson(await this.ksu.runAction('snapshot_list'));
+        const snaps = (r && r.status === 'success') ? r.snapshots : [];
+        this.renderSnapshots(snaps || []);
+    }
+
+    renderSnapshots(snaps) {
+        const list = document.getElementById('snapshot-list');
+        if (!snaps.length) {
+            list.innerHTML = '<div class="snapshot-empty" id="snapshot-empty">No snapshots yet — save one before making changes.</div>';
+            return;
+        }
+        list.innerHTML = snaps.map(s => {
+            const isAuto = s.label.startsWith('auto:');
+            const when = this.formatSnapshotTime(s.epoch);
+            const sizeKb = (s.size / 1024).toFixed(1);
+            return `
+                <div class="snapshot-row${isAuto ? ' auto' : ''}" data-id="${escHtml(s.id)}">
+                    <div class="snapshot-info">
+                        <div class="snapshot-label">${escHtml(s.label)}</div>
+                        <div class="snapshot-meta">
+                            <span class="snapshot-mode-tag ${escHtml(s.mode)}">${escHtml(s.mode)}</span>${when} · ${sizeKb} KB
+                        </div>
+                    </div>
+                    <div class="snapshot-actions">
+                        <button class="restore" title="Restore" onclick="app.restoreSnapshot('${s.id}')">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 0 1 7-7 7 7 0 0 1 7 7 7 7 0 0 1-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 9-9 9 9 0 0 0-9-9z"/></svg>
+                        </button>
+                        <button class="delete" title="Delete — tap twice to confirm" onclick="app.deleteSnapshot('${s.id}', this)">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    formatSnapshotTime(epoch) {
+        if (!epoch) return 'unknown time';
+        const d = new Date(epoch * 1000);
+        const diffSec = Math.round((Date.now() - d.getTime()) / 1000);
+        if (diffSec < 60)   return 'just now';
+        if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+        if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) +
+               ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    }
+
+    async restoreSnapshot(id) {
+        const status = document.getElementById('config-status');
+        status.style.color = 'var(--cyan)';
+        status.textContent = 'Restoring snapshot…';
+        this.log(`[SNAP] Restoring ${id}…`, 'info');
+        const r = parseJson(await this.ksu.runAction('snapshot_restore', id));
+        if (r && r.status === 'success') {
+            status.style.color = 'var(--green)';
+            status.textContent = 'Snapshot restored.';
+            this.log('[SNAP] Restored — a safety snapshot of the previous state was saved', 'success');
+            await this.loadConfig();
+            await this.refreshSnapshots();
+            if (this.driverType === 'modular') {
+                this.log('[DRV] Triggering driver reload…', 'info');
+                setTimeout(() => this.softReset(true), 400);
+            } else if (this.driverType === 'builtin') {
+                this.showRebootBanner();
+            }
+        } else {
+            status.style.color = 'var(--red)';
+            status.textContent = r?.message || 'Restore failed';
+            this.log(`[SNAP] Restore failed: ${r?.message}`, 'error');
+        }
+    }
+
+    async deleteSnapshot(id, btn) {
+        if (!btn.classList.contains('confirm')) {
+            btn.classList.add('confirm');
+            btn.title = 'Tap again to confirm delete';
+            btn.style.background = 'var(--red-glow)';
+            btn.style.borderColor = 'var(--red)';
+            setTimeout(() => {
+                btn.classList.remove('confirm');
+                btn.title = 'Delete — tap twice to confirm';
+                btn.style.background = '';
+                btn.style.borderColor = '';
+            }, 3000);
+            return;
+        }
+        btn.disabled = true;
+        const r = parseJson(await this.ksu.runAction('snapshot_delete', id));
+        if (r && r.status === 'success') {
+            this.log('[SNAP] Snapshot deleted', 'info');
+        } else {
+            this.log(`[SNAP] Delete failed: ${r?.message}`, 'error');
+        }
+        await this.refreshSnapshots();
+    }
+
+    // ---- Custom Profile Builder ----
+
+    async loadCustomBuilder() {
+        this.customState = {};
+        CUSTOM_PARAMS.forEach(p => { this.customState[p.key] = { enabled: false, value: p.def }; });
+
+        const r = parseJson(await this.ksu.runAction('get_custom_patch'));
+        if (r && r.status === 'success' && r.content) {
+            try {
+                const bytes = Uint8Array.from(atob(r.content), c => c.charCodeAt(0));
+                const text = new TextDecoder().decode(bytes);
+                text.split('\n').forEach(line => {
+                    const eq = line.indexOf('=');
+                    if (eq < 0) return;
+                    const k = line.slice(0, eq).trim();
+                    const v = line.slice(eq + 1).trim();
+                    if (this.customState[k]) { this.customState[k].enabled = true; this.customState[k].value = v; }
+                });
+            } catch (e) { /* malformed/legacy content — start from defaults */ }
+        }
+        this.renderCustomBuilder();
+        this.updateCustomHint();
+    }
+
+    renderCustomBuilder() {
+        const list = document.getElementById('cp-param-list');
+        if (!list) return;
+        list.innerHTML = CUSTOM_PARAMS.map(p => {
+            const st = this.customState[p.key] || { enabled: false, value: p.def };
+            let control;
+            if (p.type === 'toggle') {
+                control = `
+                    <div class="cp-toggle-pair">
+                        <button type="button" class="cp-toggle-btn${st.value === p.offVal ? ' on' : ''}" onclick="app.cpSetValue('${p.key}','${p.offVal}')">${escHtml(p.offLabel)}</button>
+                        <button type="button" class="cp-toggle-btn${st.value === p.onVal ? ' on' : ''}" onclick="app.cpSetValue('${p.key}','${p.onVal}')">${escHtml(p.onLabel)}</button>
+                    </div>`;
+            } else {
+                control = `
+                    <div class="cp-range-row">
+                        <input type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${st.value}"
+                            oninput="app.cpRangeInput('${p.key}', this.value)"/>
+                        <span class="cp-range-val" id="cp-val-${p.key}">${st.value}${p.unit}</span>
+                    </div>`;
+            }
+            return `
+                <div class="cp-row${st.enabled ? ' enabled' : ''}" data-key="${p.key}">
+                    <label class="cp-switch">
+                        <input type="checkbox" ${st.enabled ? 'checked' : ''} onchange="app.cpToggle('${p.key}', this.checked)"/>
+                        <span class="cp-switch-track"></span>
+                    </label>
+                    <div class="cp-info">
+                        <div class="cp-label">${escHtml(p.label)}</div>
+                        <div class="cp-desc">${escHtml(p.desc)}</div>
+                        <div class="cp-control">${control}</div>
+                    </div>
+                </div>`;
+        }).join('');
+        this.updateCpCount();
+    }
+
+    cpToggle(key, checked) {
+        this.customState[key].enabled = checked;
+        this.renderCustomBuilder();
+    }
+
+    cpSetValue(key, val) {
+        this.customState[key].value = val;
+        this.renderCustomBuilder();
+    }
+
+    cpRangeInput(key, val) {
+        this.customState[key].value = val;
+        const p = CUSTOM_PARAMS.find(x => x.key === key);
+        const lbl = document.getElementById(`cp-val-${key}`);
+        if (lbl && p) lbl.textContent = `${val}${p.unit}`;
+    }
+
+    updateCpCount() {
+        const n = CUSTOM_PARAMS.filter(p => this.customState[p.key]?.enabled).length;
+        const el = document.getElementById('cp-count');
+        if (el) el.textContent = `${n} selected`;
+    }
+
+    updateCustomHint() {
+        const n = CUSTOM_PARAMS.filter(p => this.customState[p.key]?.enabled).length;
+        const hint = document.getElementById('hint-custom');
+        if (hint) hint.textContent = n > 0 ? `[${n}p]` : '';
+    }
+
+    buildCustomPatchText() {
+        return CUSTOM_PARAMS
+            .filter(p => this.customState[p.key]?.enabled)
+            .map(p => `${p.key}=${this.customState[p.key].value}`)
+            .join('\n');
+    }
+
+    clearCustomProfile() {
+        CUSTOM_PARAMS.forEach(p => { this.customState[p.key] = { enabled: false, value: p.def }; });
+        this.renderCustomBuilder();
+        const status = document.getElementById('cp-status');
+        status.style.color = 'var(--text-dim)';
+        status.textContent = 'Cleared locally — tap Apply to write stock values, or just leave unset.';
+    }
+
+    async applyCustomProfile() {
+        if (this.processing) return;
+        const status = document.getElementById('cp-status');
+        const text = this.buildCustomPatchText();
+        if (!text) {
+            status.style.color = 'var(--red)';
+            status.textContent = 'Select at least one parameter to apply.';
+            return;
+        }
+        this.processing = true;
+        const applyBtn = document.querySelector('#custom-builder-panel .config-btn.success');
+        if (applyBtn) applyBtn.disabled = true;
+        status.style.color = 'var(--cyan)';
+        status.textContent = 'Applying custom profile…';
+        const paramCount = text.split('\n').length;
+        this.log(`[CUSTOM] Applying ${paramCount} parameter(s)…`, 'info');
+
+        try {
+            const b64 = btoa(String.fromCharCode(...new TextEncoder().encode(text)));
+            const r = parseJson(await this.ksu.runAction('apply_custom', b64));
+            if (r && r.status === 'success') {
+                status.style.color = 'var(--green)';
+                status.textContent = r.message;
+                this.log(`[CUSTOM] ${r.message}`, 'success');
+                this.updateUIState('custom');
+                this.updateCustomHint();
+                if (r.driver_type) { this.driverType = r.driver_type; this.driverName = r.driver_name || this.driverName; this.updateDriverTag(); }
+                if      (this.driverType === 'modular') { this.log('[DRV] MODULAR — triggering reload…', 'info'); setTimeout(() => this.softReset(true), 400); }
+                else if (this.driverType === 'builtin') { this.log('[DRV] BUILT-IN — reboot required', 'builtin'); this.showRebootBanner(); }
+                await this.refreshSnapshots();
+                if (this.configLoaded) await this.loadConfig();
+            } else {
+                status.style.color = 'var(--red)';
+                status.textContent = r?.message || 'Apply failed';
+                this.log(`[CUSTOM] Apply failed: ${r?.message}`, 'error');
+            }
+        } catch (e) {
+            status.style.color = 'var(--red)';
+            status.textContent = e.message;
+            this.log(`[CUSTOM] EXCEPTION: ${e.message}`, 'error');
+        } finally {
+            this.processing = false;
+            if (applyBtn) applyBtn.disabled = false;
         }
     }
 

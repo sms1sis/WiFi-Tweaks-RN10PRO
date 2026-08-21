@@ -1,3 +1,26 @@
+## v7.1.0 — Snapshot History & Custom Profile Builder
+
+### New Features
+
+- **New "Tools" tab** — added between Dashboard and Config in the bottom nav, dedicated to Snapshot History and the Custom Profile Builder (see below). Keeps the raw Config Editor page exactly as it was — a first pass had these panels appended to the Config page, but that pushed the raw `.ini` editor out of easy reach, so they got their own home instead.
+- **Snapshot History & Rollback.** Previously there was only a single stock backup slot (`.bak`), silently overwritten on first patch apply. Now every mode change creates a timestamped, labeled snapshot in `/data/adb/wcs/snapshots/` (persistent, survives reflashes), listed newest-first on the Tools tab with one-tap Restore/Delete. Manual "Save" is also available for checkpointing before hand-editing the raw config. History is capped at 20 entries (oldest pruned automatically) so it never grows unbounded. Restoring a snapshot itself creates a safety snapshot of the pre-restore state first, so a rollback is always itself undoable. New backend actions: `snapshot_create`, `snapshot_list`, `snapshot_restore`, `snapshot_delete`.
+- **Custom Profile Builder.** A 4th profile alongside Performance / Balanced / Stock. Exposes 7 known `WCNSS_qcom_cfg.ini` keys (`gEnableBmps`, `gEnableImps`, `gDataInactivityTimeout`, `TxPower2g`, `TxPower5g`, `gChannelBondingMode24GHz`, `gRoamScanOffloadEnabled`) as individually toggleable sliders/switches on the Tools tab — friendlier than editing raw `.ini` text for users who just want to tune one or two values. Only the parameters you explicitly enable are written; everything else in the config is left exactly as the last-applied profile set it. The selection persists in `/data/adb/wcs/custom.patch` and is re-applied automatically on boot, the same as Perf/Balanced. New backend actions: `apply_custom`, `get_custom_patch`, `reapply_custom` (boot-only).
+- **`apply_mode` now auto-snapshots before a real mode change** (skipped when re-applying the same mode, to avoid noise), and **`apply_custom` snapshots before every apply** — each custom edit is its own checkpoint since, unlike Perf/Balanced, the values can differ between applies while staying in the same mode.
+- **`get_mode` now recognizes `custom`** as a valid saved mode (previously any value outside `perf`/`balanced`/`stock` silently fell back to `stock`).
+- **`service.sh`** re-applies a saved Custom profile on boot (`reapply_custom`), extending the existing Perf/Balanced boot-restore behaviour introduced in v7.0.0.
+
+### WebUI
+
+- Dashboard's Performance Profile row is now a 4-across grid (2×2 under 380px) to fit the new Custom button, which jumps straight to the Tools tab; existing Perf/Balanced/Stock buttons are unchanged.
+- Added a dedicated `--purple` accent (with `-dim`/`-glow` variants) across all three themes (Sci-Fi / Light / Dark) for Custom-mode styling, consistent with the existing green/amber/neutral treatment for Perf/Balanced/Stock.
+- Tools tab content (Snapshot History + Custom Profile Builder) refreshes on every visit rather than once per session, since either can change from actions taken on the Dashboard or Config page.
+
+### Assets
+
+- **New `banner.png`.** Replaced the leftover "Wi-Fi Config Switcher" title text (unchanged since the v7.0.0 rename) with "WiFi Config Tuner". Also swapped the small glyph above the chip icon for an unambiguous WiFi signal icon (dot + fanning arcs) — the previous glyph's rectangle-with-an-arc silhouette read as a padlock to more than one person. Subtitle updated to "GENERIC QUALCOMM EDITION // UNIVERSAL ROOT" to match the root-solution-agnostic wording used everywhere else since v7.0.0.
+
+---
+
 ## v7.0.0 — Rename & Maintenance Audit
 
 ### Renamed
