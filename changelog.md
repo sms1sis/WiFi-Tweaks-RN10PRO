@@ -1,3 +1,11 @@
+## v7.2.1 — Emoji Markers for Module Card Profile Tag
+
+### WebUI / Module Card
+- **Profile tag on the module card now includes an emoji marker** — `📦 Stock`, `⚖️ Balanced`, `⚡ Performance`, `🛠️ Custom` — instead of plain `Profile: X` text, so the active profile is easier to spot at a glance in the Modules list.
+- `sync_description()`'s previous-tag stripping is now format-agnostic (matches any trailing `[...]` rather than the literal `[Profile: ...]` text), so re-syncing after this change still cleans up an old-format tag from a prior install without leaving both side by side.
+
+---
+
 ## v7.2.0 — Volume-Key Profile Picker & Module Card Status
 
 ### New Features

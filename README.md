@@ -5,7 +5,7 @@
 > *(Formerly "WiFi Config Switcher" — renamed in v7.0.0. See [Upgrading](#upgrading-from-wifi-config-switcher-pre-v700) if you have an existing install.)*
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v7.2.0-blue?style=flat-square"/>
+  <img src="https://img.shields.io/badge/version-v7.2.1-blue?style=flat-square"/>
   <img src="https://img.shields.io/badge/platform-Qualcomm-red?style=flat-square"/>
   <img src="https://img.shields.io/badge/root-Universal-orange?style=flat-square"/>
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square"/>
@@ -52,7 +52,7 @@ All changes are **systemless** — the module overlays your vendor Wi-Fi config 
 
 > **No reboot needed** to switch profiles on devices with a modular (loadable) Wi-Fi driver — the driver is reloaded automatically. Devices with a built-in (kernel-compiled) driver will prompt you to reboot.
 
-> The module card in your root manager's Modules list shows the currently active profile (e.g. `... [Profile: Balanced]`) appended to the description — no need to open the WebUI just to check what's applied. It updates whenever you change profiles, and re-syncs on every boot.
+> The module card in your root manager's Modules list shows the currently active profile (e.g. `... [⚡ Performance]`) appended to the description — no need to open the WebUI just to check what's applied. It updates whenever you change profiles, and re-syncs on every boot.
 
 ### Upgrading from WiFi Config Switcher (pre-v7.0.0)
 

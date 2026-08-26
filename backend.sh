@@ -54,8 +54,9 @@ resolve_device_alias() {
 }
 
 # Rewrites module.prop's description to append the currently-applied
-# profile (Stock/Balanced/Performance/Custom), so it's visible on the
-# module card in KernelSU/Magisk Manager without opening the WebUI.
+# profile (Stock/Balanced/Performance/Custom) with a small emoji marker,
+# so it's visible — and eye-catching — on the module card in KernelSU/
+# Magisk Manager without opening the WebUI.
 # Manager apps re-read module.prop when the module list is shown, so this
 # reflects the last-applied profile, not a live value — good enough for
 # "what's currently on", which is the point.
@@ -66,18 +67,20 @@ sync_description() {
 
     sd_raw=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
     case "$sd_raw" in
-        perf)     sd_tag="Performance" ;;
-        balanced) sd_tag="Balanced" ;;
-        custom)   sd_tag="Custom" ;;
-        *)        sd_tag="Stock" ;;
+        perf)     sd_emoji="⚡"; sd_tag="Performance" ;;
+        balanced) sd_emoji="⚖️"; sd_tag="Balanced" ;;
+        custom)   sd_emoji="🛠️"; sd_tag="Custom" ;;
+        *)        sd_emoji="📦"; sd_tag="Stock" ;;
     esac
 
-    # Strip any tag from a previous sync before re-appending, so repeated
-    # calls never nest "[Profile: X] [Profile: Y]".
-    sd_base=$(grep "^description=" "$sd_prop" 2>/dev/null | cut -d= -f2- | sed 's/ \[Profile:.*\]$//')
+    # Strip any bracketed tag from a previous sync before re-appending, so
+    # repeated calls never nest "[⚡ Performance] [⚖️ Balanced]". Matches
+    # any trailing "[...]" rather than the exact previous text, since the
+    # emoji varies per profile.
+    sd_base=$(grep "^description=" "$sd_prop" 2>/dev/null | cut -d= -f2- | sed 's/ \[[^]]*\]$//')
     [ -z "$sd_base" ] && sd_base="Qualcomm Wi-Fi tuning module with WebUI. Patch-based, driver-aware."
 
-    awk -v line="description=${sd_base} [Profile: ${sd_tag}]" '
+    awk -v line="description=${sd_base} [${sd_emoji} ${sd_tag}]" '
         /^description=/ { print line; next }
         { print }
     ' "$sd_prop" > "${sd_prop}.wcs_tmp" && mv "${sd_prop}.wcs_tmp" "$sd_prop"
