@@ -25,5 +25,18 @@ if [ -f "$MODE_FILE" ]; then
             sh "$MODDIR/backend.sh" reapply_custom \
                 >> "${WCS_STATE_DIR}/boot_restore.log" 2>&1
             ;;
+        *)
+            # Stock (or unset) needs no re-apply, but module.prop's
+            # description gets shipped fresh with every module update —
+            # any previously-synced "[Profile: ...]" tag is gone until
+            # this runs, so re-sync it on every boot regardless of mode.
+            sh "$MODDIR/backend.sh" sync_description \
+                >> "${WCS_STATE_DIR}/boot_restore.log" 2>&1
+            ;;
     esac
+else
+    # No saved mode yet (fresh install, no profile chosen at install time) —
+    # still sync so the card reads "Stock" instead of the bare default text.
+    sh "$MODDIR/backend.sh" sync_description \
+        >> "${WCS_STATE_DIR}/boot_restore.log" 2>&1
 fi

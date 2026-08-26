@@ -1,6 +1,6 @@
 {
-  "version": "v7.1.0",
-  "versionCode": 137,
-  "zipUrl": "https://github.com/sms1sis/WiFi-Config-Tuner/releases/download/v7.1.0/WiFi-Config-Tuner.zip",
+  "version": "v7.2.0",
+  "versionCode": 139,
+  "zipUrl": "https://github.com/sms1sis/WiFi-Config-Tuner/releases/download/v7.2.0/WiFi-Config-Tuner.zip",
   "changelog": "https://raw.githubusercontent.com/sms1sis/WiFi-Config-Tuner/main/changelog.md"
 }

@@ -1,3 +1,27 @@
+## v7.2.0 — Volume-Key Profile Picker & Module Card Status
+
+### New Features
+- **Volume-key profile selection at install.** `customize.sh` now prompts during install: Volume Down cycles Stock → Balanced → Performance, Volume Up confirms. Picking Balanced or Performance applies it immediately via the existing `backend.sh apply_mode` path (same snapshot/backup safety as applying from the WebUI) — no need to open the app just to get off Stock. Auto-continues at Stock after 15s of no input, and is skipped entirely (with a log line explaining why) when `getevent`, `timeout`, or `/dev/input/event*` aren't available to the install shell — a headless flash (fastboot/ADB sideload, or a manager that doesn't forward key events) never hangs waiting for a button that can't be pressed.
+- **Current profile shown on the module card.** `module.prop`'s `description` is now kept in sync with the active profile — e.g. `... driver-aware. [Profile: Balanced]` — visible in KernelSU/Magisk Manager's module list without opening the WebUI. New backend helper `sync_description()` (and a `sync_description` action for callers outside a WebUI action) reads the same saved mode `get_mode` does, so it can't disagree with what the app shows. Re-syncing is idempotent — a previous `[Profile: ...]` tag is stripped before the current one is appended, so repeated calls never nest tags.
+- **`apply_mode`, `apply_custom`, and `reapply_custom` now sync the card automatically** on every successful mode change, so the description reflects the live state without any extra step.
+- **`service.sh` syncs the description on every boot**, including for Stock and for a fresh install with no saved mode yet — `module.prop` is shipped fresh with every module update (the module dir is wiped on each flash, same as everything else under `$MODDIR`), so any previously-synced tag would otherwise disappear until the next mode change.
+
+### Notes
+- No changes to patch files or `WCNSS_qcom_cfg.ini` handling — this release is install UX and status visibility only.
+- The appended `[Profile: ...]` tag adds a bit of length to the description; if your manager app truncates long module descriptions, the tag may get clipped on-screen (v5.1.0 already trimmed the base text once for the same reason). Functionally harmless either way — this is a display-only concern.
+
+---
+
+## v7.1.1 — Snapshot Delete Confirmation Fix
+
+### WebUI Fixes
+- **Fix: Snapshot delete button appeared unresponsive.** Delete used a tap-twice-to-confirm pattern (first tap armed it via a `.confirm` CSS class + `title` tooltip change, second tap within 3s actually deleted). On touch devices neither cue is visible — `:hover` doesn't fire and `title` tooltips don't show on tap — so a single tap looked like nothing happened, and users had no reliable way to discover the second tap was needed.
+- **New: themed confirm modal.** Replaced the two-tap button state with a proper confirm dialog (`confirmAction()` on the `App` class) — shows the snapshot's label, "Delete" / "Cancel" actions, dismissible via backdrop click. Styled consistently across all three themes (Sci-Fi / Light / Dark) using the existing CSS custom properties, no new palette entries needed.
+- `confirmAction()` is generic (`{ title, message, okLabel }` → resolves `true`/`false`), so other destructive actions (e.g. Restore Snapshot, Reset Preferences) can adopt the same dialog instead of ad hoc confirm patterns.
+- No backend changes — `snapshot_delete` in `backend.sh` was already correct; this was a frontend confirmation-UX issue only.
+
+---
+
 ## v7.1.0 — Snapshot History & Custom Profile Builder
 
 ### New Features

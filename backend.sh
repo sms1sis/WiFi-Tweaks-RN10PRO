@@ -53,6 +53,36 @@ resolve_device_alias() {
     echo "$rda_device"
 }
 
+# Rewrites module.prop's description to append the currently-applied
+# profile (Stock/Balanced/Performance/Custom), so it's visible on the
+# module card in KernelSU/Magisk Manager without opening the WebUI.
+# Manager apps re-read module.prop when the module list is shown, so this
+# reflects the last-applied profile, not a live value — good enough for
+# "what's currently on", which is the point.
+# Safe to call anytime: falls back to Stock exactly like get_mode does.
+sync_description() {
+    sd_prop="${MODDIR}/module.prop"
+    [ -f "$sd_prop" ] || return 0
+
+    sd_raw=$(cat "$MODE_FILE" 2>/dev/null | tr -d '[:space:]')
+    case "$sd_raw" in
+        perf)     sd_tag="Performance" ;;
+        balanced) sd_tag="Balanced" ;;
+        custom)   sd_tag="Custom" ;;
+        *)        sd_tag="Stock" ;;
+    esac
+
+    # Strip any tag from a previous sync before re-appending, so repeated
+    # calls never nest "[Profile: X] [Profile: Y]".
+    sd_base=$(grep "^description=" "$sd_prop" 2>/dev/null | cut -d= -f2- | sed 's/ \[Profile:.*\]$//')
+    [ -z "$sd_base" ] && sd_base="Qualcomm Wi-Fi tuning module with WebUI. Patch-based, driver-aware."
+
+    awk -v line="description=${sd_base} [Profile: ${sd_tag}]" '
+        /^description=/ { print line; next }
+        { print }
+    ' "$sd_prop" > "${sd_prop}.wcs_tmp" && mv "${sd_prop}.wcs_tmp" "$sd_prop"
+}
+
 # NOTE ON POSIX PORTABILITY (applies to every function below):
 # `local` is a bash/mksh/toybox-sh extension, not part of POSIX sh. Most Android
 # ROMs' /system/bin/sh (toybox) supports it, but not all — some minimal AOSP/
@@ -414,6 +444,15 @@ case "$1" in
         ;;
 
     # -----------------------------------------------------------------------
+    # -----------------------------------------------------------------------
+    # Re-syncs module.prop's description to the currently saved profile.
+    # Called from service.sh (boot) and customize.sh (install) — anywhere
+    # outside a WebUI action that needs the module card kept up to date.
+    "sync_description")
+        sync_description
+        log_json "success" "Description synced."
+        ;;
+
     "apply_mode")
         MODE="$2"
 
@@ -449,6 +488,7 @@ case "$1" in
                 cp "${CONFIG_FILE}.bak" "$CONFIG_FILE"
                 sync
                 echo "stock" > "$MODE_FILE"
+                sync_description
                 printf '{"status":"success","message":"Stock config restored.","driver_type":"%s","driver_name":"%s","params_applied":0}\n' \
                     "$DTYPE" "$DNAME"
             else
@@ -475,6 +515,7 @@ case "$1" in
         N=$(apply_patch "$CONFIG_FILE" "$PATCH_FILE")
         sync
         echo "$MODE" > "$MODE_FILE"
+        sync_description
 
         printf '{"status":"success","message":"Mode %s applied (%s params).","driver_type":"%s","driver_name":"%s","patch_source":"%s","params_applied":%s}\n' \
             "$MODE" "$N" "$DTYPE" "$DNAME" "$PATCH_SOURCE" "${N:-0}"
@@ -1054,6 +1095,7 @@ case "$1" in
         N=$(apply_patch "$CONFIG_FILE" "$CUSTOM_PATCH_FILE")
         sync
         echo "custom" > "$MODE_FILE"
+        sync_description
 
         printf '{"status":"success","message":"Custom profile applied (%s params).","driver_type":"%s","driver_name":"%s","params_applied":%s}\n' \
             "$N" "$DTYPE" "$DNAME" "${N:-0}"
@@ -1083,6 +1125,7 @@ case "$1" in
         fi
         apply_patch "$CONFIG_FILE" "$CUSTOM_PATCH_FILE" >/dev/null
         sync
+        sync_description
         log_json "success" "Custom profile re-applied."
         ;;
 

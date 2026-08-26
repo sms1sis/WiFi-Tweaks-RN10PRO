@@ -5,7 +5,7 @@
 > *(Formerly "WiFi Config Switcher" — renamed in v7.0.0. See [Upgrading](#upgrading-from-wifi-config-switcher-pre-v700) if you have an existing install.)*
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v7.1.0-blue?style=flat-square"/>
+  <img src="https://img.shields.io/badge/version-v7.2.0-blue?style=flat-square"/>
   <img src="https://img.shields.io/badge/platform-Qualcomm-red?style=flat-square"/>
   <img src="https://img.shields.io/badge/root-Universal-orange?style=flat-square"/>
   <img src="https://img.shields.io/badge/license-GPL--3.0-green?style=flat-square"/>
@@ -46,10 +46,13 @@ All changes are **systemless** — the module overlays your vendor Wi-Fi config 
    - Detect your device codename and SoC platform automatically.
    - Select the most specific patch profile available (see [Patch Resolution](#patch-resolution) below).
    - Import your stock `WCNSS_qcom_cfg.ini` into the module overlay.
+   - Prompt you to pick an initial profile with the **Volume buttons** — Volume Down cycles Stock → Balanced → Performance, Volume Up confirms. No input for 15s leaves it at Stock; you can always change it later from the app. Skipped automatically on headless flashes (fastboot/ADB sideload, or a manager that doesn't forward key events to the install shell) — install proceeds at Stock without waiting.
 4. Reboot once after flashing.
 5. Open **your root manager → Modules → WiFi Config Tuner → Open WebUI**.
 
 > **No reboot needed** to switch profiles on devices with a modular (loadable) Wi-Fi driver — the driver is reloaded automatically. Devices with a built-in (kernel-compiled) driver will prompt you to reboot.
+
+> The module card in your root manager's Modules list shows the currently active profile (e.g. `... [Profile: Balanced]`) appended to the description — no need to open the WebUI just to check what's applied. It updates whenever you change profiles, and re-syncs on every boot.
 
 ### Upgrading from WiFi Config Switcher (pre-v7.0.0)
 

@@ -910,6 +910,50 @@
         .snapshot-actions button:disabled { opacity: 0.4; pointer-events: none; }
         [data-theme="normal"] .snapshot-row,
         [data-theme="normal-dark"] .snapshot-row { border-radius: 8px; }
+
+        /* ---- Confirm modal (snapshot delete, and reusable elsewhere) ---- */
+        .confirm-overlay {
+            position: fixed; inset: 0; z-index: 999;
+            background: rgba(0, 4, 10, 0.65);
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px; opacity: 0; pointer-events: none;
+            transition: opacity 0.15s;
+        }
+        .confirm-overlay.open { opacity: 1; pointer-events: auto; }
+        .confirm-box {
+            width: 100%; max-width: 320px;
+            background: var(--bg-panel); border: 1px solid var(--border-bright);
+            border-radius: 6px; padding: 18px 16px 16px;
+            transform: translateY(6px) scale(0.98); transition: transform 0.15s;
+        }
+        .confirm-overlay.open .confirm-box { transform: translateY(0) scale(1); }
+        .confirm-title {
+            font-family: var(--head); font-size: 0.78rem; letter-spacing: 0.5px;
+            color: var(--text-bright); margin-bottom: 8px;
+        }
+        .confirm-message {
+            font-size: 0.65rem; line-height: 1.5; color: var(--text-dim);
+        }
+        .confirm-message b { color: var(--text-bright); font-weight: 600; }
+        .confirm-actions {
+            display: flex; gap: 8px; margin-top: 16px;
+        }
+        .confirm-actions button {
+            flex: 1; padding: 9px 0; border-radius: 3px; cursor: pointer;
+            font-size: 0.62rem; letter-spacing: 0.5px; text-transform: uppercase;
+            font-weight: 600; border: 1px solid var(--border); background: transparent;
+            color: var(--text-dim); transition: all 0.15s;
+        }
+        .confirm-actions button.cancel:hover { border-color: var(--border-bright); color: var(--text-bright); }
+        .confirm-actions button.danger {
+            border-color: var(--red); color: var(--red);
+        }
+        .confirm-actions button.danger:hover { background: var(--red-glow); }
+        .confirm-actions button:disabled { opacity: 0.4; pointer-events: none; }
+        [data-theme="normal"] .confirm-box,
+        [data-theme="normal-dark"] .confirm-box { border-radius: 10px; }
+        [data-theme="normal"] .confirm-actions button,
+        [data-theme="normal-dark"] .confirm-actions button { border-radius: 8px; }
         [data-theme="normal"] .snapshot-actions button,
         [data-theme="normal-dark"] .snapshot-actions button { border-radius: 6px; }
 
@@ -1748,6 +1792,17 @@
   </button>
 </nav>
 
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">Confirm</div>
+    <div class="confirm-message" id="confirm-message"></div>
+    <div class="confirm-actions">
+      <button class="cancel" id="confirm-cancel-btn">Cancel</button>
+      <button class="danger" id="confirm-ok-btn">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 
 class KsuBridge {
@@ -1855,7 +1910,40 @@ class App {
         this.$log    = document.getElementById('console-output');
         this.$reset  = document.getElementById('reset-btn');
         this.$banner = document.getElementById('reboot-banner');
+        this._initConfirmModal();
         this.init();
+    }
+
+    // ---- Reusable confirm modal (replaces tap-twice-to-confirm patterns) ----
+    _initConfirmModal() {
+        this.$confirmOverlay = document.getElementById('confirm-overlay');
+        this.$confirmTitle   = document.getElementById('confirm-title');
+        this.$confirmMessage = document.getElementById('confirm-message');
+        this.$confirmOk      = document.getElementById('confirm-ok-btn');
+        this.$confirmCancel  = document.getElementById('confirm-cancel-btn');
+        this._confirmResolve = null;
+
+        const close = (result) => {
+            this.$confirmOverlay.classList.remove('open');
+            this.$confirmOk.disabled = false;
+            if (this._confirmResolve) { this._confirmResolve(result); this._confirmResolve = null; }
+        };
+        this.$confirmCancel.addEventListener('click', () => close(false));
+        this.$confirmOverlay.addEventListener('click', (e) => {
+            if (e.target === this.$confirmOverlay) close(false);
+        });
+        this.$confirmOk.addEventListener('click', () => close(true));
+        this._closeConfirm = close;
+    }
+
+    // Shows the modal and resolves true/false based on the user's choice.
+    // opts: { title, message (HTML allowed), okLabel }
+    confirmAction(opts) {
+        this.$confirmTitle.textContent = opts.title || 'Confirm';
+        this.$confirmMessage.innerHTML = opts.message || '';
+        this.$confirmOk.textContent = opts.okLabel || 'Confirm';
+        this.$confirmOverlay.classList.add('open');
+        return new Promise((resolve) => { this._confirmResolve = resolve; });
     }
 
     async init() {
@@ -2456,7 +2544,7 @@ class App {
                         <button class="restore" title="Restore" onclick="app.restoreSnapshot('${s.id}')">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 0 1 7-7 7 7 0 0 1 7 7 7 7 0 0 1-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 9-9 9 9 0 0 0-9-9z"/></svg>
                         </button>
-                        <button class="delete" title="Delete — tap twice to confirm" onclick="app.deleteSnapshot('${s.id}', this)">
+                        <button class="delete" title="Delete" onclick="app.deleteSnapshot('${s.id}', this, ${JSON.stringify(s.label).replace(/"/g, '&quot;')})">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                         </button>
                     </div>
@@ -2500,20 +2588,14 @@ class App {
         }
     }
 
-    async deleteSnapshot(id, btn) {
-        if (!btn.classList.contains('confirm')) {
-            btn.classList.add('confirm');
-            btn.title = 'Tap again to confirm delete';
-            btn.style.background = 'var(--red-glow)';
-            btn.style.borderColor = 'var(--red)';
-            setTimeout(() => {
-                btn.classList.remove('confirm');
-                btn.title = 'Delete — tap twice to confirm';
-                btn.style.background = '';
-                btn.style.borderColor = '';
-            }, 3000);
-            return;
-        }
+    async deleteSnapshot(id, btn, label) {
+        const ok = await this.confirmAction({
+            title: 'Delete snapshot?',
+            message: `<b>${escHtml(label || id)}</b> will be permanently removed. This can't be undone.`,
+            okLabel: 'Delete'
+        });
+        if (!ok) return;
+
         btn.disabled = true;
         const r = parseJson(await this.ksu.runAction('snapshot_delete', id));
         if (r && r.status === 'success') {
