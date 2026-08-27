@@ -13,6 +13,17 @@
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/image1.png" width="23%" />
+  <img src="screenshots/image2.png" width="23%" />
+  <img src="screenshots/image3.png" width="23%" />
+  <img src="screenshots/image4.png" width="23%" />
+</p>
+
+---
+
 ## What It Does
 
 This root module lets you tune your device's Wi-Fi driver configuration between four profiles without touching system partitions:
@@ -113,17 +124,6 @@ A guided alternative to hand-editing the raw `.ini` for people who just want to 
 - Each has its own **include** switch — only the parameters you turn on are written to the config; everything else is left exactly as your last-applied profile set it.
 - Selections persist in `/data/adb/wcs/custom.patch` and are **re-applied automatically on boot**, the same as Perf/Balanced.
 - Apply from the Dashboard's 4th profile button (**Custom**, jumps straight to the Tools tab) or directly from the Tools tab.
-
----
-
-## Screenshots
-
-<p align="center">
-  <img src="screenshots/image1.png" width="23%" />
-  <img src="screenshots/image2.png" width="23%" />
-  <img src="screenshots/image3.png" width="23%" />
-  <img src="screenshots/image4.png" width="23%" />
-</p>
 
 ---
 
